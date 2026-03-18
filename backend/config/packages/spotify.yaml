@@ -1,0 +1,5 @@
+parameters:
+    spotify.client_id: '%env(SPOTIFY_CLIENT_ID)%'
+    spotify.client_secret: '%env(SPOTIFY_CLIENT_SECRET)%'
+    spotify.redirect_uri: '%env(SPOTIFY_REDIRECT_URI)%'
+    spotify.frontend_url: '%env(FRONTEND_URL)%'

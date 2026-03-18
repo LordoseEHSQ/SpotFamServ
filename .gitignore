@@ -1,0 +1,27 @@
+# Umgebungsvariablen – niemals committen
+.env
+
+# Backend
+backend/vendor/
+backend/var/cache/
+backend/var/log/
+backend/.env.local
+backend/.env.*.local
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# Docker Volumes
+docker/volumes/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

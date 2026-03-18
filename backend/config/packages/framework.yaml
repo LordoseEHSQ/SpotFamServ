@@ -1,0 +1,14 @@
+framework:
+    secret: '%env(APP_SECRET)%'
+    cache: true
+    http_client: true
+    http_method_override: false
+    handle_all_throwables: true
+    php_errors:
+        log: true
+    session:
+        handler_id: null
+        cookie_secure: auto
+        cookie_samesite: lax
+    serializer:
+        enabled: true

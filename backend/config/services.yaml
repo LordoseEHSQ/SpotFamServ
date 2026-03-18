@@ -1,0 +1,95 @@
+parameters:
+    uuid_regex: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+    reader_api_key: ''
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Kernel.php'
+            - '../src/Module/*/Domain/*'
+
+    # Explicit module application services can be tagged or wired by interface
+    App\Module\FamilyProfile\Application\:
+        resource: '../src/Module/FamilyProfile/Application/'
+    App\Module\Spotify\Application\:
+        resource: '../src/Module/Spotify/Application/'
+    App\Module\Rfid\Application\:
+        resource: '../src/Module/Rfid/Application/'
+    App\Module\Scan\Application\:
+        resource: '../src/Module/Scan/Application/'
+    App\Module\SetupWizard\Application\:
+        resource: '../src/Module/SetupWizard/Application/'
+
+    # Repository-Interfaces (Application/Port/) → Doctrine-Implementierungen
+    App\Module\FamilyProfile\Application\Port\FamilyProfileRepositoryInterface: '@App\Module\FamilyProfile\Infrastructure\Repository\DoctrineFamilyProfileRepository'
+    App\Module\Rfid\Application\Port\RfidCardRepositoryInterface: '@App\Module\Rfid\Infrastructure\Repository\DoctrineRfidCardRepository'
+    App\Module\Rfid\Application\Port\CardPlaylistBindingRepositoryInterface: '@App\Module\Rfid\Infrastructure\Repository\DoctrineCardPlaylistBindingRepository'
+    App\Module\Spotify\Application\Port\SpotifyAccountLinkRepositoryInterface: '@App\Module\Spotify\Infrastructure\Repository\DoctrineSpotifyAccountLinkRepository'
+    App\Module\Spotify\Application\Port\SpotifyPlaylistReferenceRepositoryInterface: '@App\Module\Spotify\Infrastructure\Repository\DoctrineSpotifyPlaylistReferenceRepository'
+    App\Module\SetupWizard\Application\Port\ProfileSetupSessionRepositoryInterface: '@App\Module\SetupWizard\Infrastructure\Repository\DoctrineProfileSetupSessionRepository'
+    App\Module\Scan\Application\Port\ReaderDeviceRepositoryInterface: '@App\Module\Scan\Infrastructure\Repository\DoctrineReaderDeviceRepository'
+    App\Module\Scan\Application\Port\ScanEventRepositoryInterface: '@App\Module\Scan\Infrastructure\Repository\DoctrineScanEventRepository'
+    App\Module\Scan\Application\Port\ScanCardResolverInterface: '@App\Module\Rfid\Infrastructure\Scan\RfidScanCardResolver'
+    App\Module\Device\Application\Port\SpotifyDeviceRepositoryInterface: '@App\Module\Device\Infrastructure\Repository\DoctrineSpotifyDeviceRepository'
+    App\Module\Device\Application\Port\DeviceDiscoveryRunRepositoryInterface: '@App\Module\Device\Infrastructure\Repository\DoctrineDeviceDiscoveryRunRepository'
+    App\Module\ActivityLog\Application\Port\ActivityLogRepositoryInterface: '@App\Module\ActivityLog\Infrastructure\Repository\DoctrineActivityLogRepository'
+
+    App\Module\Device\Application\:
+        resource: '../src/Module/Device/Application/'
+    App\Module\ActivityLog\Application\:
+        resource: '../src/Module/ActivityLog/Application/'
+
+    # SetupWizard: Strategy-Handler mit DI-Tagging
+    App\Module\SetupWizard\Application\StepHandler\ProfileStepHandler:
+        tags: [{ name: setup_wizard.step_handler }]
+    App\Module\SetupWizard\Application\StepHandler\SpotifyValidateStepHandler:
+        tags: [{ name: setup_wizard.step_handler }]
+    App\Module\SetupWizard\Application\StepHandler\DefaultSpeakerStepHandler:
+        tags: [{ name: setup_wizard.step_handler }]
+    App\Module\SetupWizard\Application\StepHandler\PlaybackTestStepHandler:
+        tags: [{ name: setup_wizard.step_handler }]
+    App\Module\SetupWizard\Application\StepHandler\PassthroughStepHandler:
+        tags: [{ name: setup_wizard.step_handler }]
+
+    App\Module\SetupWizard\Application\SubmitStep:
+        arguments:
+            $handlers: !tagged_iterator setup_wizard.step_handler
+
+    App\Module\Scan\Infrastructure\Http\ScanController:
+        arguments:
+            $readerApiKey: '%env(default:reader_api_key:READER_API_KEY)%'
+
+    App\Module\Spotify\Application\Port\TokenEncryptionInterface: '@App\Module\Spotify\Infrastructure\Security\TokenEncryptionService'
+    App\Module\Spotify\Infrastructure\Security\TokenEncryptionService:
+        arguments:
+            $appSecret: '%env(APP_SECRET)%'
+    App\Module\Spotify\Infrastructure\Doctrine\EncryptedStringTypeInitializer:
+        tags: [kernel.event_subscriber]
+
+    App\Module\Spotify\Application\Port\SpotifyApiClientInterface: '@App\Module\Spotify\Infrastructure\Spotify\SpotifyHttpApiClient'
+    App\Module\Spotify\Application\Port\SpotifyTokenManagerInterface: '@App\Module\Spotify\Infrastructure\Spotify\SpotifyTokenManager'
+    App\Module\Spotify\Application\Port\OAuthStateManagerInterface: '@App\Module\Spotify\Infrastructure\Spotify\SpotifyOAuthStateManager'
+
+    App\Module\Spotify\Infrastructure\Spotify\SpotifyOAuthStateManager:
+        arguments:
+            $cache: '@cache.app'
+
+    App\Module\Spotify\Infrastructure\Spotify\SpotifyHttpApiClient:
+        arguments:
+            $clientId: '%spotify.client_id%'
+            $clientSecret: '%spotify.client_secret%'
+
+    App\Module\Spotify\Application\GetSpotifyAuthorizationUrl:
+        arguments:
+            $clientId: '%spotify.client_id%'
+            $redirectUri: '%spotify.redirect_uri%'
+
+    App\Module\Spotify\Infrastructure\Http\SpotifyOAuthController:
+        arguments:
+            $frontendUrl: '%spotify.frontend_url%'
+            $redirectUri: '%spotify.redirect_uri%'

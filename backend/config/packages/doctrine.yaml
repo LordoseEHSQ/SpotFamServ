@@ -1,0 +1,44 @@
+doctrine:
+    dbal:
+        url: '%env(resolve:DATABASE_URL)%'
+        driver: pdo_pgsql
+        server_version: '15'
+        charset: utf8
+        types:
+            spotify_encrypted_string: App\Module\Spotify\Infrastructure\Doctrine\EncryptedStringType
+    orm:
+        auto_generate_proxy_classes: true
+        enable_lazy_ghost_objects: true
+        report_fields_where_declared: true
+        validate_xml_mapping: true
+        naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
+        mappings:
+            Admin:
+                type: attribute
+                dir: '%kernel.project_dir%/src/Module/Admin/Domain'
+                prefix: 'App\Module\Admin\Domain'
+            FamilyProfile:
+                type: attribute
+                dir: '%kernel.project_dir%/src/Module/FamilyProfile/Domain'
+                prefix: 'App\Module\FamilyProfile\Domain'
+            Spotify:
+                type: attribute
+                dir: '%kernel.project_dir%/src/Module/Spotify/Domain'
+                prefix: 'App\Module\Spotify\Domain'
+            Rfid:
+                type: attribute
+                dir: '%kernel.project_dir%/src/Module/Rfid/Domain'
+                prefix: 'App\Module\Rfid\Domain'
+            Scan:
+                type: attribute
+                dir: '%kernel.project_dir%/src/Module/Scan/Domain'
+                prefix: 'App\Module\Scan\Domain'
+            SetupWizard:
+                type: attribute
+                dir: '%kernel.project_dir%/src/Module/SetupWizard/Domain'
+                prefix: 'App\Module\SetupWizard\Domain'
+
+when@test:
+    doctrine:
+        dbal:
+            url: 'postgresql://spotfam:spotfam@127.0.0.1:5432/spotfam_test?serverVersion=15&charset=utf8'

@@ -1,0 +1,71 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Module\Scan\Domain;
+
+use Doctrine\ORM\Mapping as ORM;
+
+#[ORM\Entity]
+#[ORM\Table(name: 'reader_device')]
+#[ORM\UniqueConstraint(name: 'uniq_reader_id', columns: ['reader_id'])]
+class ReaderDevice
+{
+    #[ORM\Id]
+    #[ORM\Column(type: 'uuid', unique: true)]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: \Symfony\Bridge\Doctrine\IdGenerator\UuidGenerator::class)]
+    private ?string $id = null;
+
+    #[ORM\Column(name: 'reader_id', length: 64)]
+    private string $readerId;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $name = null;
+
+    #[ORM\Column(name: 'api_key_hash', length: 255, nullable: true)]
+    private ?string $apiKeyHash = null;
+
+    #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
+    private \DateTimeImmutable $createdAt;
+
+    #[ORM\Column(name: 'updated_at', type: 'datetime_immutable')]
+    private \DateTimeImmutable $updatedAt;
+
+    public function __construct(string $readerId, ?string $name = null, ?string $apiKeyHash = null)
+    {
+        $this->readerId = $readerId;
+        $this->name = $name;
+        $this->apiKeyHash = $apiKeyHash;
+        $this->createdAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $this->updatedAt = $this->createdAt;
+    }
+
+    public function getId(): ?string
+    {
+        return $this->id;
+    }
+
+    public function getReaderId(): string
+    {
+        return $this->readerId;
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    public function getApiKeyHash(): ?string
+    {
+        return $this->apiKeyHash;
+    }
+
+    public function validateApiKey(string $apiKey): bool
+    {
+        if ($this->apiKeyHash === null) {
+            return false;
+        }
+        return password_verify($apiKey, $this->apiKeyHash);
+    }
+}

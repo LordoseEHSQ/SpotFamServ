@@ -1,0 +1,2 @@
+# All routes are registered via PHP attributes on controllers (routes.yaml handles the prefix).
+# This file is intentionally kept empty to avoid duplicate api_v1 definitions.
