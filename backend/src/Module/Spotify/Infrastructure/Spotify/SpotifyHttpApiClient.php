@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace App\Module\Spotify\Infrastructure\Spotify;
 
 use App\Module\Spotify\Application\Dto\SpotifyDeviceDto;
+use App\Module\Spotify\Application\Dto\SpotifyPlaybackStateDto;
 use App\Module\Spotify\Application\Dto\SpotifyPlaylistDto;
+use App\Module\Spotify\Application\Dto\SpotifyPlaylistTracksDto;
 use App\Module\Spotify\Application\Dto\SpotifySearchResultDto;
 use App\Module\Spotify\Application\Dto\SpotifyTokenResponseDto;
+use App\Module\Spotify\Application\Dto\SpotifyTrackDto;
 use App\Module\Spotify\Application\Dto\SpotifyUserDto;
 use App\Module\Spotify\Application\Port\SpotifyApiClientInterface;
-use App\Module\Spotify\Domain\Exception\SpotifyException;
+use App\Module\Spotify\Domain\Exception\SpotifyApiException;
+use App\Module\Spotify\Domain\Exception\SpotifyNoDeviceException;
 use App\Module\Spotify\Domain\Exception\SpotifyScopeMissingException;
 use App\Module\Spotify\Domain\Exception\SpotifyTokenInvalidException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -85,12 +89,16 @@ final class SpotifyHttpApiClient implements SpotifyApiClientInterface
     public function search(string $accessToken, string $query, string $types = 'playlist,track'): SpotifySearchResultDto
     {
         $data = $this->get(self::API_BASE . '/search', $accessToken, [
-            'q' => $query,
-            'type' => $types,
-            'limit' => 20,
+            'q'      => $query,
+            'type'   => $types,
+            'limit'  => '10',
+            'market' => 'from_token',
         ]);
         $playlists = [];
         foreach (($data['playlists']['items'] ?? []) as $item) {
+            if ($item === null) {
+                continue;
+            }
             $playlists[] = [
                 'id' => (string) ($item['id'] ?? ''),
                 'name' => (string) ($item['name'] ?? ''),
@@ -98,7 +106,32 @@ final class SpotifyHttpApiClient implements SpotifyApiClientInterface
                 'type' => 'playlist',
             ];
         }
-        return new SpotifySearchResultDto($playlists);
+        $tracks = [];
+        foreach (($data['tracks']['items'] ?? []) as $item) {
+            if ($item === null) {
+                continue;
+            }
+            $artists = array_map(
+                fn ($a) => (string) ($a['name'] ?? ''),
+                $item['artists'] ?? []
+            );
+            $coverUrl = null;
+            $images = $item['album']['images'] ?? [];
+            if (!empty($images)) {
+                $coverUrl = (string) ($images[0]['url'] ?? '');
+            }
+            $tracks[] = [
+                'id' => (string) ($item['id'] ?? ''),
+                'name' => (string) ($item['name'] ?? ''),
+                'uri' => (string) ($item['uri'] ?? ''),
+                'artists' => $artists,
+                'album_name' => (string) ($item['album']['name'] ?? ''),
+                'album_cover_url' => $coverUrl,
+                'duration_ms' => (int) ($item['duration_ms'] ?? 0),
+                'type' => 'track',
+            ];
+        }
+        return new SpotifySearchResultDto($playlists, $tracks);
     }
 
     public function getAvailableDevices(string $accessToken): array
@@ -131,6 +164,195 @@ final class SpotifyHttpApiClient implements SpotifyApiClientInterface
         $this->put(self::API_BASE . '/me/player/play', $accessToken, $body);
     }
 
+    public function getCurrentPlayback(string $accessToken): ?SpotifyPlaybackStateDto
+    {
+        $response = $this->httpClient->request('GET', self::API_BASE . '/me/player', [
+            'headers' => ['Authorization' => 'Bearer ' . $accessToken],
+            'query' => ['additional_types' => 'track'],
+        ]);
+        $status = $response->getStatusCode();
+        if ($status === 204 || $status === 202) {
+            return null;
+        }
+        $data = $this->decodeAndMapErrors($response, '/me/player');
+        if (empty($data) || !isset($data['is_playing'])) {
+            return null;
+        }
+
+        $track = null;
+        $item = $data['item'] ?? null;
+        if ($item !== null && ($item['type'] ?? '') === 'track') {
+            $artists = array_map(fn ($a) => (string) ($a['name'] ?? ''), $item['artists'] ?? []);
+            $images = $item['album']['images'] ?? [];
+            $coverUrl = !empty($images) ? (string) ($images[0]['url'] ?? '') : null;
+            $track = new SpotifyTrackDto(
+                (string) ($item['id'] ?? ''),
+                (string) ($item['name'] ?? ''),
+                (string) ($item['uri'] ?? ''),
+                $artists,
+                (string) ($item['album']['name'] ?? '') ?: null,
+                $coverUrl,
+                (int) ($item['duration_ms'] ?? 0),
+            );
+        }
+
+        $device = $data['device'] ?? [];
+
+        return new SpotifyPlaybackStateDto(
+            (bool) ($data['is_playing'] ?? false),
+            (int) ($data['progress_ms'] ?? 0),
+            $track,
+            isset($device['id']) ? (string) $device['id'] : null,
+            isset($device['name']) ? (string) $device['name'] : null,
+            isset($device['type']) ? (string) $device['type'] : null,
+            isset($data['context']['uri']) ? (string) $data['context']['uri'] : null,
+            isset($data['context']['type']) ? (string) $data['context']['type'] : null,
+            (int) ($device['volume_percent'] ?? 0),
+        );
+    }
+
+    public function pausePlayback(string $accessToken, ?string $deviceId = null): void
+    {
+        $query = $deviceId !== null ? ['device_id' => $deviceId] : [];
+        $response = $this->httpClient->request('PUT', self::API_BASE . '/me/player/pause', [
+            'headers' => ['Authorization' => 'Bearer ' . $accessToken, 'Content-Type' => 'application/json'],
+            'query' => $query,
+            'body' => '',
+        ]);
+        $status = $response->getStatusCode();
+        if ($status >= 400) {
+            $body = $response->toArray(false);
+            $err = $body['error'] ?? [];
+            $message = is_array($err) ? ($err['message'] ?? (string) $status) : (string) $err;
+            if ($status === 403 && str_contains(strtolower($message), 'premium')) {
+                throw new SpotifyScopeMissingException('Spotify Premium required for playback control');
+            }
+            if ($status !== 403) {
+                throw new SpotifyApiException('Pause failed: ' . $message, $status);
+            }
+        }
+    }
+
+    public function nextTrack(string $accessToken, ?string $deviceId = null): void
+    {
+        $query = $deviceId !== null ? ['device_id' => $deviceId] : [];
+        $response = $this->httpClient->request('POST', self::API_BASE . '/me/player/next', [
+            'headers' => ['Authorization' => 'Bearer ' . $accessToken, 'Content-Type' => 'application/json'],
+            'query' => $query,
+            'body' => '',
+        ]);
+        $status = $response->getStatusCode();
+        if ($status >= 400) {
+            $body = $response->toArray(false);
+            $err = $body['error'] ?? [];
+            $message = is_array($err) ? ($err['message'] ?? (string) $status) : (string) $err;
+            throw new SpotifyApiException('Next track failed: ' . $message, $status);
+        }
+    }
+
+    public function previousTrack(string $accessToken, ?string $deviceId = null): void
+    {
+        $response = $this->httpClient->request('POST', self::API_BASE . '/me/player/previous', [
+            'headers' => ['Authorization' => 'Bearer ' . $accessToken, 'Content-Type' => 'application/json'],
+            'body' => '',
+        ]);
+        $status = $response->getStatusCode();
+        if ($status >= 400) {
+            $body = $response->toArray(false);
+            $err = $body['error'] ?? [];
+            $message = is_array($err) ? ($err['message'] ?? (string) $status) : (string) $err;
+            throw new SpotifyApiException('Previous track failed: ' . $message, $status);
+        }
+    }
+
+    public function getPlaylistTracks(string $accessToken, string $playlistId, int $offset = 0, int $limit = 50): SpotifyPlaylistTracksDto
+    {
+        $data = $this->get(self::API_BASE . '/playlists/' . $playlistId . '/tracks', $accessToken, [
+            'offset' => (string) $offset,
+            'limit' => (string) $limit,
+            'additional_types' => 'track,episode',
+        ]);
+
+        $items = [];
+        foreach (($data['items'] ?? []) as $entry) {
+            $item = $entry['track'] ?? null;
+            // Skip null entries, local files, podcast episodes (no id or type != track)
+            if ($item === null || ($item['id'] ?? '') === '' || ($item['type'] ?? 'track') !== 'track') {
+                continue;
+            }
+            $artists = array_map(fn ($a) => (string) ($a['name'] ?? ''), $item['artists'] ?? []);
+            $images = $item['album']['images'] ?? [];
+            $coverUrl = !empty($images) ? (string) ($images[0]['url'] ?? '') : null;
+            $items[] = new SpotifyTrackDto(
+                (string) ($item['id'] ?? ''),
+                (string) ($item['name'] ?? ''),
+                (string) ($item['uri'] ?? ''),
+                $artists,
+                (string) ($item['album']['name'] ?? '') ?: null,
+                $coverUrl,
+                (int) ($item['duration_ms'] ?? 0),
+            );
+        }
+
+        return new SpotifyPlaylistTracksDto(
+            $items,
+            (int) ($data['total'] ?? 0),
+            (int) ($data['offset'] ?? $offset),
+            (int) ($data['limit'] ?? $limit),
+        );
+    }
+
+    public function createPlaylist(string $accessToken, string $spotifyUserId, string $name, ?string $description = null): SpotifyPlaylistDto
+    {
+        $body = ['name' => $name, 'public' => false];
+        if ($description !== null && $description !== '') {
+            $body['description'] = $description;
+        }
+        $response = $this->httpClient->request('POST', self::API_BASE . '/users/' . $spotifyUserId . '/playlists', [
+            'headers' => ['Authorization' => 'Bearer ' . $accessToken, 'Content-Type' => 'application/json'],
+            'json' => $body,
+        ]);
+        $status = $response->getStatusCode();
+        if ($status >= 400) {
+            $b = $response->toArray(false);
+            $err = $b['error'] ?? [];
+            $message = is_array($err) ? ($err['message'] ?? (string) $status) : (string) $err;
+            if ($status === 403) {
+                throw new SpotifyScopeMissingException(
+                    'Fehlende Berechtigung zum Erstellen von Playlists. Bitte Spotify-Verbindung neu autorisieren (Scope: playlist-modify-private).'
+                );
+            }
+            throw new SpotifyApiException('Create playlist failed: ' . $message, $status);
+        }
+        $data = $response->toArray(false);
+        return new SpotifyPlaylistDto(
+            (string) ($data['id'] ?? ''),
+            (string) ($data['name'] ?? $name),
+            (string) ($data['uri'] ?? ''),
+            isset($data['owner']['id']) ? (string) $data['owner']['id'] : null,
+        );
+    }
+
+    public function addTracksToPlaylist(string $accessToken, string $playlistId, array $uris): void
+    {
+        $response = $this->httpClient->request('POST', self::API_BASE . '/playlists/' . $playlistId . '/tracks', [
+            'headers' => ['Authorization' => 'Bearer ' . $accessToken, 'Content-Type' => 'application/json'],
+            'json' => ['uris' => $uris],
+        ]);
+        $status = $response->getStatusCode();
+        if ($status >= 400) {
+            $b = $response->toArray(false);
+            $err = $b['error'] ?? [];
+            $message = is_array($err) ? ($err['message'] ?? (string) $status) : (string) $err;
+            if ($status === 403) {
+                throw new SpotifyScopeMissingException(
+                    'Fehlende Berechtigung zum Bearbeiten von Playlists. Bitte Spotify-Verbindung neu autorisieren.'
+                );
+            }
+            throw new SpotifyApiException('Add tracks failed: ' . $message, $status);
+        }
+    }
+
     private function parseTokenResponse($response, bool $isRefresh, string $currentRefreshToken): SpotifyTokenResponseDto
     {
         $status = $response->getStatusCode();
@@ -143,7 +365,7 @@ final class SpotifyHttpApiClient implements SpotifyApiClientInterface
             if ($status === 403) {
                 throw new SpotifyScopeMissingException($detail);
             }
-            throw new SpotifyException('Spotify OAuth error: ' . $detail, $status);
+            throw new SpotifyApiException('Spotify OAuth error: ' . $detail, $status);
         }
         $scope = $body['scope'] ?? '';
         $expiresIn = (int) ($body['expires_in'] ?? 3600);
@@ -183,12 +405,12 @@ final class SpotifyHttpApiClient implements SpotifyApiClientInterface
             $err = $body['error'] ?? [];
             $message = is_array($err) ? ($err['message'] ?? (string) $status) : (string) $err;
             if ($status === 404 && str_contains(strtolower($message), 'device')) {
-                throw new \App\Module\Spotify\Domain\Exception\SpotifyNoDeviceException($message);
+                throw new SpotifyNoDeviceException($message);
             }
             if ($status === 401) {
                 throw new SpotifyTokenInvalidException($message);
             }
-            throw new SpotifyException('Spotify API error: ' . $message, $status);
+            throw new SpotifyApiException('Spotify API error: ' . $message, $status);
         }
     }
 
@@ -203,9 +425,15 @@ final class SpotifyHttpApiClient implements SpotifyApiClientInterface
                 throw new SpotifyTokenInvalidException($message);
             }
             if ($status === 403) {
-                throw new SpotifyScopeMissingException($message);
+                // Spotify returns 403 for two distinct reasons:
+                // "Insufficient client scope" = missing OAuth scope
+                // "Forbidden" = resource access denied (collaborative/private playlist owned by other user)
+                if (str_contains(strtolower($message), 'scope') || str_contains(strtolower($message), 'insufficient')) {
+                    throw new SpotifyScopeMissingException($message);
+                }
+                throw new SpotifyApiException('Zugriff verweigert: ' . $message, 403);
             }
-            throw new SpotifyException('Spotify API error: ' . $message, $status);
+            throw new SpotifyApiException('Spotify API error: ' . $message, $status);
         }
         return $response->toArray(false);
     }

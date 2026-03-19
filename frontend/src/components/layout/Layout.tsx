@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Speaker, CreditCard, Activity,
-  Clock, Settings, Wifi, ChevronRight,
+  Clock, Settings, Wifi, ChevronRight, SlidersHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -45,6 +45,7 @@ const navigation: NavGroup[] = [
     heading: 'System',
     items: [
       { label: 'Setup-Assistent', href: '/setup', icon: Settings },
+      { label: 'Systemeinstellungen', href: '/system', icon: SlidersHorizontal },
     ],
   },
 ];

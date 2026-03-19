@@ -222,7 +222,7 @@ export function CardsPage() {
                 style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: 2, border: '1px solid #d1d5db', borderRadius: 4 }}
               >
                 <option value="">— Keine —</option>
-                {(playlistRefs?.items ?? []).map((r) => (
+                {(playlistRefs?.items ?? []).map((r: { id: string; name: string }) => (
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
               </select>

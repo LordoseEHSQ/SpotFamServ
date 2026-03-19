@@ -8,6 +8,7 @@ import { CardsPage } from '../pages/CardsPage';
 import { ScanLogsPage } from '../pages/ScanLogsPage';
 import { DevicesPage } from '../pages/DevicesPage';
 import { ActivityPage } from '../pages/ActivityPage';
+import { SystemPage } from '../pages/SystemPage';
 
 export function AppRoutes() {
   return (
@@ -21,6 +22,7 @@ export function AppRoutes() {
       <Route path="/cards" element={<CardsPage />} />
       <Route path="/activity" element={<ActivityPage />} />
       <Route path="/scan-logs" element={<ScanLogsPage />} />
+      <Route path="/system" element={<SystemPage />} />
       <Route path="/rules" element={<Navigate to="/" replace />} />
       <Route path="/setup" element={<Navigate to="/profiles" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />

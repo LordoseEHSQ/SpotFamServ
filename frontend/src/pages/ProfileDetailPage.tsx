@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Save, Trash2, Wand2, RefreshCw,
-  User, Music2, Speaker, CreditCard, Clock, Activity,
+  User, Music2, Speaker, CreditCard, Clock, Activity, Headphones,
   CheckCircle2, XCircle, AlertCircle, ExternalLink,
 } from 'lucide-react';
+import { MusicTab } from '@/components/music/MusicTab';
 import { useProfile, useUpdateProfile, useDeleteProfile } from '@/hooks/useProfiles';
 import { useRfidCards } from '@/hooks/useRfidCards';
 import { useActivity } from '@/hooks/useActivity';
@@ -85,7 +86,9 @@ function TabAllgemein({ profile }: { profile: FamilyProfileDto }) {
 
 function TabSpotify({ profile }: { profile: FamilyProfileDto }) {
   const [validating, setValidating] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [validateResult, setValidateResult] = useState<{ valid: boolean; message?: string } | null>(null);
+  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
 
   const getAuthUrl = async () => {
     try {
@@ -109,6 +112,19 @@ function TabSpotify({ profile }: { profile: FamilyProfileDto }) {
       setValidateResult({ valid: false, message: 'Validierung fehlgeschlagen.' });
     } finally {
       setValidating(false);
+    }
+  };
+
+  const disconnect = async () => {
+    setDisconnecting(true);
+    try {
+      await api.delete(`/profiles/${profile.id}/spotify/disconnect`);
+      window.location.reload();
+    } catch {
+      alert('Fehler beim Trennen der Spotify-Verbindung.');
+    } finally {
+      setDisconnecting(false);
+      setShowDisconnectDialog(false);
     }
   };
 
@@ -139,6 +155,20 @@ function TabSpotify({ profile }: { profile: FamilyProfileDto }) {
             </div>
           </div>
 
+          {(status === 'not_connected') && (
+            <div className="rounded-md border border-muted bg-muted/30 px-3 py-2.5 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-0.5">Spotify nicht verbunden</p>
+              <p>Klicke auf „Mit Spotify verbinden". Spotify zeigt dann einen Autorisierungsdialog – alle benötigten Berechtigungen werden dabei erteilt.</p>
+            </div>
+          )}
+
+          {(status === 'connected' || status === 'expired') && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-3 py-2.5 text-sm text-amber-800 dark:text-amber-300">
+              <p className="font-medium mb-0.5">Fehlende Berechtigungen? Neu verbinden</p>
+              <p>Falls Aktionen wie Playlist-Erstellen mit „Fehlende Berechtigung" fehlschlagen: Klicke auf <strong>„Trennen"</strong> und danach <strong>„Mit Spotify verbinden"</strong>. Spotify fordert dann die vollständigen Berechtigungen neu an.</p>
+            </div>
+          )}
+
           {validateResult && (
             <div className={cn(
               'rounded-md border px-3 py-2 text-sm',
@@ -164,11 +194,42 @@ function TabSpotify({ profile }: { profile: FamilyProfileDto }) {
                   <ExternalLink className="h-4 w-4" />
                   Neu verbinden
                 </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setShowDisconnectDialog(true)}
+                  disabled={disconnecting}
+                >
+                  <XCircle className="h-4 w-4" />
+                  Trennen
+                </Button>
               </>
             )}
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={showDisconnectDialog} onOpenChange={setShowDisconnectDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Spotify-Verbindung trennen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Das gespeicherte Spotify-Token für <strong>{profile.name}</strong> wird gelöscht. Musik-Funktionen stehen nicht mehr zur Verfügung bis die Verbindung neu autorisiert wird.
+              <br /><br />
+              Nach dem Trennen: Klicke auf „Mit Spotify verbinden" um alle Berechtigungen neu zu erteilen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={disconnect}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {disconnecting ? 'Trennt…' : 'Verbindung trennen'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -446,6 +507,10 @@ export function ProfileDetailPage() {
                 <Activity className="h-3.5 w-3.5 mr-1.5" />
                 Aktivität
               </TabsTrigger>
+              <TabsTrigger value="musik">
+                <Headphones className="h-3.5 w-3.5 mr-1.5" />
+                Musik
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -468,6 +533,9 @@ export function ProfileDetailPage() {
               </TabsContent>
               <TabsContent value="aktivitaet">
                 <TabAktivitaet profileId={profile.id} />
+              </TabsContent>
+              <TabsContent value="musik">
+                <MusicTab profile={profile} />
               </TabsContent>
             </div>
           </ScrollArea>

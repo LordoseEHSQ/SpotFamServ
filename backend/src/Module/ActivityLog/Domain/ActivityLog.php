@@ -36,6 +36,12 @@ class ActivityLog
     public const TYPE_RULE_LIMIT_REACHED    = 'rule_limit_reached';
     public const TYPE_SETUP_COMPLETED       = 'setup_completed';
     public const TYPE_SYSTEM                = 'system';
+    public const TYPE_PLAYLIST_CREATED      = 'playlist_created';
+    public const TYPE_PLAYLIST_CHANGED      = 'playlist_changed';
+    public const TYPE_PLAYBACK_PAUSED       = 'playback_paused';
+    public const TYPE_PLAYBACK_NEXT         = 'playback_next';
+    public const TYPE_PLAYBACK_PREVIOUS     = 'playback_previous';
+    public const TYPE_SEARCH_EXECUTED       = 'search_executed';
 
     #[ORM\Id]
     #[ORM\Column(type: 'uuid')]

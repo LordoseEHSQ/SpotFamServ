@@ -51,11 +51,8 @@ final readonly class RunDeviceDiscovery
 
         foreach ($profilesToScan as $profile) {
             try {
-                $token = $this->tokenManager->getValidToken($profile->getId());
-                if ($token === null) {
-                    continue;
-                }
-                $devices = $this->spotifyClient->getDevices($token);
+                $link = $this->tokenManager->getValidLinkForProfile((string) $profile->getId());
+                $devices = $this->spotifyClient->getAvailableDevices($link->getAccessToken());
                 foreach ($devices as $device) {
                     $rawDevicesAll[$device->id] = [
                         'id'        => $device->id,

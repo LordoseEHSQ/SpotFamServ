@@ -2,6 +2,183 @@
 
 ## [Unreleased]
 
+### Neu
+- **Spotify API-Restriction Handling (Nov 2024)** – Spotify hat seit November 2024 den API-Zugriff auf Podcast/Hörbuch-Inhalte und Playlist-Schreiboperationen für nicht-genehmigte Apps gesperrt. Das System kommuniziert diese Einschränkungen nun klar im UI: Playlist-Detail zeigt "Inhalt nicht über API verfügbar" mit erläuterndem Text, Playlist-Erstellen-Dialog enthält einen Hinweis auf die erforderliche Spotify Developer Extended Quota Genehmigung.
+- **`playlist-read-collaborative` Scope hinzugefügt** – Neue Autorisierungs-URL enthält jetzt auch den `playlist-read-collaborative` Scope für kooperative Playlists.
+- **Spotify-Verbindung trennen** – Im Tab „Spotify" des Teilnehmerprofils gibt es jetzt einen roten „Trennen"-Button mit Bestätigungsdialog. Er ruft `DELETE /api/v1/profiles/{id}/spotify/disconnect` auf und löscht das gespeicherte OAuth-Token. Danach kann die Verbindung mit frischen Berechtigungen neu autorisiert werden.
+- **Backend: `DisconnectSpotify` UseCase + `DELETE /disconnect` Endpoint** – Neuer UseCase und Endpoint für das Entfernen der `SpotifyAccountLink`-Entität. Repository-Interface und -Implementierung um `delete()`-Methode erweitert.
+- **Hinweis-Banner bei fehlenden Scopes** – Im Spotify-Tab erscheint ein Amber-Banner der erklärt, wann und wie das Trennen+Neuverbinden nötig ist (z. B. bei 403 auf Playlist-Funktionen).
+
+### Geändert
+- **`show_dialog=true` bei Spotify-Autorisierung** – Der Spotify-OAuth-Consent-Dialog wird nun immer angezeigt, auch wenn der Nutzer bereits eingeloggt ist. Damit werden fehlende Scopes bei Reconnect zuverlässig erteilt.
+- **`decodeAndMapErrors`: 403 differenziert gemappt** – Spotify-interne 403-Fehler werden jetzt unterschieden: "Insufficient client scope" → `SpotifyScopeMissingException` (HTTP 403), generisches "Forbidden" → `SpotifyApiException` (HTTP 422). Verhindert falsch-positive "fehlende Berechtigung"-Meldungen.
+- **`getPlaylistTracks`: `fields`-Parameter entfernt, `additional_types` ergänzt** – Der `fields`-Filter verursachte bei bestimmten Playlist-Typen 403-Fehler in der Spotify API. Ersetzt durch `additional_types=track,episode`.
+- **`client.ts`: 204-Antworten korrekt verarbeitet** – HTTP 204 (No Content) löst keinen JSON-Parse-Fehler mehr aus.
+
+### Behoben
+- **PlaylistList: Playlist-Namen wieder sichtbar** – Das `owner_id`-Badge (Spotify-User-ID wie `31ord36in...`) wurde vollständig aus der Playlist-Liste entfernt. Es verdeckte zuvor durch seine Breite den eigentlichen Playlist-Namen im Flex-Layout, sodass nur die kryptische ID sichtbar war.
+- **Playlist-Erstellung: 403-Fehler klar kommuniziert** – Wenn das Spotify-Token der Verbindung die Scopes `playlist-modify-private` / `playlist-modify-public` nicht enthält (z. B. weil die Verbindung vor dem Hinzufügen dieser Scopes autorisiert wurde), zeigt der Erstell-Dialog jetzt eine verständliche Fehlermeldung mit Handlungsanweisung (Spotify-Verbindung neu autorisieren) statt eines generischen 500-Fehlers.
+- **Backend: SpotifyApiClient mappt 403 auf SpotifyScopeMissingException** – In `SpotifyHttpApiClient::createPlaylist()` und `addTracksToPlaylist()` wird ein HTTP-403 von Spotify jetzt als `SpotifyScopeMissingException` geworfen. Dies führt zu einem sauberen HTTP 403 Problem+JSON in der API-Antwort statt eines unbehandelten 500-Fehlers.
+
+### Profilgebundener Musikarbeitsbereich „Mini Spotify" + globale Spotify-App-Konfiguration (2026-03-18)
+
+#### Überblick
+
+Erweiterung des bestehenden Admin-/Governance-Systems um einen vollständig integrierten Musikarbeitsbereich pro Teilnehmerprofil. Kernstück ist der neue Tab **„Musik"** im Teilnehmerprofil, der eine dreispaltige Arbeitsfläche mit Playlist-Verwaltung, Spotify-Suche und Mini-Player bietet. Ergänzt wird dies durch eine zentrale **globale Spotify-App-Konfiguration** (trennt Client Credentials von teilnehmerbezogenen Tokens), neue Player-API-Endpunkte im Backend sowie vollständige ActivityLog-Integration für alle Musik-Aktionen.
+
+---
+
+#### Architektonische Entscheidung: Trennung App-Credentials vs. Benutzer-Tokens
+
+Klare Separation zwischen:
+- **`SpotifyAppConfiguration`** (systemweit, 1× pro Installation): Client ID, Client Secret (verschlüsselt), Redirect URI, Scope-Defaults, Validierungsstatus
+- **`SpotifyAccountLink`** (pro Teilnehmer, bereits vorhanden): Access/Refresh-Token, Spotify User ID, Scopes, neu: `spotify_display_name`, `last_validated_at`
+
+#### Entscheidung: Mini-Player-Platzierung
+
+Der Mini-Player wird als **festes rechtes Panel im Musik-Tab** umgesetzt – nicht als globales Sticky-Panel. Begründung: Der Player ist kontextspezifisch für den Teilnehmer, der gerade bearbeitet wird. Ein globaler Player würde den Governance-Kontext (Profil, Gerät, Regeln) verschleiern.
+
+---
+
+#### Backend – Neue Entität: SpotifyAppConfiguration
+
+- Datei: `backend/src/Module/Spotify/Domain/SpotifyAppConfiguration.php`
+- Tabelle: `spotify_app_configuration` (Singleton-Semantik via `is_active`)
+- Felder: `spotify_client_id`, `spotify_client_secret` (verschlüsselt via `spotify_encrypted_string`), `redirect_uri`, `scope_defaults`, `config_status` (unconfigured/configured/validated/error), `last_check_at`, `last_check_note`, `is_active`
+- Methode `isComplete()`: prüft Client ID + Secret + Redirect URI
+- Methode `recordCheck()`: setzt Status + Zeitstempel nach Validierungsversuch
+
+#### Backend – Repository & Port
+
+- `SpotifyAppConfigRepositoryInterface` (Application Port)
+- `DoctrineSpotifyAppConfigRepository` (Infrastructure)
+- Registriert in `services.yaml`
+
+#### Backend – SpotifyAccountLink erweitert
+
+- Neues Feld `spotify_display_name` (VARCHAR 255, nullable)
+- Neues Feld `last_validated_at` (TIMESTAMP, nullable)
+- Methode `markValidated(?string $displayName)` – setzt beide Felder in einem Aufruf
+- `ValidateSpotifyConnection` UseCase jetzt `final class` statt `final readonly class` (wegen Repository-Injektion), speichert Display Name bei Validierung
+
+#### Backend – Neue DTOs
+
+- `SpotifyTrackDto`: id, name, uri, artists, albumName, albumCoverUrl, durationMs
+- `SpotifyPlaybackStateDto`: isPlaying, progressMs, currentTrack, deviceId, deviceName, deviceType, contextUri, contextType, volumePercent
+- `SpotifyPlaylistTracksDto`: items (SpotifyTrackDto[]), total, offset, limit
+- `SpotifySearchResultDto` erweitert: jetzt auch `tracks` (TrackItems mit type, artists, album_cover_url etc.)
+
+#### Backend – SpotifyApiClientInterface & SpotifyHttpApiClient erweitert
+
+Neue Methoden:
+- `getCurrentPlayback()` → `?SpotifyPlaybackStateDto` (GET /me/player)
+- `pausePlayback()` (PUT /me/player/pause)
+- `nextTrack()` (POST /me/player/next)
+- `previousTrack()` (POST /me/player/previous)
+- `getPlaylistTracks()` (GET /playlists/{id}/tracks mit fields-Parameter)
+- `createPlaylist()` (POST /users/{userId}/playlists)
+- `addTracksToPlaylist()` (POST /playlists/{id}/tracks)
+
+Bugfix: Inline FQCN `\App\Module\...\SpotifyNoDeviceException` in `put()` durch Import am Dateikopf ersetzt.
+
+#### Backend – Neue UseCases
+
+- `GetCurrentPlayback` – Holt aktuellen Player-Status
+- `PausePlayback` – Pausiert Wiedergabe
+- `SkipToNext` – Nächster Titel
+- `SkipToPrevious` – Vorheriger Titel
+- `GetPlaylistTracks` – Tracks einer Playlist (paginiert)
+- `CreateSpotifyPlaylist` – Erstellt neue Spotify-Playlist, schreibt ActivityLog
+- `AddTracksToPlaylist` – Fügt Tracks hinzu, schreibt ActivityLog
+- `GetSpotifyAppConfig` – Liest aktive DB-Konfig oder fällt auf env vars zurück
+- `SaveSpotifyAppConfig` – Speichert Konfig, schreibt ActivityLog
+- `ValidateSpotifyAppConfig` – Prüft Konfigurationsvollständigkeit, schreibt ActivityLog
+
+#### Backend – Neuer Controller: SpotifySystemController
+
+Endpunkte:
+- `GET /api/v1/system/spotify` – Aktuelle App-Konfiguration lesen (Client Secret wird **nicht** zurückgegeben, nur `has_client_secret`)
+- `PUT /api/v1/system/spotify` – Konfiguration speichern
+- `POST /api/v1/system/spotify/validate` – Konfiguration validieren
+
+#### Backend – SpotifyController erweitert
+
+Neue Endpunkte:
+- `GET  /api/v1/profiles/{id}/spotify/player` – Aktueller Wiedergabestatus
+- `POST /api/v1/profiles/{id}/spotify/player/pause` – Pause
+- `POST /api/v1/profiles/{id}/spotify/player/next` – Nächster Titel
+- `POST /api/v1/profiles/{id}/spotify/player/previous` – Vorheriger Titel
+- `GET  /api/v1/profiles/{id}/spotify/playlists/{playlistId}/tracks` – Playlist-Tracks
+- `POST /api/v1/profiles/{id}/spotify/playlists/{playlistId}/tracks` – Tracks hinzufügen
+- `POST /api/v1/profiles/{id}/spotify/playlists/create` – Playlist erstellen
+
+Bugfix: Search-Endpunkt gibt jetzt korrekte 400-Response mit `error`-Schlüssel statt `playlists`.
+
+#### Backend – ActivityLog: Neue Typen
+
+- `TYPE_PLAYLIST_CREATED`, `TYPE_PLAYLIST_CHANGED`, `TYPE_PLAYBACK_PAUSED`
+- `TYPE_PLAYBACK_NEXT`, `TYPE_PLAYBACK_PREVIOUS`, `TYPE_SEARCH_EXECUTED`
+
+#### Backend – Migration
+
+- Datei: `backend/migrations/Version20250318100000_spotify_music.php`
+- Neue Tabelle `spotify_app_configuration` (UUID PK, verschlüsseltes Secret, Index auf `is_active`)
+- Erweiterung `spotify_account_link` um `spotify_display_name`, `last_validated_at`
+- Migration erfolgreich ausgeführt (8 SQL-Queries)
+
+---
+
+#### Frontend – API-Client: spotify.ts
+
+- Datei: `frontend/src/api/endpoints/spotify.ts` (neu strukturiert)
+- `spotifySystemApi`: getConfig, saveConfig, validate (System-Konfiguration)
+- `spotifyMusicApi`: getPlaylists, getPlaylistTracks, createPlaylist, addTracks, search, getPlayer, play, pause, next, previous
+- `spotifyApi` (Legacy): rückwärtskompatible Exporte für Setup-Wizard (getStatus, validate, getDevices etc.)
+- Neue Typen: `SpotifyAppConfigDto`, `SpotifyTrackItem`, `SpotifyPlaybackState`, `SpotifyPlayerResponse`, `SpotifySearchResponse` (mit tracks + playlists)
+
+#### Frontend – Neue Hooks
+
+- `useSpotifyAppConfig` + `useSaveSpotifyAppConfig` + `useValidateSpotifyAppConfig` – System-Konfig
+- `useSpotifyPlayer` – Polling (5s Intervall), `usePlaySpotify`, `usePauseSpotify`, `useNextTrack`, `usePreviousTrack`
+- `useSpotifyPlaylists` + `useSpotifyPlaylistTracks` + `useCreateSpotifyPlaylist` + `useAddTracksToPlaylist`
+- `useSpotifySearch` – Debounced, ab 2 Zeichen
+
+#### Frontend – Neue Komponenten
+
+- `components/music/MiniPlayer.tsx` – Kompakter Player mit Cover, Titel, Künstler, Fortschritt, Steuerung; Governance-Hinweise (kein Lautsprecher, Spotify nicht verbunden)
+- `components/music/PlaylistList.tsx` – Sidebar-Playlist-Liste mit Suche, Erstell-Dialog, Refresh
+- `components/music/PlaylistDetail.tsx` – Trackliste mit Cover, Künstler, Album, Dauer; Play-Button pro Track und für gesamte Playlist
+- `components/music/SpotifySearch.tsx` – Suchpanel mit Tracks + Playlists; Inline-Play + „Zu Playlist hinzufügen"-Dialog
+- `components/music/MusicTab.tsx` – Dreispaltiges Layout: Playlist-Sidebar (links), Detail/Suche (Mitte), Mini-Player + Status (rechts); Governance-Guards für fehlende Sys-Konfig oder nicht verbundenen Spotify-Account
+
+#### Frontend – Neue Seite: SystemPage
+
+- `pages/SystemPage.tsx` – Systemeinstellungen mit Spotify-App-Konfigurationsformular
+- Zeigt: Konfigurationsstatus-Badge, Client ID, Redirect URI, Secret-Eingabe mit Sichtbarkeits-Toggle
+- Warnung wenn Konfiguration aus Env-Vars gelesen wird
+- Validieren-Button mit Ergebnisanzeige
+- Status-Grid (Client ID ✓, Secret ✓, Redirect URI ✓, Vollständig ✓)
+
+#### Frontend – ProfileDetailPage erweitert
+
+- Neuer Tab **„Musik"** (Icon: Headphones) mit `MusicTab`-Komponente
+- Importiert `MusicTab` aus `components/music/MusicTab`
+
+#### Frontend – Navigation & Routes
+
+- Neue Route `/system` → `SystemPage`
+- Neuer Sidebar-Eintrag „Systemeinstellungen" mit `SlidersHorizontal`-Icon in Gruppe „System"
+
+---
+
+#### Offene Punkte
+
+- Lautstärkeregelung im Mini-Player: Spotify erlaubt `PUT /me/player/volume` – sinnvoll erst mit Device-Tracking
+- Hörzeit-Regeln: Player-Endpunkte blockieren noch nicht bei Tageslimit-Überschreitung – Backend-Prüfung in `StartPlayback` geplant
+- Suche speichert keine History im ActivityLog (nur explizite Aktionen werden geloggt)
+- `spotify_app_configuration`: Wenn sowohl DB-Konfig als auch Env-Vars vorhanden, hat DB Vorrang – Hinweis im UI vorhanden
+- Tests für neue UseCases (CreateSpotifyPlaylist, AddTracksToPlaylist, GetCurrentPlayback etc.) noch ausstehend
+
 ### Professionelles Admin-Refactoring: Governance-UI, Geräteverwaltung, Aktivitätslog (2026-03-18)
 
 #### Überblick

@@ -11,4 +11,6 @@ interface SpotifyAccountLinkRepositoryInterface
     public function findByProfileId(string $profileId): ?SpotifyAccountLink;
 
     public function save(SpotifyAccountLink $link): void;
+
+    public function delete(SpotifyAccountLink $link): void;
 }

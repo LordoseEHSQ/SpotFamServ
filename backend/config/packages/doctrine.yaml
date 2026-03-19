@@ -37,6 +37,14 @@ doctrine:
                 type: attribute
                 dir: '%kernel.project_dir%/src/Module/SetupWizard/Domain'
                 prefix: 'App\Module\SetupWizard\Domain'
+            Device:
+                type: attribute
+                dir: '%kernel.project_dir%/src/Module/Device/Domain'
+                prefix: 'App\Module\Device\Domain'
+            ActivityLog:
+                type: attribute
+                dir: '%kernel.project_dir%/src/Module/ActivityLog/Domain'
+                prefix: 'App\Module\ActivityLog\Domain'
 
 when@test:
     doctrine:

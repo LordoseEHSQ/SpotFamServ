@@ -4,13 +4,21 @@ declare(strict_types=1);
 
 namespace App\Module\Spotify\Infrastructure\Http;
 
+use App\Module\Spotify\Application\AddTracksToPlaylist;
 use App\Module\Spotify\Application\CreatePlaylistReference;
-use App\Module\Spotify\Application\ListPlaylistReferences;
+use App\Module\Spotify\Application\CreateSpotifyPlaylist;
+use App\Module\Spotify\Application\DisconnectSpotify;
 use App\Module\Spotify\Application\GetAvailableDevices;
+use App\Module\Spotify\Application\GetCurrentPlayback;
+use App\Module\Spotify\Application\GetPlaylistTracks;
 use App\Module\Spotify\Application\GetSpotifyAuthorizationUrl;
 use App\Module\Spotify\Application\GetSpotifyStatus;
 use App\Module\Spotify\Application\GetUserPlaylists;
+use App\Module\Spotify\Application\ListPlaylistReferences;
+use App\Module\Spotify\Application\PausePlayback;
 use App\Module\Spotify\Application\SearchSpotify;
+use App\Module\Spotify\Application\SkipToNext;
+use App\Module\Spotify\Application\SkipToPrevious;
 use App\Module\Spotify\Application\StartPlayback;
 use App\Module\Spotify\Application\ValidateSpotifyConnection;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -24,12 +32,20 @@ final class SpotifyController
         private readonly GetSpotifyStatus $getStatus,
         private readonly GetSpotifyAuthorizationUrl $getAuthUrl,
         private readonly ValidateSpotifyConnection $validateConnection,
+        private readonly DisconnectSpotify $disconnectSpotify,
         private readonly GetUserPlaylists $getUserPlaylists,
         private readonly ListPlaylistReferences $listPlaylistReferences,
         private readonly CreatePlaylistReference $createPlaylistReference,
         private readonly SearchSpotify $searchSpotify,
         private readonly GetAvailableDevices $getAvailableDevices,
         private readonly StartPlayback $startPlayback,
+        private readonly GetCurrentPlayback $getCurrentPlayback,
+        private readonly PausePlayback $pausePlayback,
+        private readonly SkipToNext $skipToNext,
+        private readonly SkipToPrevious $skipToPrevious,
+        private readonly GetPlaylistTracks $getPlaylistTracks,
+        private readonly CreateSpotifyPlaylist $createPlaylist,
+        private readonly AddTracksToPlaylist $addTracks,
     ) {
     }
 
@@ -63,6 +79,13 @@ final class SpotifyController
             'spotify_user_id' => $result->spotifyUserId,
             'display_name' => $result->displayName,
         ]);
+    }
+
+    #[Route(path: '/disconnect', name: 'disconnect', methods: ['DELETE'])]
+    public function disconnect(string $profileId): JsonResponse
+    {
+        ($this->disconnectSpotify)($profileId);
+        return new JsonResponse(null, 204);
     }
 
     #[Route(path: '/playlist-references', name: 'playlist_references_list', methods: ['GET'])]
@@ -119,11 +142,11 @@ final class SpotifyController
     {
         $query = $request->query->getString('q');
         if ($query === '') {
-            return new JsonResponse(['playlists' => []], 400);
+            return new JsonResponse(['error' => 'query parameter q is required', 'playlists' => [], 'tracks' => []], 400);
         }
         $types = $request->query->getString('type', 'playlist,track');
         $result = ($this->searchSpotify)($profileId, $query, $types);
-        return new JsonResponse(['playlists' => $result->playlists]);
+        return new JsonResponse(['playlists' => $result->playlists, 'tracks' => $result->tracks]);
     }
 
     #[Route(path: '/devices', name: 'devices', methods: ['GET'])]
@@ -151,5 +174,115 @@ final class SpotifyController
         }
         ($this->startPlayback)($profileId, $contextUri, $deviceId);
         return new JsonResponse(['ok' => true]);
+    }
+
+    #[Route(path: '/player', name: 'player_state', methods: ['GET'])]
+    public function playerState(string $profileId): JsonResponse
+    {
+        $state = ($this->getCurrentPlayback)($profileId);
+        if ($state === null) {
+            return new JsonResponse(['playing' => false, 'state' => null]);
+        }
+        return new JsonResponse([
+            'playing' => true,
+            'state' => [
+                'is_playing' => $state->isPlaying,
+                'progress_ms' => $state->progressMs,
+                'device_id' => $state->deviceId,
+                'device_name' => $state->deviceName,
+                'device_type' => $state->deviceType,
+                'context_uri' => $state->contextUri,
+                'context_type' => $state->contextType,
+                'volume_percent' => $state->volumePercent,
+                'current_track' => $state->currentTrack !== null ? [
+                    'id' => $state->currentTrack->id,
+                    'name' => $state->currentTrack->name,
+                    'uri' => $state->currentTrack->uri,
+                    'artists' => $state->currentTrack->artists,
+                    'album_name' => $state->currentTrack->albumName,
+                    'album_cover_url' => $state->currentTrack->albumCoverUrl,
+                    'duration_ms' => $state->currentTrack->durationMs,
+                ] : null,
+            ],
+        ]);
+    }
+
+    #[Route(path: '/player/pause', name: 'player_pause', methods: ['POST'])]
+    public function playerPause(string $profileId, Request $request): JsonResponse
+    {
+        $body = $request->toArray();
+        $deviceId = isset($body['device_id']) ? (string) $body['device_id'] : null;
+        ($this->pausePlayback)($profileId, $deviceId);
+        return new JsonResponse(['ok' => true]);
+    }
+
+    #[Route(path: '/player/next', name: 'player_next', methods: ['POST'])]
+    public function playerNext(string $profileId, Request $request): JsonResponse
+    {
+        $body = $request->toArray();
+        $deviceId = isset($body['device_id']) ? (string) $body['device_id'] : null;
+        ($this->skipToNext)($profileId, $deviceId);
+        return new JsonResponse(['ok' => true]);
+    }
+
+    #[Route(path: '/player/previous', name: 'player_previous', methods: ['POST'])]
+    public function playerPrevious(string $profileId, Request $request): JsonResponse
+    {
+        $body = $request->toArray();
+        $deviceId = isset($body['device_id']) ? (string) $body['device_id'] : null;
+        ($this->skipToPrevious)($profileId, $deviceId);
+        return new JsonResponse(['ok' => true]);
+    }
+
+    #[Route(path: '/playlists/{playlistId}/tracks', name: 'playlist_tracks', methods: ['GET'], requirements: ['playlistId' => '.+'])]
+    public function playlistTracks(string $profileId, string $playlistId, Request $request): JsonResponse
+    {
+        $offset = max(0, (int) $request->query->get('offset', 0));
+        $limit = min(50, max(1, (int) $request->query->get('limit', 50)));
+        $result = ($this->getPlaylistTracks)($profileId, $playlistId, $offset, $limit);
+        return new JsonResponse([
+            'items' => array_map(fn ($t) => [
+                'id' => $t->id,
+                'name' => $t->name,
+                'uri' => $t->uri,
+                'artists' => $t->artists,
+                'album_name' => $t->albumName,
+                'album_cover_url' => $t->albumCoverUrl,
+                'duration_ms' => $t->durationMs,
+            ], $result->items),
+            'total' => $result->total,
+            'offset' => $result->offset,
+            'limit' => $result->limit,
+        ]);
+    }
+
+    #[Route(path: '/playlists/{playlistId}/tracks', name: 'playlist_tracks_add', methods: ['POST'], requirements: ['playlistId' => '.+'])]
+    public function playlistTracksAdd(string $profileId, string $playlistId, Request $request): JsonResponse
+    {
+        $body = $request->toArray();
+        $uris = $body['uris'] ?? [];
+        if (!is_array($uris) || empty($uris)) {
+            return new JsonResponse(['error' => 'uris array required'], 400);
+        }
+        ($this->addTracks)($profileId, $playlistId, array_values(array_map('strval', $uris)));
+        return new JsonResponse(['ok' => true]);
+    }
+
+    #[Route(path: '/playlists/create', name: 'playlist_create', methods: ['POST'])]
+    public function playlistCreate(string $profileId, Request $request): JsonResponse
+    {
+        $body = $request->toArray();
+        $name = trim((string) ($body['name'] ?? ''));
+        $description = isset($body['description']) ? trim((string) $body['description']) : null;
+        if ($name === '') {
+            return new JsonResponse(['error' => 'name required'], 400);
+        }
+        $playlist = ($this->createPlaylist)($profileId, $name, $description);
+        return new JsonResponse([
+            'id' => $playlist->id,
+            'name' => $playlist->name,
+            'uri' => $playlist->uri,
+            'owner_id' => $playlist->ownerId,
+        ], 201);
     }
 }

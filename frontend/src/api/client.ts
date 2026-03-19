@@ -19,7 +19,7 @@ async function request<T>(
       ...options.headers,
     },
   });
-  const data = await res.json().catch(() => ({}));
+  const data = res.status === 204 ? {} : await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = new Error((data as ApiError).detail ?? res.statusText) as Error & { status?: number; body?: ApiError };
     err.status = res.status;

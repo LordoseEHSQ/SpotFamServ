@@ -37,6 +37,12 @@ class SpotifyAccountLink
     #[ORM\Column(name: 'expires_at', type: 'datetime_immutable')]
     private \DateTimeImmutable $expiresAt;
 
+    #[ORM\Column(name: 'spotify_display_name', length: 255, nullable: true)]
+    private ?string $spotifyDisplayName = null;
+
+    #[ORM\Column(name: 'last_validated_at', type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $lastValidatedAt = null;
+
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
@@ -67,6 +73,11 @@ class SpotifyAccountLink
     public function getFamilyProfileId(): string
     {
         return $this->familyProfileId;
+    }
+
+    public function getSpotifyUserId(): string
+    {
+        return $this->spotifyUserId;
     }
 
     public function getAccessToken(): string
@@ -109,5 +120,30 @@ class SpotifyAccountLink
             $this->scopes = $scopes;
         }
         $this->updatedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+    }
+
+    public function getSpotifyDisplayName(): ?string
+    {
+        return $this->spotifyDisplayName;
+    }
+
+    public function setSpotifyDisplayName(?string $name): void
+    {
+        $this->spotifyDisplayName = $name;
+        $this->updatedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+    }
+
+    public function getLastValidatedAt(): ?\DateTimeImmutable
+    {
+        return $this->lastValidatedAt;
+    }
+
+    public function markValidated(?string $displayName = null): void
+    {
+        $this->lastValidatedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        if ($displayName !== null) {
+            $this->spotifyDisplayName = $displayName;
+        }
+        $this->updatedAt = $this->lastValidatedAt;
     }
 }

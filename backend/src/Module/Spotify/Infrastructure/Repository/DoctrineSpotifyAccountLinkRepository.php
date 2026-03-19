@@ -25,4 +25,10 @@ final class DoctrineSpotifyAccountLinkRepository implements SpotifyAccountLinkRe
         $this->em->persist($link);
         $this->em->flush();
     }
+
+    public function delete(SpotifyAccountLink $link): void
+    {
+        $this->em->remove($link);
+        $this->em->flush();
+    }
 }

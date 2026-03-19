@@ -74,6 +74,7 @@ services:
     App\Module\Spotify\Application\Port\SpotifyApiClientInterface: '@App\Module\Spotify\Infrastructure\Spotify\SpotifyHttpApiClient'
     App\Module\Spotify\Application\Port\SpotifyTokenManagerInterface: '@App\Module\Spotify\Infrastructure\Spotify\SpotifyTokenManager'
     App\Module\Spotify\Application\Port\OAuthStateManagerInterface: '@App\Module\Spotify\Infrastructure\Spotify\SpotifyOAuthStateManager'
+    App\Module\Spotify\Application\Port\SpotifyAppConfigRepositoryInterface: '@App\Module\Spotify\Infrastructure\Repository\DoctrineSpotifyAppConfigRepository'
 
     App\Module\Spotify\Infrastructure\Spotify\SpotifyOAuthStateManager:
         arguments:
@@ -88,6 +89,17 @@ services:
         arguments:
             $clientId: '%spotify.client_id%'
             $redirectUri: '%spotify.redirect_uri%'
+
+    App\Module\Spotify\Application\GetSpotifyAppConfig:
+        arguments:
+            $envClientId: '%spotify.client_id%'
+            $envClientSecret: '%spotify.client_secret%'
+            $envRedirectUri: '%spotify.redirect_uri%'
+
+    App\Module\Spotify\Application\ValidateSpotifyAppConfig:
+        arguments:
+            $envClientId: '%spotify.client_id%'
+            $envRedirectUri: '%spotify.redirect_uri%'
 
     App\Module\Spotify\Infrastructure\Http\SpotifyOAuthController:
         arguments:

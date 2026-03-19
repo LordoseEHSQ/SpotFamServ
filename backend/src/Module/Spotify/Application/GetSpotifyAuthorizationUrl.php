@@ -31,12 +31,13 @@ final readonly class GetSpotifyAuthorizationUrl
                 'user-read-private',
                 'user-read-email',
                 'playlist-read-private',
+                'playlist-read-collaborative',
                 'playlist-modify-public',
                 'playlist-modify-private',
                 'user-modify-playback-state',
                 'user-read-playback-state',
             ]),
-            'show_dialog' => 'false',
+            'show_dialog' => 'true',
         ]);
         $url = 'https://accounts.spotify.com/authorize?' . $params;
         return new GetSpotifyAuthorizationUrlResult($url, $state, $redirectUri);

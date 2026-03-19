@@ -25,6 +25,9 @@ class FamilyProfile
     #[ORM\Column(name: 'default_spotify_device_id', length: 255, nullable: true)]
     private ?string $defaultSpotifyDeviceId = null;
 
+    #[ORM\Column(name: 'status', length: 32, options: ['default' => 'active'])]
+    private string $status = 'active';
+
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
@@ -74,6 +77,17 @@ class FamilyProfile
     public function setDefaultSpotifyDeviceId(?string $defaultSpotifyDeviceId): void
     {
         $this->defaultSpotifyDeviceId = $defaultSpotifyDeviceId;
+        $this->touch();
+    }
+
+    public function getStatus(): string
+    {
+        return $this->status;
+    }
+
+    public function setStatus(string $status): void
+    {
+        $this->status = $status;
         $this->touch();
     }
 

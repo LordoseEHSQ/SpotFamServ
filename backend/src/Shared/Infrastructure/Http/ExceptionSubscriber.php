@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Shared\Infrastructure\Http;
 
 use App\Module\SetupWizard\Domain\Exception\StepValidationException;
+use App\Module\Spotify\Domain\Exception\SpotifyApiException;
 use App\Module\Spotify\Domain\Exception\SpotifyNoDeviceException;
 use App\Module\Spotify\Domain\Exception\SpotifyNotConnectedException;
 use App\Module\Spotify\Domain\Exception\SpotifyOAuthStateException;
@@ -56,6 +57,19 @@ final class ExceptionSubscriber implements EventSubscriberInterface
                 $event->setResponse($response);
                 return;
             }
+        }
+
+        // Generic Spotify API errors: use embedded HTTP status (capped at 422 to avoid 5xx propagation)
+        if ($e instanceof SpotifyApiException) {
+            $status = $e->getHttpStatus();
+            // Map Spotify 4xx errors to meaningful HTTP responses; avoid echoing Spotify 5xx as our 5xx
+            $mappedStatus = match (true) {
+                $status === 404 => Response::HTTP_NOT_FOUND,
+                $status >= 400 && $status < 500 => Response::HTTP_UNPROCESSABLE_ENTITY,
+                default => Response::HTTP_BAD_GATEWAY,
+            };
+            $response = ProblemJsonResponse::fromDomainException($e, $mappedStatus, $instance);
+            $event->setResponse($response);
         }
     }
 }

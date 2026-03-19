@@ -11,6 +11,9 @@ use App\Module\FamilyProfile\Application\ListFamilyProfiles;
 use App\Module\FamilyProfile\Application\UpdateFamilyProfile;
 use App\Module\FamilyProfile\Domain\FamilyProfile;
 use App\Module\FamilyProfile\Infrastructure\Http\Dto\FamilyProfileRequest;
+use App\Module\Spotify\Application\Port\SpotifyAccountLinkRepositoryInterface;
+use App\Module\Spotify\Domain\SpotifyAccountLink;
+use App\Module\SetupWizard\Application\GetCompleteness;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,8 +28,9 @@ final class FamilyProfileController
         private readonly CreateFamilyProfile $createProfile,
         private readonly UpdateFamilyProfile $updateProfile,
         private readonly DeleteFamilyProfile $deleteProfile,
-    ) {
-    }
+        private readonly SpotifyAccountLinkRepositoryInterface $accountLinkRepository,
+        private readonly GetCompleteness $getCompleteness,
+    ) {}
 
     #[Route(name: 'list', methods: ['GET'])]
     public function list(): JsonResponse
@@ -47,7 +51,7 @@ final class FamilyProfileController
     #[Route(name: 'create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
-        $body = FamilyProfileRequest::fromRequest($request);
+        $body    = FamilyProfileRequest::fromRequest($request);
         $profile = ($this->createProfile)($body->name, $body->description);
         return new JsonResponse($this->profileToArray($profile), Response::HTTP_CREATED);
     }
@@ -55,7 +59,7 @@ final class FamilyProfileController
     #[Route(path: '/{id}', name: 'update', requirements: ['id' => '%uuid_regex%'], methods: ['PUT'])]
     public function update(string $id, Request $request): JsonResponse
     {
-        $body = FamilyProfileRequest::fromRequest($request);
+        $body    = FamilyProfileRequest::fromRequest($request);
         $profile = ($this->updateProfile)($id, $body->name, $body->description);
         return new JsonResponse($this->profileToArray($profile));
     }
@@ -69,13 +73,46 @@ final class FamilyProfileController
 
     private function profileToArray(FamilyProfile $p): array
     {
+        $link          = $this->accountLinkRepository->findByProfileId((string) $p->getId());
+        $spotifyStatus = $this->resolveSpotifyStatus($link);
+
+        $completeness = null;
+        try {
+            $completeness = ($this->getCompleteness)((string) $p->getId());
+        } catch (\Throwable) {
+            // kein Setup gestartet – kein Fehler werfen
+        }
+
         return [
-            'id' => $p->getId(),
-            'name' => $p->getName(),
-            'description' => $p->getDescription(),
+            'id'                        => $p->getId(),
+            'name'                      => $p->getName(),
+            'description'               => $p->getDescription(),
+            'status'                    => $p->getStatus(),
             'default_spotify_device_id' => $p->getDefaultSpotifyDeviceId(),
-            'created_at' => $p->getCreatedAt()->format(\DateTimeInterface::ATOM),
-            'updated_at' => $p->getUpdatedAt()->format(\DateTimeInterface::ATOM),
+            'default_device_name'       => null, // wird in zukünftiger Version aus SpotifyDevice geladen
+            'spotify_status'            => $spotifyStatus,
+            'spotify_user_display_name' => $link?->getSpotifyUserId(),
+            'setup_complete'            => $completeness !== null && $completeness->percent >= 100,
+            'setup_percent'             => $completeness?->percent ?? 0,
+            'last_activity_at'          => null, // wird in zukünftiger Version aus ActivityLog geladen
+            'created_at'                => $p->getCreatedAt()->format(\DateTimeInterface::ATOM),
+            'updated_at'                => $p->getUpdatedAt()->format(\DateTimeInterface::ATOM),
         ];
+    }
+
+    private function resolveSpotifyStatus(?SpotifyAccountLink $link): string
+    {
+        if ($link === null) {
+            return 'not_connected';
+        }
+
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+
+        // Wenn Token bereits abgelaufen (mit 5-Minuten-Puffer)
+        if ($link->getExpiresAt() < $now->modify('-5 minutes')) {
+            return 'expired';
+        }
+
+        return 'connected';
     }
 }
