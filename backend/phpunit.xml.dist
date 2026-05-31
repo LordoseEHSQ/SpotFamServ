@@ -14,12 +14,12 @@
             <directory>src</directory>
         </include>
         <exclude>
-            <directory>src/Kernel.php</directory>
+            <file>src/Kernel.php</file>
         </exclude>
-        <coverage>
-            <report>
-                <html outputDirectory="var/coverage"/>
-            </report>
-        </coverage>
     </source>
+    <!--
+      Kein coverage-Report in der Default-Config: ohne Coverage-Treiber (pcov/xdebug)
+      wuerde PHPUnit sonst warnen und mit Exit 1 abbrechen. Coverage bei Bedarf via
+      CLI-Coverage-Flag mit aktivem Treiber erzeugen.
+    -->
 </phpunit>

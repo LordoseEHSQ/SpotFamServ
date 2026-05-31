@@ -1,0 +1,13 @@
+nelmio_api_doc:
+    documentation:
+        info:
+            title: SpotFamServ API
+            description: 'Spotify Familien Server – Backend API (Vertrag, geprüft via oasdiff)'
+            version: 1.0.0
+        servers:
+            - url: /api/v1
+              description: API v1
+    areas:
+        default:
+            path_patterns:
+                - ^/api/v1

@@ -1,0 +1,613 @@
+openapi: 3.0.0
+info:
+  title: 'SpotFamServ API'
+  description: 'Spotify Familien Server – Backend API (Vertrag, geprüft via oasdiff)'
+  version: 1.0.0
+servers:
+  -
+    url: /api/v1
+    description: 'API v1'
+paths:
+  /api/v1/activity-log:
+    get:
+      operationId: get_api_activity_log_list
+      responses:
+        default:
+          description: ''
+  /api/v1/devices:
+    get:
+      operationId: get_api_devices_list
+      responses:
+        default:
+          description: ''
+  '/api/v1/devices/{id}':
+    get:
+      operationId: get_api_devices_get
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        default:
+          description: ''
+  '/api/v1/devices/{id}/assign':
+    put:
+      operationId: put_api_devices_assign
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        default:
+          description: ''
+  /api/v1/devices/discover:
+    post:
+      operationId: post_api_devices_discover
+      responses:
+        default:
+          description: ''
+  /api/v1/devices/discovery-runs/latest:
+    get:
+      operationId: get_api_devices_discovery_latest
+      responses:
+        default:
+          description: ''
+  /api/v1/devices/discovery-runs:
+    get:
+      operationId: get_api_devices_discovery_runs
+      responses:
+        default:
+          description: ''
+  /api/v1/profiles:
+    get:
+      operationId: get_api_profiles_list
+      responses:
+        default:
+          description: ''
+    post:
+      operationId: post_api_profiles_create
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{id}':
+    get:
+      operationId: get_api_profiles_get
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+    put:
+      operationId: put_api_profiles_update
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+    delete:
+      operationId: delete_api_profiles_delete
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/rfid-cards':
+    get:
+      operationId: get_api_rfid_list
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+    post:
+      operationId: post_api_rfid_create
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/rfid-cards/{cardId}':
+    get:
+      operationId: get_api_rfid_get
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+        -
+          name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+    put:
+      operationId: put_api_rfid_update
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+        -
+          name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+    delete:
+      operationId: delete_api_rfid_delete
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+        -
+          name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/rfid-cards/{cardId}/binding':
+    get:
+      operationId: get_api_rfid_get_binding
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+        -
+          name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+    put:
+      operationId: put_api_rfid_set_binding
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+        -
+          name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  /api/v1/readers/scan:
+    post:
+      operationId: post_api_scan_scan
+      responses:
+        default:
+          description: ''
+  /api/v1/readers/next:
+    post:
+      operationId: post_api_scan_next
+      responses:
+        default:
+          description: ''
+  /api/v1/readers/previous:
+    post:
+      operationId: post_api_scan_previous
+      responses:
+        default:
+          description: ''
+  /api/v1/readers/scan-events:
+    get:
+      operationId: get_api_scan_scan_events
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/setup':
+    get:
+      operationId: get_api_setup_state
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/setup/step':
+    put:
+      operationId: put_api_setup_step_submit
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+    post:
+      operationId: post_api_setup_step_submit
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/setup/current-step':
+    put:
+      operationId: put_api_setup_current_step
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/setup/completeness':
+    get:
+      operationId: get_api_setup_completeness
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/authorization-url':
+    get:
+      operationId: get_api_spotify_authorization_url
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/status':
+    get:
+      operationId: get_api_spotify_status
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/validate':
+    post:
+      operationId: post_api_spotify_validate
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/disconnect':
+    delete:
+      operationId: delete_api_spotify_disconnect
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/playlist-references':
+    get:
+      operationId: get_api_spotify_playlist_references_list
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+    post:
+      operationId: post_api_spotify_playlist_references_create
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/playlists':
+    get:
+      operationId: get_api_spotify_playlists
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/search':
+    get:
+      operationId: get_api_spotify_search
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/devices':
+    get:
+      operationId: get_api_spotify_devices
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/playback/start':
+    post:
+      operationId: post_api_spotify_playback_start
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/player':
+    get:
+      operationId: get_api_spotify_player_state
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/player/pause':
+    post:
+      operationId: post_api_spotify_player_pause
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/player/next':
+    post:
+      operationId: post_api_spotify_player_next
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/player/previous':
+    post:
+      operationId: post_api_spotify_player_previous
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/playlists/{playlistId}/tracks':
+    get:
+      operationId: get_api_spotify_playlist_tracks
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+        -
+          name: playlistId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: .+
+      responses:
+        default:
+          description: ''
+    post:
+      operationId: post_api_spotify_playlist_tracks_add
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+        -
+          name: playlistId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: .+
+      responses:
+        default:
+          description: ''
+  '/api/v1/profiles/{profileId}/spotify/playlists/create':
+    post:
+      operationId: post_api_spotify_playlist_create
+      parameters:
+        -
+          name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+  /api/v1/spotify/callback:
+    get:
+      operationId: get_api_spotify_oauth_callback
+      responses:
+        default:
+          description: ''
+  /api/v1/system/spotify:
+    get:
+      operationId: get_api_system_spotify_config_get
+      responses:
+        default:
+          description: ''
+    put:
+      operationId: put_api_system_spotify_config_save
+      responses:
+        default:
+          description: ''
+  /api/v1/system/spotify/validate:
+    post:
+      operationId: post_api_system_spotify_config_validate
+      responses:
+        default:
+          description: ''
+

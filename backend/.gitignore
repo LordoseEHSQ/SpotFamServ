@@ -13,3 +13,8 @@
 /phpunit.xml
 /.phpunit.cache/
 ###< phpunit/phpunit ###
+
+###> phpstan ###
+/phpstan.neon
+/.phpunit.result.cache
+###< phpstan ###
