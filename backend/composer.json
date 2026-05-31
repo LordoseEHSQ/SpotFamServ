@@ -4,30 +4,35 @@
     "license": "proprietary",
     "type": "project",
     "require": {
-        "php": ">=8.3",
+        "php": ">=8.4",
         "ext-json": "*",
         "ext-pdo": "*",
-        "doctrine/doctrine-bundle": "^2.11",
-        "doctrine/doctrine-migrations-bundle": "^3.3",
-        "doctrine/orm": "^3.0",
-        "symfony/console": "^7.2",
-        "symfony/doctrine-bridge": "^7.2",
-        "symfony/dotenv": "^7.2",
+        "doctrine/doctrine-bundle": "^2.13",
+        "doctrine/doctrine-migrations-bundle": "^3.4",
+        "doctrine/orm": "^3.3",
+        "nelmio/api-doc-bundle": "^5.0",
+        "symfony/console": "^7.4",
+        "symfony/doctrine-bridge": "^7.4",
+        "symfony/dotenv": "^7.4",
         "symfony/flex": "^2.4",
-        "symfony/framework-bundle": "^7.2",
-        "symfony/http-client": "^7.2",
-        "symfony/runtime": "^7.2",
-        "symfony/security-bundle": "^7.2",
-        "symfony/serializer": "^7.2",
+        "symfony/framework-bundle": "^7.4",
+        "symfony/http-client": "^7.4",
+        "symfony/runtime": "^7.4",
+        "symfony/security-bundle": "^7.4",
+        "symfony/serializer": "^7.4",
         "symfony/uid": "^7.4",
-        "symfony/validator": "^7.2",
-        "symfony/yaml": "^7.2"
+        "symfony/validator": "^7.4",
+        "symfony/yaml": "^7.4"
     },
     "require-dev": {
-        "phpunit/phpunit": "^11.0",
-        "symfony/browser-kit": "^7.2",
-        "symfony/css-selector": "^7.2",
-        "symfony/phpunit-bridge": "^7.2"
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-doctrine": "^2.0",
+        "phpstan/phpstan-symfony": "^2.0",
+        "phpunit/phpunit": "^11.5",
+        "symfony/browser-kit": "^7.4",
+        "symfony/css-selector": "^7.4",
+        "symfony/phpunit-bridge": "^7.4"
     },
     "autoload": {
         "psr-4": {
@@ -42,16 +47,27 @@
     "config": {
         "allow-plugins": {
             "php-http/discovery": true,
+            "phpstan/extension-installer": true,
             "symfony/flex": true,
             "symfony/runtime": true
+        },
+        "platform": {
+            "php": "8.5.6"
         },
         "sort-packages": true
     },
     "minimum-stability": "stable",
+    "extra": {
+        "symfony": {
+            "require": "7.4.*"
+        }
+    },
     "scripts": {
         "auto-scripts": {
             "cache:clear": "symfony-cmd",
             "assets:install %PUBLIC_DIR%": "symfony-cmd"
-        }
+        },
+        "stan": "phpstan analyse",
+        "openapi-dump": "php bin/console nelmio:apidoc:dump --format=yaml"
     }
 }

@@ -1,0 +1,343 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Method App\\Module\\ActivityLog\\Domain\\ActivityLog\:\:__construct\(\) has parameter \$details with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/ActivityLog/Domain/ActivityLog.php
+
+		-
+			message: '#^Method App\\Module\\ActivityLog\\Domain\\ActivityLog\:\:getDetails\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/ActivityLog/Domain/ActivityLog.php
+
+		-
+			message: '#^Property App\\Module\\ActivityLog\\Domain\\ActivityLog\:\:\$details type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/ActivityLog/Domain/ActivityLog.php
+
+		-
+			message: '#^Method App\\Module\\Admin\\Domain\\AdminUser\:\:getUserIdentifier\(\) should return non\-empty\-string but returns string\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Module/Admin/Domain/AdminUser.php
+
+		-
+			message: '#^Property App\\Module\\Device\\Application\\AssignDevice\:\:\$profileRepository is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Module/Device/Application/AssignDevice.php
+
+		-
+			message: '#^Offset ''type'' on array\{id\: string, name\: string, type\: string, is_active\: bool\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Module/Device/Application/RunDeviceDiscovery.php
+
+		-
+			message: '#^Method App\\Module\\Device\\Domain\\DeviceDiscoveryRun\:\:finish\(\) has parameter \$rawPayload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/Device/Domain/DeviceDiscoveryRun.php
+
+		-
+			message: '#^Method App\\Module\\Device\\Domain\\DeviceDiscoveryRun\:\:getRawPayload\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/Device/Domain/DeviceDiscoveryRun.php
+
+		-
+			message: '#^Property App\\Module\\Device\\Domain\\DeviceDiscoveryRun\:\:\$rawPayload type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/Device/Domain/DeviceDiscoveryRun.php
+
+		-
+			message: '#^Class App\\Shared\\Infrastructure\\Http\\ProblemJsonResponse does not have a constructor and must be instantiated without any parameters\.$#'
+			identifier: new.noConstructor
+			count: 4
+			path: src/Module/Device/Infrastructure/Http/DeviceController.php
+
+		-
+			message: '#^Method App\\Module\\Device\\Infrastructure\\Http\\DeviceController\:\:assign\(\) should return Symfony\\Component\\HttpFoundation\\JsonResponse but returns App\\Shared\\Infrastructure\\Http\\ProblemJsonResponse\.$#'
+			identifier: return.type
+			count: 2
+			path: src/Module/Device/Infrastructure/Http/DeviceController.php
+
+		-
+			message: '#^Method App\\Module\\Device\\Infrastructure\\Http\\DeviceController\:\:get\(\) should return Symfony\\Component\\HttpFoundation\\JsonResponse but returns App\\Shared\\Infrastructure\\Http\\ProblemJsonResponse\.$#'
+			identifier: return.type
+			count: 2
+			path: src/Module/Device/Infrastructure/Http/DeviceController.php
+
+		-
+			message: '#^Method App\\Module\\Device\\Infrastructure\\Http\\DeviceController\:\:serialize\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/Device/Infrastructure/Http/DeviceController.php
+
+		-
+			message: '#^Method App\\Module\\Device\\Infrastructure\\Http\\DeviceController\:\:serializeRun\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/Device/Infrastructure/Http/DeviceController.php
+
+		-
+			message: '#^Method App\\Module\\FamilyProfile\\Infrastructure\\Http\\FamilyProfileController\:\:profileToArray\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/FamilyProfile/Infrastructure/Http/FamilyProfileController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>percent" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: src/Module/FamilyProfile/Infrastructure/Http/FamilyProfileController.php
+
+		-
+			message: '#^Method App\\Module\\Rfid\\Infrastructure\\Http\\RfidCardController\:\:cardToArray\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/Rfid/Infrastructure/Http/RfidCardController.php
+
+		-
+			message: '#^Method App\\Module\\Rfid\\Infrastructure\\Http\\RfidCardController\:\:playlistRefToArray\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/Rfid/Infrastructure/Http/RfidCardController.php
+
+		-
+			message: '#^Parameter \#1 \$cardId of class App\\Module\\Scan\\Domain\\ScanCardContext constructor expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Module/Rfid/Infrastructure/Scan/RfidScanCardResolver.php
+
+		-
+			message: '#^Parameter \#1 \$rfidCardId of method App\\Module\\Rfid\\Application\\Port\\CardPlaylistBindingRepositoryInterface\:\:findByCardId\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Module/Rfid/Infrastructure/Scan/RfidScanCardResolver.php
+
+		-
+			message: '#^Method App\\Module\\Scan\\Application\\Port\\ScanEventRepositoryInterface\:\:append\(\) has parameter \$details with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/Scan/Application/Port/ScanEventRepositoryInterface.php
+
+		-
+			message: '#^Method App\\Module\\Scan\\Application\\ProcessScan\:\:logScan\(\) has parameter \$details with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/Scan/Application/ProcessScan.php
+
+		-
+			message: '#^Method App\\Module\\Scan\\Domain\\ScanEvent\:\:__construct\(\) has parameter \$details with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/Scan/Domain/ScanEvent.php
+
+		-
+			message: '#^Property App\\Module\\Scan\\Domain\\ScanEvent\:\:\$details type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/Scan/Domain/ScanEvent.php
+
+		-
+			message: '#^Method App\\Module\\Scan\\Infrastructure\\Repository\\DoctrineScanEventRepository\:\:append\(\) has parameter \$details with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/Scan/Infrastructure/Repository/DoctrineScanEventRepository.php
+
+		-
+			message: '#^Comparison operation "\>" between 9 and 0 is always true\.$#'
+			identifier: greater.alwaysTrue
+			count: 1
+			path: src/Module/SetupWizard/Application/GetCompleteness.php
+
+		-
+			message: '#^Offset ''status'' on array\{step_key\: string, status\: string, payload\: array\|null\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Module/SetupWizard/Application/GetCompleteness.php
+
+		-
+			message: '#^Parameter \#1 \$sessionId of method App\\Module\\SetupWizard\\Application\\Port\\ProfileSetupSessionRepositoryInterface\:\:getStepStatuses\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Module/SetupWizard/Application/GetCompleteness.php
+
+		-
+			message: '#^Method App\\Module\\SetupWizard\\Application\\GetCompletenessResult\:\:__construct\(\) has parameter \$steps with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/SetupWizard/Application/GetCompletenessResult.php
+
+		-
+			message: '#^Parameter \#1 \$sessionId of method App\\Module\\SetupWizard\\Application\\Port\\ProfileSetupSessionRepositoryInterface\:\:getStepStatuses\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Module/SetupWizard/Application/GetWizardState.php
+
+		-
+			message: '#^Method App\\Module\\SetupWizard\\Application\\GetWizardStateResult\:\:__construct\(\) has parameter \$steps with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/SetupWizard/Application/GetWizardStateResult.php
+
+		-
+			message: '#^Method App\\Module\\SetupWizard\\Application\\Port\\ProfileSetupSessionRepositoryInterface\:\:getStepStatuses\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/SetupWizard/Application/Port/ProfileSetupSessionRepositoryInterface.php
+
+		-
+			message: '#^Method App\\Module\\SetupWizard\\Application\\Port\\ProfileSetupSessionRepositoryInterface\:\:upsertStepStatus\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/SetupWizard/Application/Port/ProfileSetupSessionRepositoryInterface.php
+
+		-
+			message: '#^Parameter \#1 \$sessionId of method App\\Module\\SetupWizard\\Application\\Port\\ProfileSetupSessionRepositoryInterface\:\:getStepStatuses\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Module/SetupWizard/Application/SetCurrentStep.php
+
+		-
+			message: '#^Parameter \#1 \$sessionId of method App\\Module\\SetupWizard\\Application\\Port\\ProfileSetupSessionRepositoryInterface\:\:getStepStatuses\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Module/SetupWizard/Application/SubmitStep.php
+
+		-
+			message: '#^Method App\\Module\\SetupWizard\\Application\\SubmitStepRequest\:\:__construct\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/SetupWizard/Application/SubmitStepRequest.php
+
+		-
+			message: '#^Method App\\Module\\SetupWizard\\Application\\SubmitStepResult\:\:__construct\(\) has parameter \$steps with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/SetupWizard/Application/SubmitStepResult.php
+
+		-
+			message: '#^Method App\\Module\\SetupWizard\\Domain\\Exception\\StepValidationException\:\:__construct\(\) has parameter \$steps with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/SetupWizard/Domain/Exception/StepValidationException.php
+
+		-
+			message: '#^Method App\\Module\\SetupWizard\\Domain\\ProfileSetupStepStatus\:\:getPayload\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/SetupWizard/Domain/ProfileSetupStepStatus.php
+
+		-
+			message: '#^Method App\\Module\\SetupWizard\\Domain\\ProfileSetupStepStatus\:\:setPayload\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/SetupWizard/Domain/ProfileSetupStepStatus.php
+
+		-
+			message: '#^Property App\\Module\\SetupWizard\\Domain\\ProfileSetupStepStatus\:\:\$payload type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/SetupWizard/Domain/ProfileSetupStepStatus.php
+
+		-
+			message: '#^Method App\\Module\\SetupWizard\\Infrastructure\\Repository\\DoctrineProfileSetupSessionRepository\:\:getStepStatuses\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/SetupWizard/Infrastructure/Repository/DoctrineProfileSetupSessionRepository.php
+
+		-
+			message: '#^Method App\\Module\\SetupWizard\\Infrastructure\\Repository\\DoctrineProfileSetupSessionRepository\:\:upsertStepStatus\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/SetupWizard/Infrastructure/Repository/DoctrineProfileSetupSessionRepository.php
+
+		-
+			message: '#^Parameter \#1 \$profileSetupSessionId of class App\\Module\\SetupWizard\\Domain\\ProfileSetupStepStatus constructor expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Module/SetupWizard/Infrastructure/Repository/DoctrineProfileSetupSessionRepository.php
+
+		-
+			message: '#^Instantiated class App\\Module\\Spotify\\Domain\\Exception\\SpotifyProfileNotFoundException not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Module/Spotify/Application/DisconnectSpotify.php
+
+		-
+			message: '#^Throwing object of an unknown class App\\Module\\Spotify\\Domain\\Exception\\SpotifyProfileNotFoundException\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Module/Spotify/Application/DisconnectSpotify.php
+
+		-
+			message: '#^Property App\\Module\\Spotify\\Application\\ExchangeSpotifyCode\:\:\$tokenManager is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Module/Spotify/Application/ExchangeSpotifyCode.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between non\-empty\-string and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 2
+			path: src/Module/Spotify/Application/ValidateSpotifyAppConfig.php
+
+		-
+			message: '#^Method App\\Module\\Spotify\\Infrastructure\\Spotify\\SpotifyHttpApiClient\:\:decodeAndMapErrors\(\) has parameter \$response with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Module/Spotify/Infrastructure/Spotify/SpotifyHttpApiClient.php
+
+		-
+			message: '#^Method App\\Module\\Spotify\\Infrastructure\\Spotify\\SpotifyHttpApiClient\:\:decodeAndMapErrors\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/Spotify/Infrastructure/Spotify/SpotifyHttpApiClient.php
+
+		-
+			message: '#^Method App\\Module\\Spotify\\Infrastructure\\Spotify\\SpotifyHttpApiClient\:\:extractErrorMessage\(\) has parameter \$response with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Module/Spotify/Infrastructure/Spotify/SpotifyHttpApiClient.php
+
+		-
+			message: '#^Method App\\Module\\Spotify\\Infrastructure\\Spotify\\SpotifyHttpApiClient\:\:get\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Module/Spotify/Infrastructure/Spotify/SpotifyHttpApiClient.php
+
+		-
+			message: '#^Method App\\Module\\Spotify\\Infrastructure\\Spotify\\SpotifyHttpApiClient\:\:parseTokenResponse\(\) has parameter \$response with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Module/Spotify/Infrastructure/Spotify/SpotifyHttpApiClient.php
+
+		-
+			message: '#^Offset ''is_playing'' on non\-empty\-array on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Module/Spotify/Infrastructure/Spotify/SpotifyHttpApiClient.php
+
+		-
+			message: '#^Parameter \#2 \$tracks of class App\\Module\\Spotify\\Application\\Dto\\SpotifySearchResultDto constructor expects list\<array\{id\: string, name\: string, uri\: string, artists\: list\<string\>, album_name\: string\|null, album_cover_url\: string\|null, duration_ms\: int, type\: string\}\>, list\<array\{id\: string, name\: string, uri\: string, artists\: array\<string\>, album_name\: string, album_cover_url\: string\|null, duration_ms\: int, type\: ''track''\}\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Module/Spotify/Infrastructure/Spotify/SpotifyHttpApiClient.php
+
+		-
+			message: '#^Parameter \#4 \$artists of class App\\Module\\Spotify\\Application\\Dto\\SpotifyTrackDto constructor expects list\<string\>, array\<string\> given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Module/Spotify/Infrastructure/Spotify/SpotifyHttpApiClient.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: src/Module/Spotify/Infrastructure/Spotify/SpotifyOAuthStateManager.php

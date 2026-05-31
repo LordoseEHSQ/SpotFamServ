@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_ENV: test
+  APP_SECRET: ci-dummy-secret
+  DATABASE_URL: "postgresql://spotfam:spotfam@127.0.0.1:5432/spotfam?serverVersion=17&charset=utf8"
+  SPOTIFY_REDIRECT_URI: "http://localhost/api/v1/spotify/callback"
+  FRONTEND_URL: "http://localhost:5173"
+  READER_API_KEY: "ci-dummy"
+
+jobs:
+  backend:
+    name: Backend (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.4', '8.5']
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: intl, pdo_pgsql, sodium
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer files
+        run: composer validate --no-check-publish
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ matrix.php }}-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-${{ matrix.php }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: PHPStan (Level 8)
+        run: php vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+      - name: PHPUnit
+        run: php vendor/bin/phpunit
+
+      - name: Security audit (Composer-Abhängigkeiten)
+        run: composer audit
+
+  frontend:
+    name: Frontend (Node 22)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Hinweis: 'pnpm lint' ist bewusst NICHT aktiv – ESLint ist im Projekt
+      # weder als Dependency noch per Config eingerichtet. Erst ESLint einführen,
+      # dann hier einen Lint-Step ergänzen.
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm exec vitest run --passWithNoTests
+
+  api-drift:
+    name: API-Drift (oasdiff)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: intl, pdo_pgsql, sodium
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        working-directory: backend
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Generate current OpenAPI spec (revision)
+        working-directory: backend
+        run: php bin/console nelmio:apidoc:dump --format=yaml > openapi.yaml
+
+      - name: Extract base OpenAPI spec
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          if git cat-file -e "origin/${{ github.base_ref }}:backend/openapi.yaml" 2>/dev/null; then
+            git show "origin/${{ github.base_ref }}:backend/openapi.yaml" > base-openapi.yaml
+            echo "has_baseline=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Keine OpenAPI-Baseline auf '${{ github.base_ref }}' – Drift-Check wird übersprungen."
+            cp backend/openapi.yaml base-openapi.yaml
+            echo "has_baseline=false" >> "$GITHUB_OUTPUT"
+          fi
+        id: base
+
+      - name: Detect breaking API changes
+        uses: oasdiff/oasdiff-action/breaking@v0.0.49
+        with:
+          base: base-openapi.yaml
+          revision: backend/openapi.yaml
+          fail-on: ERR
+
+  security:
+    name: Security Scan (Trivy)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+          skip-dirs: backend/vendor,frontend/node_modules

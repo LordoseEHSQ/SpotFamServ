@@ -1,7 +1,9 @@
 # Plan: Stack-Modernisierung + CI-Pipeline (PHP, PHPStan L8, API-Drift, Security)
 
 **Erstellt:** 2026-05-31
-**Status:** In Progress (Implementierung blockiert bis Architekturentscheidungen bestätigt)
+**Status:** Implementiert auf Branch `chore/stack-modernization` (lokal verifiziert; GitHub-Actions-Lauf steht noch aus)
+
+**Bestätigte Entscheidungen:** D-1 = Symfony **7.4 LTS** · D-2 = **L8 + Baseline** · D-3 = **nelmio/api-doc-bundle** · D-4 = PHP **8.5.6** · Scope = alles in einem Branch
 
 ## Scope
 Backend-Stack auf einen aktuellen, supporteten Stand bringen (PHP + Symfony),
@@ -127,14 +129,14 @@ Supply-Chain, Secrets) in die Pipeline integrieren.
 7. Bestehende 3 Tests laufen weiter grün.
 
 ## 7. Definition of Done
-- [ ] Stack-Constraints aktualisiert + `composer.lock` neu
-- [ ] PHP-/Postgres-Image gepinnt, Build verifiziert
-- [ ] PHPStan L8 + Baseline, lokal + CI grün
-- [ ] CI-Workflow grün (alle Stages)
-- [ ] `composer audit` sauber
-- [ ] OpenAPI-Baseline + oasdiff-Gate aktiv
-- [ ] Security-Stages dokumentiert
-- [ ] Bestehende Tests grün, keine Regression
+- [x] Stack-Constraints aktualisiert + `composer.lock` neu (Symfony 7.4.*, keine 8.x-Leakage)
+- [x] PHP-/Postgres-Image gepinnt (8.5.6 / pg17), Build lokal verifiziert
+- [x] PHPStan L8 + Baseline (64 Findings), lokal grün
+- [~] CI-Workflow geschrieben + actionlint-clean; GitHub-Lauf steht aus
+- [x] `composer audit` sauber ("No security vulnerability advisories found")
+- [x] OpenAPI-Baseline (`backend/openapi.yaml`) + oasdiff-Gate (lokal verifiziert)
+- [x] Security-Stages dokumentiert (composer audit + Trivy fs vuln/secret)
+- [x] Bestehende Tests grün, keine Regression (final-Mock-Bug behoben)
 
 ## 8. Risiken / Offene Fragen
 - **Symfony-Upgrade-Deprecations** könnten Laufzeitfehler erzeugen → in CI fangen,
@@ -155,7 +157,23 @@ Supply-Chain, Secrets) in die Pipeline integrieren.
 7. Security-Stages (audit, optional CodeQL/Trivy) + Doku.
 
 ## Verifikations-Log
-- (wird während Implementierung gefüllt)
+- Verifiziert: Docker-Image | `docker build` PHP 8.5.6 | Build OK (opcache ist im Image eingebaut, aus Install-Liste entfernt) | 2026-05-31
+- Verifiziert: composer-Resolution | `composer update` im Container, Platform-Pin 8.5.6 | Symfony 7.4.13, keine v8-Leakage | 2026-05-31
+- Verifiziert: PHPStan L8 | `phpstan analyse` | Baseline 64 Findings, danach "No errors" | 2026-05-31
+- Verifiziert: Tests | `phpunit` | 5 Tests / 13 Assertions grün (Interface-Mocks statt final-Klassen) | 2026-05-31
+- Verifiziert: PHPUnit-Konfig | Schema-Validierung | `<coverage>` aus `<source>` gelöst, Warnung weg | 2026-05-31
+- Verifiziert: OpenAPI | `nelmio:apidoc:dump` | 613 Zeilen, OpenAPI 3.0.0 | 2026-05-31
+- Verifiziert: API-Drift | `oasdiff breaking` | self=clean, entfernter Pfad=ERR/exit1 | 2026-05-31
+- Verifiziert: Workflow-Syntax | actionlint (docker) | exit 0, keine Findings | 2026-05-31
+
+## Restrisiken / offen
+- GitHub-Actions-Lauf selbst (setup-php 8.5, oasdiff-action, trivy-action, frontend-Job) ist lokal NICHT verifizierbar.
+- Trivy-Gate (CRITICAL/HIGH, vuln+secret) kann beim ersten Lauf über Frontend-Lockfile rot werden → Schwellen ggf. justieren.
+- PHPStan-Baseline = 64 technische Schulden; Abbau ist Folge-Epic (D-2 Variante B).
+- Symfony-7.4→8.0 weiterhin offen (bewusst zurückgestellt zugunsten LTS).
+- Frontend (React 18/Vite 5) nicht modernisiert – außerhalb des PHP-Fokus.
 
 ## Abgeschlossen
-- (offen)
+- 2026-05-31: Backend-Stack auf PHP 8.5.6 + Symfony 7.4 LTS gehoben, PHPStan L8 (Baseline),
+  GitHub-Actions-Pipeline (backend-Matrix, frontend, api-drift, security), OpenAPI + oasdiff,
+  Trivy. Lokal vollständig verifiziert; PR-Lauf ausstehend.

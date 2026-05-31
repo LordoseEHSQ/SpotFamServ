@@ -14,12 +14,12 @@
             <directory>src</directory>
         </include>
         <exclude>
-            <directory>src/Kernel.php</directory>
+            <file>src/Kernel.php</file>
         </exclude>
-        <coverage>
-            <report>
-                <html outputDirectory="var/coverage"/>
-            </report>
-        </coverage>
     </source>
+    <coverage>
+        <report>
+            <html outputDirectory="var/coverage"/>
+        </report>
+    </coverage>
 </phpunit>
