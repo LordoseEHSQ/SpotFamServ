@@ -25,3 +25,8 @@ docker/volumes/
 # OS
 .DS_Store
 Thumbs.db
+
+# Raspberry-Pi-Images (gross, niemals committen)
+pi-image/
+*.img
+*.img.xz
