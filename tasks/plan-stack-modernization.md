@@ -1,7 +1,7 @@
 # Plan: Stack-Modernisierung + CI-Pipeline (PHP, PHPStan L8, API-Drift, Security)
 
 **Erstellt:** 2026-05-31
-**Status:** Implementiert auf Branch `chore/stack-modernization` (lokal verifiziert; GitHub-Actions-Lauf steht noch aus)
+**Status:** Done – Branch `chore/stack-modernization`, PR #1, CI vollständig grün (alle 5 Jobs)
 
 **Bestätigte Entscheidungen:** D-1 = Symfony **7.4 LTS** · D-2 = **L8 + Baseline** · D-3 = **nelmio/api-doc-bundle** · D-4 = PHP **8.5.6** · Scope = alles in einem Branch
 
@@ -132,7 +132,7 @@ Supply-Chain, Secrets) in die Pipeline integrieren.
 - [x] Stack-Constraints aktualisiert + `composer.lock` neu (Symfony 7.4.*, keine 8.x-Leakage)
 - [x] PHP-/Postgres-Image gepinnt (8.5.6 / pg17), Build lokal verifiziert
 - [x] PHPStan L8 + Baseline (64 Findings), lokal grün
-- [~] CI-Workflow geschrieben + actionlint-clean; GitHub-Lauf steht aus
+- [x] CI-Workflow grün auf GitHub (PR #1): backend 8.4/8.5, frontend, api-drift, security
 - [x] `composer audit` sauber ("No security vulnerability advisories found")
 - [x] OpenAPI-Baseline (`backend/openapi.yaml`) + oasdiff-Gate (lokal verifiziert)
 - [x] Security-Stages dokumentiert (composer audit + Trivy fs vuln/secret)
