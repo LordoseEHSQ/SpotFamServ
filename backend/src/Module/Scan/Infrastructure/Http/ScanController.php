@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Module\Scan\Infrastructure\Http;
 
 use App\Module\Scan\Application\ListScanEvents;
+use App\Module\Scan\Application\ProcessReaderControl;
 use App\Module\Scan\Application\ProcessScan;
 use App\Module\Scan\Domain\ScanEvent;
 use App\Module\Scan\Domain\ScanOutcome;
@@ -23,6 +24,7 @@ final class ScanController
     public function __construct(
         private readonly ProcessScan $processScan,
         private readonly ListScanEvents $listScanEvents,
+        private readonly ProcessReaderControl $processReaderControl,
         private readonly string $readerApiKey = '',
     ) {
     }
@@ -46,6 +48,35 @@ final class ScanController
 
         $result = ($this->processScan)($readerId, $cardUid);
         return new JsonResponse(['outcome' => $result->outcome, 'message' => $result->message]);
+    }
+
+    #[Route(path: '/next', name: 'next', methods: ['POST'])]
+    public function next(Request $request): JsonResponse
+    {
+        return $this->control($request, ProcessReaderControl::ACTION_NEXT);
+    }
+
+    #[Route(path: '/previous', name: 'previous', methods: ['POST'])]
+    public function previous(Request $request): JsonResponse
+    {
+        return $this->control($request, ProcessReaderControl::ACTION_PREVIOUS);
+    }
+
+    private function control(Request $request, string $action): JsonResponse
+    {
+        if ($this->readerApiKey !== '' && !$this->validateReaderAuth($request)) {
+            return new JsonResponse([
+                'outcome' => ScanOutcome::INVALID_REQUEST,
+                'message' => 'Missing or invalid API key. Use X-API-Key or Authorization: Bearer.',
+            ], 401);
+        }
+
+        $body = $request->getContent() !== '' ? $request->toArray() : [];
+        $readerId = isset($body['reader_id']) ? trim((string) $body['reader_id']) : '';
+
+        $result = ($this->processReaderControl)($readerId, $action);
+        $status = $result->outcome === ScanOutcome::SUCCESS ? 200 : 409;
+        return new JsonResponse(['outcome' => $result->outcome, 'message' => $result->message], $status);
     }
 
     #[Route(path: '/scan-events', name: 'scan_events', methods: ['GET'])]

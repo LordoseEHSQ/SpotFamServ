@@ -35,6 +35,10 @@ services:
     App\Module\Scan\Application\Port\ReaderDeviceRepositoryInterface: '@App\Module\Scan\Infrastructure\Repository\DoctrineReaderDeviceRepository'
     App\Module\Scan\Application\Port\ScanEventRepositoryInterface: '@App\Module\Scan\Infrastructure\Repository\DoctrineScanEventRepository'
     App\Module\Scan\Application\Port\ScanCardResolverInterface: '@App\Module\Rfid\Infrastructure\Scan\RfidScanCardResolver'
+    App\Module\Scan\Application\Port\PlaybackSessionStoreInterface: '@App\Module\Scan\Infrastructure\Session\CachePlaybackSessionStore'
+    App\Module\Scan\Infrastructure\Session\CachePlaybackSessionStore:
+        arguments:
+            $cache: '@cache.app'
     App\Module\Device\Application\Port\SpotifyDeviceRepositoryInterface: '@App\Module\Device\Infrastructure\Repository\DoctrineSpotifyDeviceRepository'
     App\Module\Device\Application\Port\DeviceDiscoveryRunRepositoryInterface: '@App\Module\Device\Infrastructure\Repository\DoctrineDeviceDiscoveryRunRepository'
     App\Module\ActivityLog\Application\Port\ActivityLogRepositoryInterface: '@App\Module\ActivityLog\Infrastructure\Repository\DoctrineActivityLogRepository'

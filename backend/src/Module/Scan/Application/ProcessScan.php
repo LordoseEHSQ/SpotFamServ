@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Module\Scan\Application;
 
+use App\Module\Scan\Application\Port\PlaybackSessionStoreInterface;
 use App\Module\Scan\Application\Port\ReaderDeviceRepositoryInterface;
 use App\Module\Scan\Application\Port\ScanCardResolverInterface;
 use App\Module\Scan\Application\Port\ScanEventRepositoryInterface;
@@ -26,6 +27,7 @@ final readonly class ProcessScan
         private ScanCardResolverInterface $cardResolver,
         private ReaderDeviceRepositoryInterface $readerDeviceRepository,
         private StartPlayback $startPlayback,
+        private PlaybackSessionStoreInterface $sessionStore,
     ) {
     }
 
@@ -72,6 +74,7 @@ final readonly class ProcessScan
             return new ProcessScanResult(ScanOutcome::PLAYBACK_FAILED, $e->getMessage());
         }
 
+        $this->sessionStore->remember($profileId, $readerId);
         $this->logScan($cardUid, ScanOutcome::SUCCESS, $readerId, $readerDeviceId, $cardId, $profileId, ['context_uri' => $context->playlistUri]);
         return new ProcessScanResult(ScanOutcome::SUCCESS, 'Playback started.');
     }

@@ -18,4 +18,5 @@ final class ScanOutcome
     public const DEBOUNCED = 'debounced';
     public const INVALID_REQUEST = 'invalid_request';
     public const UNKNOWN_READER = 'unknown_reader';
+    public const NO_SESSION = 'no_session';
 }
