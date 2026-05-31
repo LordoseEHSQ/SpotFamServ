@@ -18,8 +18,8 @@
         </exclude>
     </source>
     <!--
-      Kein <coverage>-Report in der Default-Config: ohne Coverage-Treiber (pcov/xdebug)
+      Kein coverage-Report in der Default-Config: ohne Coverage-Treiber (pcov/xdebug)
       wuerde PHPUnit sonst warnen und mit Exit 1 abbrechen. Coverage bei Bedarf via
-      'php vendor/bin/phpunit --coverage-html var/coverage' mit aktivem Treiber erzeugen.
+      CLI-Coverage-Flag mit aktivem Treiber erzeugen.
     -->
 </phpunit>
