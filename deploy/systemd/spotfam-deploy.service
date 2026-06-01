@@ -1,0 +1,12 @@
+[Unit]
+Description=SpotFamServ Pull-Deploy (tag-getriggert)
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=lars
+WorkingDirectory=/home/lars/SpotFamServ
+ExecStart=/home/lars/SpotFamServ/deploy/pi-deploy.sh
+# Logs landen im Journal: journalctl -u spotfam-deploy.service

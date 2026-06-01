@@ -30,3 +30,6 @@ Thumbs.db
 pi-image/
 *.img
 *.img.xz
+
+# Pi-Deploy DB-Backups
+backups/

@@ -13,6 +13,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # Opt-in auf Node24 fuer JS-Actions (Node20 wird ab 2026-06-16 abgekuendigt).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   APP_ENV: test
   APP_SECRET: ci-dummy-secret
   DATABASE_URL: "postgresql://spotfam:spotfam@127.0.0.1:5432/spotfam?serverVersion=17&charset=utf8"
