@@ -2,7 +2,23 @@
 
 ## [Unreleased]
 
+## [v0.1.0] – 2026-06-01 (Foundation)
+
+> Erster getaggter Release. Backend + Frontend laufen auf dem Pi, ESP32-Reader-Firmware
+> vorhanden, Governance-Prozess etabliert, automatisiertes Pull-Deploy aktiv.
+
 ### Neu
+- **Tag-getriggertes Pi-Auto-Deploy (Pull-basiert, Decision D-008)** – Der Pi ist ein
+  read-only git-Clone (Deploy-Key) und pollt per `systemd`-Timer (alle 2 Min) auf neue
+  `v*`-Tags. `deploy/pi-deploy.sh` ist idempotent (fetch tags → `pg_dump`-Backup →
+  checkout neuester Tag → conditional build/composer → `up -d` → migrate → Healthcheck),
+  `deploy/pi-backup.sh` sichert vor jeder Migration mit Rotation (`backups/`, `KEEP=7`).
+  Units in `deploy/systemd/`, Runbook in `deploy/README.md`.
+- **`restart: unless-stopped`** für `app`/`nginx`/`db` (Auto-Start nach Pi-Reboot).
+- **Branch Protection auf `main`** – PR-Pflicht, 5 required CI-Checks (Backend 8.4/8.5,
+  Frontend, Trivy, oasdiff), lineare History, kein Force-Push.
+- **CI-Härtung** – Node24-Opt-in (`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`) vor der
+  Node20-Abkündigung (2026-06-16).
 - **ESP32-RFID-Reader-Firmware (`firmware/spotfam_reader/`)** – Arduino-Sketch für ESP32 + MFRC522: liest Karten, sendet `POST /api/v1/readers/scan` ans Backend, zwei Taster lösen `/next` und `/previous` aus. Geheimnisse (WLAN, API-Key, Backend-URL) liegen in einer git-ignorierten `secrets.h` (Vorlage: `secrets.h.example`); Pinout/Verhalten in `config.h`. UID-Format: Uppercase-Hex ohne Trenner. Toolchain: arduino-cli + esp32:esp32@3.3.8.
 - **Reader-Steuer-Endpunkte `POST /api/v1/readers/next` und `/previous`** – Wirken auf das Profil der aktuellen Wiedergabe-Session. Neue `PlaybackSessionStoreInterface` + `CachePlaybackSessionStore` (cache.app, TTL 6 h) merkt sich beim erfolgreichen Scan das zuletzt abspielende Profil pro Reader (Fallback global). Neuer UseCase `ProcessReaderControl`, neuer Outcome `no_session`.
 - **`READER_API_KEY` jetzt wirksam verdrahtet** – Über `backend/.env.local` (Dev) bzw. `docker-compose.yml` (Pi) gesetzt; die Reader-Endpunkte verlangen `X-API-Key`/`Bearer`. Zuvor wurde der Key nicht an den App-Container durchgereicht (stiller Default = offen).

@@ -83,3 +83,23 @@ Einträge sind immutabel nach Erstellung. Bei Wiederholung eines Musters: Vorkom
 **Status:** Aktiv
 
 ---
+
+### L-009 | 2026-06-01 | Deploy/Git
+
+**Fehlermuster:** rsync-Kopie auf dem Pi soll ohne Datenverlust ein git-Clone werden (gleicher Pfad nötig, sonst ändert sich der Compose-Projektname → DB-Volume „weg").
+**Root Cause:** `docker compose`-Projektname = Verzeichnis-Basename → ein anderer Pfad erzeugt ein neues Volume.
+**Regel:** In-place konvertieren: im selben Pfad `git init` + `remote add` + `fetch` + `git reset --hard <tag>`. `reset --hard` überschreibt nur getrackte Dateien; git-ignorierte Secrets (`.env`, `backend/.env.local`, `frontend/dist`) bleiben erhalten. Vorher prüfen: `git check-ignore -v <secret-files>`. Zusätzlich Secrets nach `~/spotfam-secrets-backup` kopieren.
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
+### L-010 | 2026-06-01 | Deploy/Healthcheck
+
+**Fehlermuster:** Direkt nach `docker compose up -d` lieferte der Healthcheck `000` (curl-Timeout), obwohl der Stack korrekt war.
+**Root Cause:** Symfony-Cache-Warmup nach Container-Recreate dauert auf dem Pi mehrere Sekunden; ein einzelner Curl mit `set -e` bricht das ganze Skript ab.
+**Regel:** Healthcheck mit Retry-Schleife (z. B. 5× alle 4 s) statt einem Versuch; Curl-Exit nicht unter `set -e` hart werten. Der erste Request nach Recreate ist absichtlich der Warmup.
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---

@@ -1,7 +1,21 @@
 # Raspberry Pi Deployment – SpotFamServ
 
 Referenz/Runbook für den Betrieb des Backends + Frontends auf dem Pi.
-Stand: 2026-06-01. Begleitende Stolpersteine: siehe `tasks/lessons.md` (L-001..L-008).
+Stand: 2026-06-01. Begleitende Stolpersteine: siehe `tasks/lessons.md` (L-001..L-010).
+
+> **Ab `v0.1.0`: Deployment ist automatisiert (Pull-basiert).** Der Pi ist ein read-only
+> git-Clone und zieht per `systemd`-Timer neue `v*`-Tags. Maßgebliches Runbook:
+> [`deploy/README.md`](../deploy/README.md). Der manuelle rsync-Abschnitt weiter unten ist
+> historisch (Erstaufsetzung) und nicht mehr der Normalweg.
+
+## Auto-Deploy (maßgeblich, ab v0.1.0)
+
+- Repo auf dem Pi: git-Clone, Remote per read-only Deploy-Key (`~/.ssh/spotfam_deploy`,
+  `core.sshCommand` im Repo gesetzt).
+- Timer `spotfam-deploy.timer` (alle 2 Min) → `spotfam-deploy.service` → `deploy/pi-deploy.sh`.
+- Release auslösen: `git tag vX.Y.Z && git push origin vX.Y.Z` (von der Dev-Maschine).
+- Backups: `backups/db-<tag>-<ts>.sql.gz` (Rotation `KEEP=7`).
+- Status/Logs: `systemctl list-timers spotfam-deploy.timer` · `journalctl -u spotfam-deploy.service`.
 
 ## Hardware / OS
 
