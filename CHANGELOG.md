@@ -11,6 +11,8 @@
 - **Spotify-Verbindung trennen** – Im Tab „Spotify" des Teilnehmerprofils gibt es jetzt einen roten „Trennen"-Button mit Bestätigungsdialog. Er ruft `DELETE /api/v1/profiles/{id}/spotify/disconnect` auf und löscht das gespeicherte OAuth-Token. Danach kann die Verbindung mit frischen Berechtigungen neu autorisiert werden.
 - **Backend: `DisconnectSpotify` UseCase + `DELETE /disconnect` Endpoint** – Neuer UseCase und Endpoint für das Entfernen der `SpotifyAccountLink`-Entität. Repository-Interface und -Implementierung um `delete()`-Methode erweitert.
 - **Hinweis-Banner bei fehlenden Scopes** – Im Spotify-Tab erscheint ein Amber-Banner der erklärt, wann und wie das Trennen+Neuverbinden nötig ist (z. B. bei 403 auf Playlist-Funktionen).
+- **Pi-Deployment (Raspberry Pi 4B, Debian 13, aarch64)** – Stack (app/nginx/db) läuft via Docker Compose v2 auf dem Pi; Frontend statisch über nginx (gleicher Origin, `/api/v1`). Runbook + Specs in `docs/pi-deployment.md`. Spotify-OAuth via SSH-Loopback-Tunnel (`127.0.0.1:8080`).
+- **Governance/Prozess** – Sprints (GitHub Milestones), WorkPackages + Bugs (GitHub Issues, Templates), Projects-v2-Board (#2) als Single Source of Truth. SemVer-Versionierung (Start `v0.1.0`), Tag am Sprint-Ende → triggert Pi-Deploy. Working-Memory im Repo: `tasks/{plan-*,lessons,decisions,todo}.md`, `docs/PROJECT_MAP.md`. Standing-Regeln unter `.cursor/rules/` (planning-discipline mit Plan-/4-Lens-/Dry-Run-Pflicht, project-architecture, parallel-branch-workflow, sprint-workflow).
 
 ### Geändert
 - **`show_dialog=true` bei Spotify-Autorisierung** – Der Spotify-OAuth-Consent-Dialog wird nun immer angezeigt, auch wenn der Nutzer bereits eingeloggt ist. Damit werden fehlende Scopes bei Reconnect zuverlässig erteilt.

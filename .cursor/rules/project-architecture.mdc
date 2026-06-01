@@ -1,0 +1,30 @@
+---
+description: Architektur-Baseline und feste Rahmenbedingungen von SpotFamServ (RFID via ESP32, Pi-Backend, lokal-first).
+alwaysApply: true
+---
+
+# SpotFamServ – Architektur-Baseline (feste Projekt-Info)
+
+## Grundprinzip
+- **Lokal-first entwickeln** (WSL2/Docker). Der Raspberry Pi ist das Ziel-Laufzeitsystem.
+- Alle Konventionen aus `engineering-discipline` + `planning-discipline` gelten.
+
+## Komponenten
+- **RFID-Reader = ESP32 (WROOM-32)**, NICHT der Pi-eigene Reader. Firmware in
+  `firmware/spotfam_reader/` (Arduino/`arduino-cli`, MFRC522, Buttons, LED).
+  Der ESP32 sendet einfache HTTP-Requests an das Backend
+  (`/api/v1/readers/scan|next|previous`, Auth via `READER_API_KEY`).
+- **Backend = Symfony 7.4 LTS / PHP 8.5.6** in Docker (`app` php-fpm, `nginx`,
+  `db` postgres:17). Verwaltet Spotify-OAuth, Profile, RFID-Bindings, Device-Discovery, Playback.
+- **Frontend = React/Vite SPA**, statisch via nginx unter gleichem Origin (`/api/v1` relativ).
+- **Wiedergabe = Spotify Web API** auf die Wobie Box (Spotify Connect, Premium noetig).
+
+## Deployment-Paket (Pi)
+- Stack laeuft auf dem Pi via `docker compose` (v2-Plugin). Runbook + Specs:
+  `docs/pi-deployment.md`. Stolpersteine: `tasks/lessons.md`.
+- Pi: Pi 4B, aarch64, Debian 13, IP `192.168.1.91`, Repo `/home/lars/SpotFamServ`.
+
+## Harte Rahmenbedingungen
+- Spotify-Redirect nur Loopback `http://127.0.0.1:8080/api/v1/spotify/callback` (SSH-Tunnel fuer OAuth).
+- Secrets liegen in `backend/.env.local` + Root-`.env` (git-ignoriert), nie committen.
+- ESP32 `secrets.h` ist git-ignoriert; `BACKEND_BASE_URL` zeigt auf die Pi-IP.

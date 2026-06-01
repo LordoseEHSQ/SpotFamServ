@@ -1,0 +1,36 @@
+---
+description: Sprint-/WorkPackage-Prozess mit GitHub als Single Source of Truth, SemVer und Working-Memory.
+alwaysApply: true
+---
+
+# Sprint- & WorkPackage-Workflow
+
+**GitHub ist die Single Source of Truth** für Planung, Tracking und Bugs.
+
+## Hierarchie
+- **Plan** (`tasks/plan-*.md`) → in **Sprints** zerlegen.
+- **Sprint** = GitHub **Milestone** (Titel `Sprint NN – <thema>`), zusätzlich Board (Project v2, #2).
+- **WorkPackage** = GitHub **Issue**, Label `work-package`, im passenden Milestone.
+- **Bug/Problem** = GitHub **Issue**, Label `bug` (Template `bug.yml`).
+
+## WorkPackage-Pflichtinhalt (Template `work-package.yml`)
+Ziel · testbare Akzeptanzkriterien · **Relevante Modelle (AI)** (welches LLM eignet sich am besten + Begründung) ·
+Plan-Verweis · Definition of Done.
+
+## Sprint = Done
+Alle WorkPackage-Issues closed **und** Sprint-Akzeptanzkriterien (im Milestone/`docs/sprints/`) erfüllt
+**und** CI grün **und** getaggter Release `vX.Y.Z`.
+
+## Versionierung (SemVer)
+`vMAJOR.MINOR.PATCH`. Patch=Fix, Minor=Feature/Sprint, Major=Breaking. Tag am Sprint-Ende → triggert Pi-Deploy.
+
+## Doku je Sprint
+PRs verlinken Issues (`Closes #N`); bei Sprint-Abschluss `CHANGELOG.md` + `docs/sprints/sprint-NN.md` aktualisieren.
+
+## Working-Memory (Repo, schneller Nachschlag)
+- `tasks/todo.md` (Cache der offenen WPs; bei Session-Start gegen GitHub abgleichen).
+- `tasks/lessons.md` (Stolpersteine) · `tasks/decisions.md` (Entscheidungen) · `docs/PROJECT_MAP.md` (Landkarte/Obsidian-Home).
+
+## gh-Cheats
+`gh issue list --milestone "<titel>"` · `gh issue create --milestone <t> --label work-package` ·
+`gh project item-add 2 --owner LordoseEHSQ --url <issue>`

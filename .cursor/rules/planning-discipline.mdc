@@ -1,0 +1,28 @@
+---
+description: Absolute Plan-vor-Code-Pflicht und verpflichtende 4-Lens-Analyse fuer dieses Projekt.
+alwaysApply: true
+---
+
+# Planungs-Disziplin (ABSOLUTE PFLICHT)
+
+**Erst planen, immer. Diese Regel darf nie gebrochen werden.**
+
+## Plan vor Code (hart)
+- Vor JEDER nicht-trivialen Aenderung (neue Dateien, Edits an Logik, Schema, Infra, CI):
+  zuerst eine Plan-Datei `tasks/plan-<feature>.md` schreiben (Template aus dem
+  `engineering-discipline`-Skill) und **auf User-Bestaetigung warten**.
+- Ausnahmen nur fuer Triviales: Typo-/Kommentar-/Log-Level-Fixes, einzelne Zeilen.
+- Kein Code, keine Migration, kein Deploy-Skript ohne bestaetigten Plan.
+
+## 4-Lens-Analyse (verpflichtend in jedem Plan)
+Jeder Plan MUSS einen Abschnitt mit diesen vier Lenses enthalten:
+1. **Lens 1 – Runtime & Sprache:** PHP/Node/OS/Arch-Versionen, Support-Status, Pi-arm64-Tauglichkeit.
+2. **Lens 2 – Frameworks & Abhaengigkeiten:** Symfony/Doctrine/Libs, neue Dependencies (begruenden), Lock-Impact.
+3. **Lens 3 – Build, CI/CD & Tooling:** Compose v2, GitHub Actions, PHPStan, Tests, OpenAPI/oasdiff, Deploy.
+4. **Lens 4 – Security & Compliance:** CVEs, composer audit, Trivy, Secrets, least-privilege, API-Vertrag.
+
+## Zusaetzlich verpflichtend (aus engineering-discipline)
+- Cross-Module-5-Fragen im Plan beantworten.
+- Architektur-Wahl → Eintrag in `tasks/decisions.md` (oder `docs/decisions.md`).
+- Nach jeder User-Korrektur/Bug → Eintrag in `tasks/lessons.md`.
+- Test vor Done; Docs als Deliverable.

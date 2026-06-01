@@ -1,0 +1,46 @@
+---
+description: Parallele Arbeit in mehreren Chats auf eigenen Branches via git worktrees, mit definiertem Merge-Pfad zurueck nach main.
+alwaysApply: true
+---
+
+# Paralleler Multi-Chat / Multi-Branch Workflow
+
+Ziel: Mehrere Chats arbeiten gleichzeitig an unterschiedlichen Features, ohne sich
+im gemeinsamen Working Tree zu blockieren, und lassen sich sauber wieder auf `main` zusammenfuehren.
+
+## Regeln
+- **Nie direkt auf `main` committen.** `main` ist immer deploybar.
+- **Ein Chat = ein Branch = ein Worktree.** Branch-Wechsel im Haupt-Checkout (`~/SpotFamServ`)
+  ist verboten, solange parallele Chats laufen (sie wuerden sich gegenseitig ueberschreiben).
+- **Branch-Naming:** `feat/<thema>`, `fix/<thema>`, `chore/<thema>`.
+- Branch + Worktree IMMER von aktuellem `origin/main` abzweigen.
+
+## Chat-Start (neuer Task)
+```bash
+cd ~/SpotFamServ && git fetch origin
+git worktree add ../SpotFamServ-<thema> -b feat/<thema> origin/main
+# Ab jetzt in diesem Chat ausschliesslich in ../SpotFamServ-<thema> arbeiten
+```
+Bestehenden Branch fortsetzen: `git worktree add ../SpotFamServ-<thema> feat/<thema>`.
+
+## Waehrend der Arbeit
+- Kleine, fokussierte Commits. Konvention: `<type>(<scope>): <beschreibung>`
+  (`feat|fix|refactor|test|docs|chore|schema`). Schema-Migrationen separat committen.
+- Regelmaessig pushen: `git push -u origin feat/<thema>`.
+
+## Zusammenfuehren nach main
+1. Branch auf aktuellen Stand bringen (Konflikte HIER aufloesen, nicht in main):
+   ```bash
+   git fetch origin && git rebase origin/main   # alternativ: git merge origin/main
+   ```
+2. PR erstellen und **Squash-Merge** nach `main` (ein sauberer Commit pro Feature).
+3. Bei ueberlappenden Aenderungen aus anderen Chats: zuerst rebasen, Konflikte loesen, dann mergen.
+
+## Aufraeumen nach Merge
+```bash
+git worktree remove ../SpotFamServ-<thema>
+git branch -d feat/<thema> && git push origin --delete feat/<thema>
+```
+
+## Pruefen, was offen ist
+- Laufende Worktrees/Branches: `git worktree list` · `git branch -a`
