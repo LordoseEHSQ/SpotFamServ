@@ -49,3 +49,17 @@ export function useDeleteProfile() {
     onSuccess: () => qc.invalidateQueries({ queryKey: profileKeys.all }),
   });
 }
+
+export function useSetDefaultDevice(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (device: { deviceId: string; deviceName?: string | null } | null) =>
+      device === null
+        ? profilesApi.clearDefaultDevice(id)
+        : profilesApi.setDefaultDevice(id, device.deviceId, device.deviceName),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: profileKeys.all });
+      qc.invalidateQueries({ queryKey: profileKeys.detail(id) });
+    },
+  });
+}
