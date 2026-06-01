@@ -3,6 +3,7 @@
 
 services:
   app:
+    restart: unless-stopped
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -24,6 +25,7 @@ services:
       - spotfam
 
   nginx:
+    restart: unless-stopped
     image: nginx:alpine
     ports:
       - "8080:80"
@@ -37,6 +39,7 @@ services:
       - spotfam
 
   db:
+    restart: unless-stopped
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: spotfam

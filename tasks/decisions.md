@@ -64,8 +64,10 @@ Format je Eintrag: Kontext, Optionen, Entscheidung, Begründung, Status.
 
 ---
 
-### D-A (OFFEN) | Deploy-Mechanismus
+### D-008 | 2026-06-01 | Deploy-Mechanismus
 
 **Kontext:** Wie das tag-getriggerte Deploy technisch läuft (Pi hinter Heim-NAT).
-**Optionen:** A) systemd-Timer Pull (empfohlen) · B) GitHub Actions + Tailscale-SSH · C) self-hosted Runner.
-**Status:** OFFEN – blockiert WorkPackage #5.
+**Optionen:** A) systemd-Timer Pull · B) GitHub Actions + Tailscale-SSH · C) self-hosted Runner.
+**Entscheidung:** A – systemd-Timer Pull auf dem Pi (alle 2 Min, neuester `v*`-Tag).
+**Begründung:** Kein Inbound nötig (Heim-NAT), kein GitHub-Secret, simpel und robust.
+**Status:** Accepted
