@@ -1,0 +1,9 @@
+# Lokale Geheimnisse – niemals committen
+spotfam_reader/secrets.h
+
+# arduino-cli Build-Artefakte
+build/
+*.bin
+*.elf
+*.hex
+*.map

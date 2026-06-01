@@ -401,14 +401,17 @@ final class SpotifyHttpApiClient implements SpotifyApiClientInterface
         ]);
         $status = $response->getStatusCode();
         if ($status >= 400) {
-            $body = $response->toArray(false);
-            $err = $body['error'] ?? [];
-            $message = is_array($err) ? ($err['message'] ?? (string) $status) : (string) $err;
+            $message = $this->extractErrorMessage($response, $status);
             if ($status === 404 && str_contains(strtolower($message), 'device')) {
                 throw new SpotifyNoDeviceException($message);
             }
             if ($status === 401) {
                 throw new SpotifyTokenInvalidException($message);
+            }
+            if ($status === 403 && str_contains(strtolower($message), 'not registered for this application')) {
+                throw new SpotifyScopeMissingException(
+                    'Dieses Spotify-Konto ist nicht für die App freigeschaltet (Spotify Dashboard → User Management).'
+                );
             }
             throw new SpotifyApiException('Spotify API error: ' . $message, $status);
         }
@@ -418,17 +421,24 @@ final class SpotifyHttpApiClient implements SpotifyApiClientInterface
     {
         $status = $response->getStatusCode();
         if ($status >= 400) {
-            $body = $response->toArray(false);
-            $err = $body['error'] ?? [];
-            $message = is_array($err) ? ($err['message'] ?? (string) $status) : (string) $err;
+            $message = $this->extractErrorMessage($response, $status);
             if ($status === 401) {
                 throw new SpotifyTokenInvalidException($message);
             }
             if ($status === 403) {
+                $lower = strtolower($message);
+                // App im Development Mode: Konto nicht freigeschaltet (User Management).
+                if (str_contains($lower, 'not registered for this application')) {
+                    throw new SpotifyScopeMissingException(
+                        'Dieses Spotify-Konto ist nicht für die App freigeschaltet. '
+                        . 'Bitte im Spotify Dashboard unter "User Management" mit Name + E-Mail hinzufügen '
+                        . '(App läuft im Development Mode).'
+                    );
+                }
                 // Spotify returns 403 for two distinct reasons:
                 // "Insufficient client scope" = missing OAuth scope
                 // "Forbidden" = resource access denied (collaborative/private playlist owned by other user)
-                if (str_contains(strtolower($message), 'scope') || str_contains(strtolower($message), 'insufficient')) {
+                if (str_contains($lower, 'scope') || str_contains($lower, 'insufficient')) {
                     throw new SpotifyScopeMissingException($message);
                 }
                 throw new SpotifyApiException('Zugriff verweigert: ' . $message, 403);
@@ -436,5 +446,34 @@ final class SpotifyHttpApiClient implements SpotifyApiClientInterface
             throw new SpotifyApiException('Spotify API error: ' . $message, $status);
         }
         return $response->toArray(false);
+    }
+
+    /**
+     * Liest die Fehlermeldung robust aus – auch wenn Spotify (z. B. bei 403 im
+     * Development Mode) eine reine Text-Antwort statt JSON liefert. Vermeidet, dass
+     * eine nicht-JSON-Antwort als JsonException/500 durchschlägt.
+     */
+    private function extractErrorMessage($response, int $status): string
+    {
+        try {
+            $raw = $response->getContent(false);
+        } catch (\Throwable) {
+            return 'Spotify request failed (HTTP ' . $status . ')';
+        }
+        $raw = trim($raw);
+        if ($raw === '') {
+            return 'HTTP ' . $status;
+        }
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            $err = $decoded['error'] ?? null;
+            if (is_array($err)) {
+                return (string) ($err['message'] ?? $status);
+            }
+            if (is_string($err) && $err !== '') {
+                return $decoded['error_description'] ?? $err;
+            }
+        }
+        return $raw;
     }
 }
