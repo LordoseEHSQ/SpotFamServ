@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Module\Spotify\Application;
 
-use App\Module\Spotify\Application\Dto\SpotifyTokenResponseDto;
+use App\Module\ActivityLog\Application\Port\ActivityLogRepositoryInterface;
+use App\Module\ActivityLog\Domain\ActivityLog;
 use App\Module\Spotify\Application\Port\OAuthStateManagerInterface;
 use App\Module\Spotify\Application\Port\SpotifyAccountLinkRepositoryInterface;
 use App\Module\Spotify\Application\Port\SpotifyApiClientInterface;
-use App\Module\Spotify\Application\Port\SpotifyTokenManagerInterface;
 use App\Module\Spotify\Domain\SpotifyAccountLink;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * Validate state, exchange code for tokens, create or update account link.
@@ -20,7 +21,7 @@ final readonly class ExchangeSpotifyCode
         private OAuthStateManagerInterface $stateManager,
         private SpotifyApiClientInterface $apiClient,
         private SpotifyAccountLinkRepositoryInterface $linkRepository,
-        private SpotifyTokenManagerInterface $tokenManager,
+        private ActivityLogRepositoryInterface $activityRepository,
     ) {
     }
 
@@ -30,6 +31,7 @@ final readonly class ExchangeSpotifyCode
         $dto = $this->apiClient->exchangeCode($code, $redirectUri);
         $user = $this->apiClient->getCurrentUser($dto->accessToken);
         $expiresAt = new \DateTimeImmutable('+' . $dto->expiresIn . ' seconds', new \DateTimeZone('UTC'));
+        $displayName = $user->displayName !== '' ? $user->displayName : null;
 
         $link = $this->linkRepository->findByProfileId($profileId);
         if ($link !== null) {
@@ -43,7 +45,20 @@ final readonly class ExchangeSpotifyCode
                 $link->setScopes($dto->scope);
             }
         }
+        // Persist the human-readable display name and mark the link as validated right after consent,
+        // so status/UI no longer require a separate manual validate call.
+        $link->markValidated($displayName);
         $this->linkRepository->save($link);
+
+        $this->activityRepository->append(new ActivityLog(
+            ActivityLog::TYPE_SPOTIFY_CONNECTED,
+            sprintf('Spotify verbunden (%s).', $displayName ?? $user->id),
+            ActivityLog::SEVERITY_INFO,
+            Uuid::fromString($profileId),
+            'spotify_account_link',
+            (string) $link->getId(),
+        ));
+
         return $link;
     }
 }

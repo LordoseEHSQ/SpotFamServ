@@ -8,6 +8,7 @@ use App\Module\FamilyProfile\Application\CreateFamilyProfile;
 use App\Module\FamilyProfile\Application\DeleteFamilyProfile;
 use App\Module\FamilyProfile\Application\GetFamilyProfile;
 use App\Module\FamilyProfile\Application\ListFamilyProfiles;
+use App\Module\FamilyProfile\Application\SetDefaultDevice;
 use App\Module\FamilyProfile\Application\UpdateFamilyProfile;
 use App\Module\FamilyProfile\Domain\FamilyProfile;
 use App\Module\FamilyProfile\Infrastructure\Http\Dto\FamilyProfileRequest;
@@ -28,6 +29,7 @@ final class FamilyProfileController
         private readonly CreateFamilyProfile $createProfile,
         private readonly UpdateFamilyProfile $updateProfile,
         private readonly DeleteFamilyProfile $deleteProfile,
+        private readonly SetDefaultDevice $setDefaultDevice,
         private readonly SpotifyAccountLinkRepositoryInterface $accountLinkRepository,
         private readonly GetCompleteness $getCompleteness,
     ) {}
@@ -71,6 +73,26 @@ final class FamilyProfileController
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
+    #[Route(path: '/{id}/default-device', name: 'set_default_device', requirements: ['id' => '%uuid_regex%'], methods: ['PUT'])]
+    public function setDefaultDevice(string $id, Request $request): JsonResponse
+    {
+        $body     = $request->toArray();
+        $deviceId = isset($body['device_id']) ? trim((string) $body['device_id']) : '';
+        if ($deviceId === '') {
+            return new JsonResponse(['error' => 'device_id is required.'], Response::HTTP_BAD_REQUEST);
+        }
+        $deviceName = isset($body['device_name']) ? (string) $body['device_name'] : null;
+        $profile    = ($this->setDefaultDevice)($id, $deviceId, $deviceName);
+        return new JsonResponse($this->profileToArray($profile));
+    }
+
+    #[Route(path: '/{id}/default-device', name: 'clear_default_device', requirements: ['id' => '%uuid_regex%'], methods: ['DELETE'])]
+    public function clearDefaultDevice(string $id): JsonResponse
+    {
+        $profile = ($this->setDefaultDevice)($id, null, null);
+        return new JsonResponse($this->profileToArray($profile));
+    }
+
     private function profileToArray(FamilyProfile $p): array
     {
         $link          = $this->accountLinkRepository->findByProfileId((string) $p->getId());
@@ -89,9 +111,9 @@ final class FamilyProfileController
             'description'               => $p->getDescription(),
             'status'                    => $p->getStatus(),
             'default_spotify_device_id' => $p->getDefaultSpotifyDeviceId(),
-            'default_device_name'       => null, // wird in zukünftiger Version aus SpotifyDevice geladen
+            'default_device_name'       => $p->getDefaultDeviceName(),
             'spotify_status'            => $spotifyStatus,
-            'spotify_user_display_name' => $link?->getSpotifyUserId(),
+            'spotify_user_display_name' => $link?->getSpotifyDisplayName() ?? $link?->getSpotifyUserId(),
             'setup_complete'            => $completeness !== null && $completeness->percent >= 100,
             'setup_percent'             => $completeness?->percent ?? 0,
             'last_activity_at'          => null, // wird in zukünftiger Version aus ActivityLog geladen
