@@ -26,3 +26,8 @@ Jeder Plan MUSS einen Abschnitt mit diesen vier Lenses enthalten:
 - Architektur-Wahl → Eintrag in `tasks/decisions.md` (oder `docs/decisions.md`).
 - Nach jeder User-Korrektur/Bug → Eintrag in `tasks/lessons.md`.
 - Test vor Done; Docs als Deliverable.
+
+## GATE – Chat-Isolation & Schwarm (verbindlich, siehe `chat-isolation-swarm.mdc`)
+- Sprint-Planung gehört in einen eigenen frischen Chat; kein Mega-Chat.
+- Plan in parallelisierbare Subagenten-Tasks zerlegen.
+- Übergang nur mit Starter-Prompt (`docs/sprints/sprint-NN-starter.md`) + sauberem Hand-off.

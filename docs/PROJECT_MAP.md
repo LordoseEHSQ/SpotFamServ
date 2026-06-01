@@ -23,7 +23,7 @@ Frontend = React/Vite SPA (nginx, gleicher Origin, `/api/v1`).
 - `docs/` — `pi-deployment.md` (Pi-Specs+Runbook), `SPOTIFY_INTEGRATION.md`, `sprints/`, dieses Map.
 - `tasks/` — `plan-*.md` (Pläne), `lessons.md` (L-001..), `decisions.md` (D-*), `todo.md` (Working-Memory).
 - `.github/` — CI-Workflow, `ISSUE_TEMPLATE/` (work-package, bug).
-- `.cursor/rules/` — Standing-Regeln (planning-discipline, project-architecture, branch-workflow, sprint-workflow).
+- `.cursor/rules/` — Standing-Regeln (planning-discipline, project-architecture, branch-workflow, sprint-workflow, chat-isolation-swarm).
 
 ## Wo finde ich was?
 - **Aktuelle Arbeit:** `tasks/todo.md` + GitHub Issues/Milestones (Board #2).
@@ -37,3 +37,5 @@ Frontend = React/Vite SPA (nginx, gleicher Origin, `/api/v1`).
 2. **Branches/Worktrees**, nie direkt auf `main`; Squash-Merge via PR.
 3. **Sprints/WorkPackages/Bugs in GitHub**; Sprint done = Akzeptanzkriterien erfüllt + Tag.
 4. **SemVer** (`vX.Y.Z`), Tag am Sprint-Ende → triggert Pi-Deploy.
+5. **GATE: Ein Chat pro Sprint + Subagenten-Schwarm + Starter-Prompt** beim Übergang
+   (`chat-isolation-swarm.mdc`, Starter unter `docs/sprints/sprint-NN-starter.md`).
