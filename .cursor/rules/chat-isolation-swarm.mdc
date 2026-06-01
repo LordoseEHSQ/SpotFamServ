@@ -1,0 +1,37 @@
+---
+description: Verbindliches GATE - ein Chat pro Sprint, Subagenten-Schwarm, Starter-Prompt-Pflicht. Gilt bei Sprints und Planung.
+alwaysApply: true
+---
+
+# Chat-Isolation & Subagenten-Schwarm (HARTES GATE)
+
+**Verbindlich bei jedem Sprint und jeder Planung. Darf NIE abweichen.**
+Begründung: Riesen-Chats verlieren Kontext, werden teuer und unübersichtlich. Pro Sprint ein
+frischer Chat hält Kontext schlank; Subagenten parallelisieren die Arbeit.
+
+## GATE 1 – Ein Chat pro Sprint
+- Jeder Sprint läuft in einem **eigenen, frischen Chat**. Kein sprintübergreifender Mega-Chat.
+- Große/unabhängige WorkPackages dürfen zusätzlich eigene Chats bekommen.
+- Ein Chat endet, wenn der Sprint „Done" ist (siehe `sprint-workflow.mdc`) ODER der Kontext zu groß wird.
+
+## GATE 2 – Starter-Prompt-Pflicht (Hand-off)
+- Beim Abschluss/Übergang IMMER einen **Starter-Prompt für den nächsten Chat** erzeugen und ausgeben.
+- Er wird als Datei abgelegt: `docs/sprints/sprint-NN-starter.md` (Template: `sprint-starter.template.md`).
+- Inhalt (token-sparsam, selbsterklärend): Ziel des nächsten Sprints, Verweise statt Volltext
+  (`docs/PROJECT_MAP.md`, `docs/sprints/sprint-NN.md`, `tasks/{todo,decisions,lessons}.md`, relevante Rules),
+  aktueller verifizierter Stand, **blockierende Punkte (User/Hardware)**, Subagenten-Plan, erste Aktion.
+
+## GATE 3 – Subagenten-Schwarm
+- WorkPackages vor Start in **parallelisierbare, unabhängige** Teilaufgaben zerlegen.
+- Unabhängige Teile parallel über mehrere `Task`-Subagenten in EINER Nachricht starten;
+  nur echte Abhängigkeiten seriell.
+- Recherche/Exploration → `explore`-Subagenten; Hardware-/Browser-Schritte bleiben beim User.
+- Synthese der Subagenten-Ergebnisse zentral im Sprint-Chat.
+
+## GATE 4 – Sauberer Hand-off vor Chat-Ende
+- Vor Chat-Wechsel: Working-Memory aktualisieren (`tasks/todo.md`, `tasks/decisions.md`,
+  `tasks/lessons.md`), GitHub-Issues/Milestone-Stand synchron, Doku (`CHANGELOG.md`,
+  `docs/sprints/sprint-NN.md`) gepflegt. Erst dann Starter-Prompt ausgeben.
+
+> Dieses GATE ergänzt `planning-discipline.mdc` (Plan vor Code, 4-Lens) und
+> `sprint-workflow.mdc` (GitHub als SSoT). Bei Konflikt gilt: planen + isolieren + parallelisieren.

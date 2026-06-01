@@ -7,6 +7,10 @@ alwaysApply: true
 
 **GitHub ist die Single Source of Truth** für Planung, Tracking und Bugs.
 
+> **GATE (verbindlich):** Jeder Sprint läuft in einem eigenen frischen Chat mit
+> Subagenten-Schwarm; beim Übergang ist ein Starter-Prompt Pflicht. Details:
+> `chat-isolation-swarm.mdc`. Darf nie übergangen werden.
+
 ## Hierarchie
 - **Plan** (`tasks/plan-*.md`) → in **Sprints** zerlegen.
 - **Sprint** = GitHub **Milestone** (Titel `Sprint NN – <thema>`), zusätzlich Board (Project v2, #2).
