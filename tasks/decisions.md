@@ -104,3 +104,26 @@ Playback und Debounce werden am ESP32 als Fehler (4 Blinks) signalisiert.
 **Entscheidung:** A – Firmware auf lowercase (`success`/`debounced`) anpassen.
 **Begründung:** Backend-lowercase ist die Quelle der Wahrheit (Enum + Frontend + OpenAPI). Fix gehört auf den Consumer.
 **Status:** Accepted
+
+---
+
+### D-011 | 2026-06-01 | Spotify-App-Config: DB als Source of Truth über die Oberfläche
+
+**Kontext:** Die System-Einstellungen speichern Client-ID/Secret/Redirect in der DB
+(`SpotifyAppConfiguration`), aber der Laufzeit-Flow (`SpotifyHttpApiClient`, `GetSpotifyAuthorizationUrl`,
+`SpotifyOAuthController`) las ausschließlich die env-Parameter `%spotify.*%`. Folge: UI-Eingaben waren
+gespeichert, aber für OAuth/Token/Playback **wirkungslos** (Defekt, nicht Bedienfehler).
+**Optionen (Präzedenz):**
+1. DB nur wenn vollständig (`isComplete()`), sonst ganzheitlich env – kein Vermischen.
+2. Pro-Feld-Fallback (DB-Feld vor env-Feld) – Risiko: neue Client-ID mit altem Secret kombiniert.
+**Entscheidung:**
+- Präzedenz **Option 1** (DB-Config gewinnt nur als vollständige Einheit, sonst env-Fallback).
+- Neuer `SpotifyCredentialsProvider` (Port + Infra) liefert effektive Credentials **pro Request** (kein Prozess-Cache → UI-Save greift ohne Neustart).
+- **Scopes bleiben code-seitig** (kanonische Liste), UI-Feld `scope_defaults` nicht für OAuth verwendet (falsche Scopes brächen Playback still).
+- **„Validieren" prüft real** gegen Spotify (client_credentials-Grant) statt nur Presence.
+- **Redirect-URI in der UI editierbar** (Loopback-Default), env bleibt Fallback.
+**Begründung:** Macht die Settings-Seite zur echten Konfigurationsquelle statt Fassade; env bleibt für
+Bootstrap/Dev erhalten; risikoarm rückrollbar (env-Pfad intakt).
+**Konsequenzen:** Konstruktor-Signatur `SpotifyHttpApiClient` geändert (nur via DI genutzt);
+`ValidateSpotifyAppConfig` + `SpotifyApiClientInterface::checkClientCredentials()` erweitert; kein Schema.
+**Status:** Accepted
