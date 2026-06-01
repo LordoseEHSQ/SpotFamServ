@@ -112,7 +112,7 @@ function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-sidebar-border px-4 py-3">
-        <p className="text-xs text-sidebar-muted">v0.1.0 · MVP</p>
+        <p className="text-xs text-sidebar-muted">v{__APP_VERSION__}</p>
       </div>
     </aside>
   );
