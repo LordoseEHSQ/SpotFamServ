@@ -2,6 +2,37 @@
 
 ## [Unreleased]
 
+### Sprint 2 – Core E2E (Spotify → Wobie via ESP32)
+
+#### Neu
+- **Dedizierter Default-Device-Endpunkt (#9, D-009)** – `PUT /api/v1/profiles/{id}/default-device`
+  (Body `device_id`, optional `device_name`) und `DELETE …/default-device`. Neuer UseCase
+  `SetDefaultDevice`, entkoppelt von der Device-Governance (`AssignDevice`). Neue Spalte
+  `family_profile.default_device_name` (Migration `Version20260601090000`) persistiert den
+  Anzeigenamen; `FamilyProfileController` liefert ihn jetzt aus (vorher hardcoded `null`).
+- **Frontend: Standardlautsprecher setzen** – Im Profil-Tab „Lautsprecher" können erkannte
+  Spotify-Geräte direkt als Standard gesetzt/entfernt werden (`useSetDefaultDevice`).
+- **Stale-Device-Re-Resolve (R2)** – `StartPlayback` löst eine veraltete (ephemere) Spotify-
+  `device_id` bei `SpotifyNoDeviceException` einmalig über den gespeicherten Gerätenamen neu auf,
+  aktualisiert die ID und wiederholt die Wiedergabe.
+- **#8-Härtung** – `ExchangeSpotifyCode` schreibt `spotify_connected` (ActivityLog) und ruft
+  `markValidated()` (Display-Name direkt nach Consent). `SpotifyTokenManager` schreibt
+  `spotify_token_refreshed` bei jedem Refresh.
+- **Backend-Tests** – Neue Unit-Tests für `SetDefaultDevice`, `StartPlayback` (inkl. Stale-Re-Resolve)
+  und `ProcessScan` (Outcome-Mapping success/unknown_card/no_device/token_invalid).
+
+#### Behoben
+- **Firmware-Outcome-Case-Bug (#10, D-010, Showstopper)** – Die ESP32-Firmware prüfte
+  `outcome=="SUCCESS"`/`"DEBOUNCED"` (uppercase), das Backend liefert lowercase. Folge:
+  erfolgreiches Playback wurde am Reader als Fehler (4 Blinks) signalisiert. `signalResult()`
+  vergleicht jetzt `success`/`debounced`.
+- **`spotify_user_display_name`** – `FamilyProfileController` gab die Spotify-User-ID statt des
+  Display-Namens zurück; nutzt jetzt `getSpotifyDisplayName()` (Fallback User-ID).
+- **Fehlende `SpotifyProfileNotFoundException`** – Die in `DisconnectSpotify` referenzierte Klasse
+  existierte nicht (potenzieller Fatal Error / PHPStan-Finding). Ergänzt und im `ExceptionSubscriber`
+  auf HTTP 404 gemappt.
+- **`firmware/secrets.h.example`** – Beispiel-IP von `192.168.1.143` auf die Pi-IP `192.168.1.91` korrigiert.
+
 ## [v0.1.0] – 2026-06-01 (Foundation)
 
 > Erster getaggter Release. Backend + Frontend laufen auf dem Pi, ESP32-Reader-Firmware
