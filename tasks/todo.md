@@ -17,13 +17,17 @@ Board: https://github.com/users/LordoseEHSQ/projects/2 · Milestones: `/mileston
 - [x] #6 Branch Protection (main) + CI-Härtung
 - [x] #7 restart: unless-stopped
 
-## Sprint 2 – Core E2E: Spotify→Wobie via ESP32 (Milestone 3)
-- [ ] #8 Spotify-Login abschließen  (priority:high) — **blockiert: braucht Nutzer-Consent im Browser**
-- [ ] #9 Wobie-Box-Discovery + Default-Device  (priority:high) — hängt an #8
-- [ ] #10 ESP32 flashen + End-to-End-Test  (priority:high) — **blockiert: physisches Gerät + serieller Zugriff**
+## Sprint 2 – Core E2E: Spotify→Wobie via ESP32 (Milestone 3) — IN ARBEIT (Branch feat/sprint-02-core-e2e)
+- [~] #8 Spotify-Login abschließen — Code-Härtung fertig (Activity-Log, Display-Name, Exception);
+      **verbleibend blockiert: Nutzer-Consent im Browser (SSH-Tunnel)**.
+- [~] #9 Wobie-Box-Discovery + Default-Device — fertig: `PUT/DELETE /profiles/{id}/default-device`,
+      UseCase `SetDefaultDevice`, Spalte `default_device_name`, Frontend-Auswahl, Stale-ID-Re-Resolve.
+- [~] #10 ESP32 flashen + E2E-Test — Firmware-Outcome-Case-Fix + secrets.h.example-IP fertig;
+      **verbleibend blockiert: physisches Gerät + serieller Zugriff**.
+- Verifiziert lokal: PHPUnit 17 grün, PHPStan L8 sauber, Frontend-Build grün, OpenAPI additiv.
 
 ## Offene Entscheidungen
-- _(keine blockierenden)_ — D-008 (Deploy-Mechanismus) entschieden: systemd-Pull.
+- _(keine blockierenden)_ — D-009 (Default-Device-Endpunkt) + D-010 (Firmware lowercase) entschieden.
 
 ## Legende
 `[ ]` offen · `[~]` in Arbeit · `[x]` erledigt (Issue closed)

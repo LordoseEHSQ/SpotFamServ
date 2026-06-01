@@ -71,3 +71,36 @@ Format je Eintrag: Kontext, Optionen, Entscheidung, Begründung, Status.
 **Entscheidung:** A – systemd-Timer Pull auf dem Pi (alle 2 Min, neuester `v*`-Tag).
 **Begründung:** Kein Inbound nötig (Heim-NAT), kein GitHub-Secret, simpel und robust.
 **Status:** Accepted
+
+---
+
+### D-009 | 2026-06-01 | Device/Playback (Sprint 2, #9)
+
+**Kontext:** Das Default-Spotify-Device pro Profil (`family_profile.default_spotify_device_id`) ist
+bislang **ausschließlich** über den Setup-Wizard-Step `default_speaker` setzbar. `AssignDevice`
+(Governance-Inventar `spotify_device`) synchronisiert es **nicht**; `default_device_name` ist im
+Profile-Controller hardcoded `null`. Es braucht einen klaren Weg, das Default außerhalb des Wizards zu setzen.
+**Optionen:**
+1. A) Wizard-Pfad belassen, nur Anzeige-Bug fixen — Vorteile: minimal · Nachteile: UX bleibt umständlich, kein API-Weg.
+2. B) Dedizierter Endpunkt `PUT /api/v1/profiles/{id}/default-device` + UI — Vorteile: sauber entkoppelt, testbar, openapi-dokumentiert · Nachteile: mehr Code (UseCase, DTO, Frontend, oasdiff).
+3. C) `AssignDevice` setzt `default_spotify_device_id` mit — Vorteile: ein Klick · Nachteile: koppelt Governance an Playback-Ziel (semantisch fragwürdig).
+**Entscheidung:** B – dedizierter Endpunkt `PUT /profiles/{id}/default-device` + UI (ProfileDetailPage/DevicesPage).
+**Begründung:** Trennt Inventar/Governance (`spotify_device`) sauber vom Playback-Ziel (`default_spotify_device_id`),
+ist als API testbar und über OpenAPI/oasdiff vertraglich abgesichert.
+**Konsequenzen:** Neuer UseCase `SetDefaultDevice` + DTO + Route + Frontend-Call + openapi.yaml-Eintrag.
+`default_device_name` wird serverseitig aufgelöst (kein hardcoded null).
+**Status:** Accepted
+
+---
+
+### D-010 | 2026-06-01 | Firmware/Scan-Vertrag (Sprint 2, #10)
+
+**Kontext:** Die ESP32-Firmware prüft `outcome=="SUCCESS"`/`"DEBOUNCED"` (uppercase), das Backend sendet
+kanonisch lowercase (`ScanOutcome.php`, Frontend `ScanLogsPage.tsx` konsistent). Folge: erfolgreiches
+Playback und Debounce werden am ESP32 als Fehler (4 Blinks) signalisiert.
+**Optionen:**
+1. A) Firmware auf lowercase anpassen — Vorteile: kein Vertragsbruch, Backend bleibt SSoT · Nachteile: Re-Flash nötig (ohnehin Teil von #10).
+2. B) Backend auf uppercase — Nachteile: bricht Frontend + OpenAPI-Vertrag, mehr Consumer betroffen.
+**Entscheidung:** A – Firmware auf lowercase (`success`/`debounced`) anpassen.
+**Begründung:** Backend-lowercase ist die Quelle der Wahrheit (Enum + Frontend + OpenAPI). Fix gehört auf den Consumer.
+**Status:** Accepted

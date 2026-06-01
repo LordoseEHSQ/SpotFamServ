@@ -6,7 +6,7 @@ import {
   CheckCircle2, XCircle, AlertCircle, ExternalLink,
 } from 'lucide-react';
 import { MusicTab } from '@/components/music/MusicTab';
-import { useProfile, useUpdateProfile, useDeleteProfile } from '@/hooks/useProfiles';
+import { useProfile, useUpdateProfile, useDeleteProfile, useSetDefaultDevice } from '@/hooks/useProfiles';
 import { useRfidCards } from '@/hooks/useRfidCards';
 import { useActivity } from '@/hooks/useActivity';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -239,6 +239,7 @@ function TabSpotify({ profile }: { profile: FamilyProfileDto }) {
 function TabLautsprecher({ profile }: { profile: FamilyProfileDto }) {
   const [devices, setDevices] = useState<{ id: string; name: string; type: string; is_active: boolean }[]>([]);
   const [loading, setLoading] = useState(false);
+  const setDefaultDevice = useSetDefaultDevice(profile.id);
 
   const loadDevices = async () => {
     setLoading(true);
@@ -260,13 +261,22 @@ function TabLautsprecher({ profile }: { profile: FamilyProfileDto }) {
           <CardDescription>Wird bei RFID-Scan automatisch genutzt.</CardDescription>
         </CardHeader>
         <CardContent>
-          {profile.default_device_name ? (
+          {profile.default_device_name || profile.default_spotify_device_id ? (
             <div className="flex items-center gap-3">
               <Speaker className="h-5 w-5 text-muted-foreground shrink-0" />
-              <div>
-                <p className="text-sm font-medium">{profile.default_device_name}</p>
-                <p className="text-xs text-muted-foreground font-mono">{profile.default_spotify_device_id}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">{profile.default_device_name ?? 'Unbekanntes Gerät'}</p>
+                <p className="text-xs text-muted-foreground font-mono break-all">{profile.default_spotify_device_id}</p>
               </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive"
+                onClick={() => setDefaultDevice.mutate(null)}
+                disabled={setDefaultDevice.isPending}
+              >
+                Entfernen
+              </Button>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Kein Standardlautsprecher konfiguriert.</p>
@@ -277,7 +287,7 @@ function TabLautsprecher({ profile }: { profile: FamilyProfileDto }) {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Verfügbare Spotify-Geräte</CardTitle>
-          <CardDescription>Aktuell über Spotify-API erkannte Geräte.</CardDescription>
+          <CardDescription>Geräte über Spotify abrufen und als Standard setzen.</CardDescription>
         </CardHeader>
         <CardContent>
           <Button size="sm" variant="outline" onClick={loadDevices} disabled={loading}>
@@ -286,16 +296,31 @@ function TabLautsprecher({ profile }: { profile: FamilyProfileDto }) {
           </Button>
           {devices.length > 0 && (
             <div className="mt-3 space-y-2">
-              {devices.map((d) => (
-                <div key={d.id} className="flex items-center gap-3 rounded-md border px-3 py-2">
-                  <Speaker className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{d.name}</p>
-                    <p className="text-xs text-muted-foreground">{d.type}</p>
+              {devices.map((d) => {
+                const isDefault = d.id === profile.default_spotify_device_id;
+                return (
+                  <div key={d.id} className="flex items-center gap-3 rounded-md border px-3 py-2">
+                    <Speaker className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{d.name}</p>
+                      <p className="text-xs text-muted-foreground">{d.type}</p>
+                    </div>
+                    {d.is_active && <Badge variant="success" className="text-xs">Aktiv</Badge>}
+                    {isDefault ? (
+                      <Badge variant="muted" className="text-xs">Standard</Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setDefaultDevice.mutate({ deviceId: d.id, deviceName: d.name })}
+                        disabled={setDefaultDevice.isPending}
+                      >
+                        Als Standard
+                      </Button>
+                    )}
                   </div>
-                  {d.is_active && <Badge variant="success" className="text-xs">Aktiv</Badge>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

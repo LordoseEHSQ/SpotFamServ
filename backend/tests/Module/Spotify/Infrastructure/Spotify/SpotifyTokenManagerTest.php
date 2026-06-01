@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Module\Spotify\Infrastructure\Spotify;
 
+use App\Module\ActivityLog\Application\Port\ActivityLogRepositoryInterface;
 use App\Module\Spotify\Application\Port\SpotifyAccountLinkRepositoryInterface;
 use App\Module\Spotify\Application\Port\SpotifyApiClientInterface;
 use App\Module\Spotify\Domain\Exception\SpotifyNotConnectedException;
@@ -17,7 +18,11 @@ class SpotifyTokenManagerTest extends TestCase
     {
         $repo = $this->createMock(SpotifyAccountLinkRepositoryInterface::class);
         $repo->method('findByProfileId')->willReturn(null);
-        $manager = new SpotifyTokenManager($repo, $this->createMock(SpotifyApiClientInterface::class));
+        $manager = new SpotifyTokenManager(
+            $repo,
+            $this->createMock(SpotifyApiClientInterface::class),
+            $this->createMock(ActivityLogRepositoryInterface::class),
+        );
         $this->expectException(SpotifyNotConnectedException::class);
         $manager->getValidLinkForProfile('profile-1');
     }
@@ -28,7 +33,11 @@ class SpotifyTokenManagerTest extends TestCase
         $link = new SpotifyAccountLink('profile-1', 'spotify-user', 'access', 'refresh', $expiresAt);
         $repo = $this->createMock(SpotifyAccountLinkRepositoryInterface::class);
         $repo->method('findByProfileId')->willReturn($link);
-        $manager = new SpotifyTokenManager($repo, $this->createMock(SpotifyApiClientInterface::class));
+        $manager = new SpotifyTokenManager(
+            $repo,
+            $this->createMock(SpotifyApiClientInterface::class),
+            $this->createMock(ActivityLogRepositoryInterface::class),
+        );
         $result = $manager->getValidLinkForProfile('profile-1');
         $this->assertSame($link, $result);
     }

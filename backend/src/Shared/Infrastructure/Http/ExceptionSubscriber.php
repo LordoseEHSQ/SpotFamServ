@@ -9,6 +9,7 @@ use App\Module\Spotify\Domain\Exception\SpotifyApiException;
 use App\Module\Spotify\Domain\Exception\SpotifyNoDeviceException;
 use App\Module\Spotify\Domain\Exception\SpotifyNotConnectedException;
 use App\Module\Spotify\Domain\Exception\SpotifyOAuthStateException;
+use App\Module\Spotify\Domain\Exception\SpotifyProfileNotFoundException;
 use App\Module\Spotify\Domain\Exception\SpotifyScopeMissingException;
 use App\Module\Spotify\Domain\Exception\SpotifyTokenInvalidException;
 use App\Shared\Application\Exception\HttpException;
@@ -26,6 +27,7 @@ final class ExceptionSubscriber implements EventSubscriberInterface
     /** Maps domain exception FQCN → HTTP status code. */
     private const DOMAIN_EXCEPTION_MAP = [
         SpotifyNotConnectedException::class => Response::HTTP_NOT_FOUND,
+        SpotifyProfileNotFoundException::class => Response::HTTP_NOT_FOUND,
         SpotifyTokenInvalidException::class  => Response::HTTP_UNAUTHORIZED,
         SpotifyNoDeviceException::class      => Response::HTTP_UNPROCESSABLE_ENTITY,
         SpotifyScopeMissingException::class  => Response::HTTP_FORBIDDEN,

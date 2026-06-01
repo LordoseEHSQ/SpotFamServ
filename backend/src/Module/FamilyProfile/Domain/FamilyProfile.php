@@ -25,6 +25,9 @@ class FamilyProfile
     #[ORM\Column(name: 'default_spotify_device_id', length: 255, nullable: true)]
     private ?string $defaultSpotifyDeviceId = null;
 
+    #[ORM\Column(name: 'default_device_name', length: 255, nullable: true)]
+    private ?string $defaultDeviceName = null;
+
     #[ORM\Column(name: 'status', length: 32, options: ['default' => 'active'])]
     private string $status = 'active';
 
@@ -77,6 +80,23 @@ class FamilyProfile
     public function setDefaultSpotifyDeviceId(?string $defaultSpotifyDeviceId): void
     {
         $this->defaultSpotifyDeviceId = $defaultSpotifyDeviceId;
+        $this->touch();
+    }
+
+    public function getDefaultDeviceName(): ?string
+    {
+        return $this->defaultDeviceName;
+    }
+
+    /**
+     * Sets the default playback device. Stores the human-readable name alongside the
+     * (ephemeral) Spotify device id so the name can be displayed and the id can be
+     * re-resolved by name if Spotify hands out a new id for the same device.
+     */
+    public function setDefaultDevice(?string $deviceId, ?string $deviceName): void
+    {
+        $this->defaultSpotifyDeviceId = ($deviceId === null || $deviceId === '') ? null : $deviceId;
+        $this->defaultDeviceName = ($deviceName === null || $deviceName === '') ? null : $deviceName;
         $this->touch();
     }
 

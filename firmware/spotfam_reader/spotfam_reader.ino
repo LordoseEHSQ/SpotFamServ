@@ -52,10 +52,11 @@ static void blink(int times, int onMs, int offMs) {
 }
 
 // LED-Feedback aus HTTP-Status + outcome-Feld des Backends.
+// Das Backend liefert outcome kanonisch in lowercase (siehe ScanOutcome.php).
 static void signalResult(int httpCode, const String &outcome) {
-  if (httpCode == 200 && outcome == "SUCCESS") {
+  if (httpCode == 200 && outcome == "success") {
     blink(1, 600, 0);                 // Erfolg: ein langer Blink
-  } else if (outcome == "DEBOUNCED") {
+  } else if (outcome == "debounced") {
     blink(2, 80, 80);                 // ignorierter Doppelscan: zwei kurze
   } else {
     blink(4, 120, 120);              // Fehler: vier schnelle Blinks

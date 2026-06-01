@@ -85,6 +85,37 @@ ssh lars@192.168.1.91 'cd ~/SpotFamServ && docker compose exec -T app php bin/co
   ```
 - Spotify-Dashboard Redirect-URI muss exakt sein: `http://127.0.0.1:8080/api/v1/spotify/callback`
 
+## E2E-Runbook: Scan → Spotify → Wobie Box (Sprint 2)
+
+Reihenfolge ist zwingend: **#8 → #9 → #10** (ohne Token kein Discovery/Playback).
+
+1. **#8 – Spotify-Token (einmalig, Loopback-Zwang, L-004):**
+   - Pi prüfen: `backend/.env.local` enthält `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET`
+     (OAuth liest **nur** Env, nicht die DB-`spotify_app_configuration` – R1!), Root-`.env`
+     `SPOTIFY_REDIRECT_URI=http://127.0.0.1:8080/api/v1/spotify/callback`, `FRONTEND_URL=http://127.0.0.1:8080`,
+     `APP_SECRET` stabil (Änderung macht gespeicherte Tokens unlesbar).
+   - Spotify-Dashboard: Redirect-URI exakt eintragen + eigene E-Mail unter „User Management" (Development Mode).
+   - Tunnel: `ssh -N -L 127.0.0.1:8080:localhost:8080 lars@192.168.1.91` → Browser `http://127.0.0.1:8080`
+     → Profil → „Mit Spotify verbinden" → Consent.
+   - Verifizieren: `GET /api/v1/profiles/{id}/spotify/status` = `connected`; `GET …/spotify/devices` liefert ≥1 Gerät.
+2. **#9 – Default-Device:** Wobie Box einschalten (Spotify Connect aktiv).
+   - Discovery: `POST /api/v1/devices/discover` (oder Profil-Tab „Lautsprecher" → „Geräte abrufen").
+   - Standard setzen: im Tab „Lautsprecher" auf „Als Standard" — ruft `PUT /profiles/{id}/default-device`.
+   - Verifizieren: `GET /profiles/{id}` zeigt `default_spotify_device_id` + `default_device_name`;
+     `POST …/spotify/playback/start` mit `context_uri` und **ohne** `device_id` spielt auf der Wobie Box.
+3. **#10 – ESP32 flashen + Scan:** ESP32 an `/dev/ttyUSB0` (Gruppe `dialout`).
+   - `firmware/spotfam_reader/secrets.h`: `BACKEND_BASE_URL=http://192.168.1.91:8080`, `READER_API_KEY`
+     identisch zu Root-`.env` auf dem Pi. Flash via `arduino-cli`.
+   - Dry-Run vor Flash (Backend-Kette prüfen):
+     ```bash
+     curl -X POST http://192.168.1.91:8080/api/v1/readers/scan \
+       -H "Content-Type: application/json" -H "X-API-Key: <READER_API_KEY>" \
+       -d '{"reader_id":"wohnzimmer-1","card_uid":"<BEKANNTE_UID>"}'
+     # Erwartung: {"outcome":"success","message":"Playback started."}
+     ```
+   - Realer Scan: Serial-Monitor zeigt `-> 200: {"outcome":"success",...}`, Reader-LED 1× langer Blink,
+     Wobie Box spielt hörbar.
+
 ## Offene Härtung / Risiken
 
 - **Auto-Start fehlt:** `restart: unless-stopped` je Service ergänzen (L-007).

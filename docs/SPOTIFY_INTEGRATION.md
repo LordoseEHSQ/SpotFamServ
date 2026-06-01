@@ -21,6 +21,7 @@ Alle Spotify-Anfragen laufen über den Port `SpotifyApiClientInterface`; keine d
 - **State:** Beim Start des OAuth-Flows erzeugt `SpotifyOAuthStateManager::createState(profileId)` einen Zufalls-String und speichert die `profileId` im Cache unter `spotify_oauth_state_{state}` mit TTL 600 Sekunden.
 - **Callback:** GET `/api/v1/spotify/callback?code=...&state=...`. Der Controller ruft `OAuthStateManager::consumeState(state)` auf: liefert die zugehörige `profileId` und löscht den State (einmalige Verwendung). Bei fehlendem oder abgelaufenem State wird `SpotifyOAuthStateException` geworfen.
 - **Profil-Kontext:** Die Zuordnung zum Profil erfolgt ausschließlich über den State; die Redirect-URI ist für alle Profile identisch (Backend-URL).
+- **Nach erfolgreichem Connect (ab Sprint 2):** `ExchangeSpotifyCode` ruft `markValidated($displayName)` (speichert `spotify_display_name` + `last_validated_at`) und schreibt einen ActivityLog-Eintrag `spotify_connected`. Ein separater manueller `validate`-Call ist für die Statusanzeige nicht mehr nötig. Der Token-Refresh schreibt `spotify_token_refreshed` (Severity `debug`).
 
 ## Fehler an das Frontend
 
@@ -31,7 +32,12 @@ Alle Spotify-Anfragen laufen über den Port `SpotifyApiClientInterface`; keine d
 ## Test-Playback / Kein Gerät
 
 - **Playback starten:** Use Case `StartPlayback`. Wenn kein `device_id` übergeben wird, wird `family_profile.default_spotify_device_id` verwendet. Ist keines gesetzt, wird `SpotifyNoDeviceException` geworfen (422).
-- **Geräte laden:** GET `/profiles/{id}/spotify/devices` liefert die Liste; das Frontend kann ein Standardgerät wählen und über das Profil-Update (PUT default-speaker) speichern.
+- **Geräte laden:** GET `/profiles/{id}/spotify/devices` liefert die aktuell von Spotify gemeldete Geräteliste.
+- **Standardgerät setzen (ab Sprint 2, D-009):** Dedizierter Endpunkt, entkoppelt von der Device-Governance (`AssignDevice`):
+  - `PUT /api/v1/profiles/{id}/default-device` mit Body `{ "device_id": "<spotify_device_id>", "device_name": "<anzeigename, optional>" }`
+  - `DELETE /api/v1/profiles/{id}/default-device` entfernt das Standardgerät.
+  - Persistiert `default_spotify_device_id` **und** `default_device_name` (Migration `Version20260601090000`). Der Setup-Wizard-Schritt `default_speaker` setzt weiterhin nur die ID.
+- **Stale-Device-Re-Resolve (ab Sprint 2, R2):** Spotify-`device_id`s sind ephemer (ändern sich z. B. nach Reboot der Wobie Box). Schlägt `StartPlayback` mit `SpotifyNoDeviceException` fehl, versucht der UseCase **einmal**, anhand des gespeicherten `default_device_name` ein aktuell verfügbares Gerät gleichen Namens zu finden, aktualisiert die gespeicherte ID und wiederholt. Findet sich kein Namens-Match, wird der Fehler durchgereicht.
 
 ## Token-Refresh
 

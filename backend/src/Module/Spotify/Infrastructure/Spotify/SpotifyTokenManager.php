@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Module\Spotify\Infrastructure\Spotify;
 
+use App\Module\ActivityLog\Application\Port\ActivityLogRepositoryInterface;
+use App\Module\ActivityLog\Domain\ActivityLog;
 use App\Module\Spotify\Application\Dto\SpotifyTokenResponseDto;
 use App\Module\Spotify\Application\Port\SpotifyAccountLinkRepositoryInterface;
 use App\Module\Spotify\Application\Port\SpotifyApiClientInterface;
 use App\Module\Spotify\Application\Port\SpotifyTokenManagerInterface;
 use App\Module\Spotify\Domain\Exception\SpotifyNotConnectedException;
 use App\Module\Spotify\Domain\SpotifyAccountLink;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * Ensures we have a valid access token for a profile; refreshes and persists when expired.
@@ -22,6 +25,7 @@ final class SpotifyTokenManager implements SpotifyTokenManagerInterface
     public function __construct(
         private readonly SpotifyAccountLinkRepositoryInterface $linkRepository,
         private readonly SpotifyApiClientInterface $apiClient,
+        private readonly ActivityLogRepositoryInterface $activityRepository,
     ) {
     }
 
@@ -48,6 +52,15 @@ final class SpotifyTokenManager implements SpotifyTokenManagerInterface
         $dto = $this->apiClient->refreshToken($link->getRefreshToken());
         $this->applyTokenResponse($link, $dto);
         $this->linkRepository->save($link);
+
+        $this->activityRepository->append(new ActivityLog(
+            ActivityLog::TYPE_SPOTIFY_TOKEN_REFRESH,
+            'Spotify-Access-Token erneuert.',
+            ActivityLog::SEVERITY_DEBUG,
+            Uuid::fromString($link->getFamilyProfileId()),
+            'spotify_account_link',
+            (string) $link->getId(),
+        ));
     }
 
     private function applyTokenResponse(SpotifyAccountLink $link, SpotifyTokenResponseDto $dto): void

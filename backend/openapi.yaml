@@ -115,6 +115,33 @@ paths:
       responses:
         default:
           description: ''
+  '/api/v1/profiles/{id}/default-device':
+    put:
+      operationId: put_api_profiles_set_default_device
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
+    delete:
+      operationId: delete_api_profiles_clear_default_device
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+      responses:
+        default:
+          description: ''
   '/api/v1/profiles/{profileId}/rfid-cards':
     get:
       operationId: get_api_rfid_list

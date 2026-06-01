@@ -30,4 +30,10 @@ export const profilesApi = {
   update: (id: string, data: { name: string; description?: string | null; status?: ProfileStatus }) =>
     api.put<FamilyProfileDto>(`/profiles/${id}`, data),
   delete: (id: string) => api.delete(`/profiles/${id}`),
+  setDefaultDevice: (id: string, deviceId: string, deviceName?: string | null) =>
+    api.put<FamilyProfileDto>(`/profiles/${id}/default-device`, {
+      device_id: deviceId,
+      device_name: deviceName ?? null,
+    }),
+  clearDefaultDevice: (id: string) => api.delete<FamilyProfileDto>(`/profiles/${id}/default-device`),
 };
