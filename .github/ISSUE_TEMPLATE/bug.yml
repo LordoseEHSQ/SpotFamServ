@@ -1,0 +1,46 @@
+name: Bug / Problem
+description: Ein Fehler oder Problem im Projekt.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung
+      description: Was ist das Problem?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduktion
+      description: Schritte, um den Fehler zu reproduzieren.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: false
+  - type: textarea
+    id: expected-actual
+    attributes:
+      label: Erwartet vs. Ist
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Umgebung / Logs
+      description: WSL/Pi, Versionen, relevante Logausschnitte.
+    validations:
+      required: false
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Schweregrad
+      options:
+        - "low – kosmetisch / Workaround vorhanden"
+        - "medium – Funktion eingeschränkt"
+        - "high – Kernfunktion kaputt"
+        - "critical – Datenverlust / Security"
+    validations:
+      required: true

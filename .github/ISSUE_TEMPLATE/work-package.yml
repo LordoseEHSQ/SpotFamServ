@@ -1,0 +1,54 @@
+name: WorkPackage
+description: Ein WorkPackage als Teil eines Sprints (Milestone).
+title: "[WP] "
+labels: ["work-package"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Ziel
+      description: Was wird in diesem WorkPackage erreicht? (1-3 Sätze)
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Akzeptanzkriterien
+      description: Nummerierte, testbare Bedingungen. Erfüllt = WP done.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: models
+    attributes:
+      label: Relevante Modelle (AI)
+      description: Welche(s) LLM-Modell(e) eignen sich am besten + kurze Begründung (Reasoning-Tiefe vs. Routine vs. Kosten).
+      placeholder: "z.B. claude-opus-4-8-thinking-high (Architektur), gpt-5.3-codex (Implementierung)"
+    validations:
+      required: true
+  - type: input
+    id: plan-ref
+    attributes:
+      label: Plan-Verweis
+      description: Pfad/Abschnitt der zugehörigen Plan-Datei (tasks/plan-*.md).
+    validations:
+      required: false
+  - type: textarea
+    id: dod
+    attributes:
+      label: Definition of Done
+      value: |
+        - [ ] Implementierung komplett
+        - [ ] Tests geschrieben/grün
+        - [ ] Dokumentation aktualisiert
+        - [ ] Akzeptanzkriterien verifiziert (wie/Ergebnis dokumentiert)
+    validations:
+      required: false
+  - type: textarea
+    id: deps
+    attributes:
+      label: Abhängigkeiten / Offene Fragen
+    validations:
+      required: false
