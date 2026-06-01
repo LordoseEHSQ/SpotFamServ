@@ -4,6 +4,26 @@
 
 Alle Spotify-Anfragen laufen über den Port `SpotifyApiClientInterface`; keine direkten HTTP-Aufrufe in Controllern. Token-Handling, OAuth-State und Fehler sind gekapselt.
 
+## App-Credentials: Quelle & Präzedenz (D-011)
+
+- **Single Source of Truth:** die in den System-Einstellungen gespeicherte DB-Konfiguration
+  (`SpotifyAppConfiguration`, Endpunkte `/api/v1/system/spotify`). Das Client Secret liegt verschlüsselt
+  (`spotify_encrypted_string`) in der DB.
+- **Auflösung zur Laufzeit:** `SpotifyCredentialsProvider` (`SpotifyCredentialsProviderInterface`) liefert pro
+  Request die effektiven Credentials. Reihenfolge:
+  1. **DB-Config, wenn vollständig** (Client ID **und** Secret **und** Redirect URI gesetzt) → `source = db`.
+  2. **sonst env-Fallback** (`SPOTIFY_CLIENT_ID`/`SECRET`/`SPOTIFY_REDIRECT_URI`) → `source = env`.
+  Es wird **ganzheitlich** umgeschaltet (kein Vermischen von DB- und env-Feldern), damit nie eine neue
+  Client ID mit einem alten Secret kombiniert wird. Kein Prozess-Cache → ein UI-Save greift ohne Neustart.
+- **Konsumenten:** `SpotifyHttpApiClient` (Token-Tausch/Refresh), `GetSpotifyAuthorizationUrl` (Consent-URL),
+  `SpotifyOAuthController` (Callback-Redirect) ziehen Client-ID/Secret/Redirect ausschließlich aus dem Provider.
+- **Scopes** bleiben code-seitig (kanonische Liste in `SpotifyCredentialsProvider::DEFAULT_SCOPES`); das UI-Feld
+  `scope_defaults` wird für den OAuth-Flow bewusst nicht verwendet.
+- **Validierung:** `POST /api/v1/system/spotify/validate` prüft die effektiven Credentials **real** gegen Spotify
+  (client_credentials-Grant, `checkClientCredentials()`), nicht nur deren Vorhandensein.
+- **Hinweis APP_SECRET:** Das DB-Secret wird mit aus `APP_SECRET` abgeleitetem Schlüssel ver-/entschlüsselt.
+  Ein Wechsel von `APP_SECRET` macht ein gespeichertes Secret unlesbar → in dem Fall neu eintragen.
+
 ## Token-Speicherung und Verschlüsselung
 
 - **Speicherort:** Tabelle `spotify_account_link`; Spalten `access_token` und `refresh_token` mit Doctrine-Type `spotify_encrypted_string`.

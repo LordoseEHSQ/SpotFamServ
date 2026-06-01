@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+### Fix – Spotify-App-Config über die Oberfläche (D-011)
+
+#### Behoben
+- **System-Einstellungen waren wirkungslos** – Client-ID/Secret/Redirect aus der UI
+  (`SpotifyAppConfiguration`) wurden zur Laufzeit ignoriert; OAuth/Token-Refresh/Playback nutzten
+  ausschließlich die env-Werte. Neuer `SpotifyCredentialsProvider` liefert die effektiven Credentials
+  jetzt pro Request: **DB-Config (Source of Truth) vor env-Fallback**. `SpotifyHttpApiClient`,
+  `GetSpotifyAuthorizationUrl` und `SpotifyOAuthController` beziehen Client-ID/Secret/Redirect/Scopes
+  daraus. Ein UI-Save greift ohne Neustart.
+
+#### Neu/Geändert
+- **Echte Credential-Validierung** – „Validieren" prüft Client-ID/Secret real gegen Spotify
+  (client_credentials-Grant) statt nur deren Vorhandensein; neue Methode
+  `SpotifyApiClientInterface::checkClientCredentials()`.
+- **Präzedenz** – DB-Config gewinnt nur, wenn vollständig (ID + Secret + Redirect); sonst env.
+  Kein Vermischen von DB- und env-Feldern.
+- **Scopes** bleiben code-seitig (kanonische Liste in `SpotifyCredentialsProvider`).
+- **Tests** – Provider-Präzedenz (DB/env/unvollständig) und `ValidateSpotifyAppConfig` (OK/abgelehnt/unvollständig).
+
 ### Sprint 2 – Core E2E (Spotify → Wobie via ESP32)
 
 #### Neu

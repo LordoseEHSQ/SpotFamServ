@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Module\Spotify\Infrastructure\Http;
 
 use App\Module\Spotify\Application\ExchangeSpotifyCode;
+use App\Module\Spotify\Application\Port\SpotifyCredentialsProviderInterface;
 use App\Module\Spotify\Domain\Exception\SpotifyOAuthStateException;
 use App\Module\Spotify\Domain\Exception\SpotifyTokenInvalidException;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -21,8 +22,8 @@ final class SpotifyOAuthController
 {
     public function __construct(
         private readonly ExchangeSpotifyCode $exchangeCode,
+        private readonly SpotifyCredentialsProviderInterface $credentials,
         private readonly string $frontendUrl,
-        private readonly string $redirectUri,
     ) {
     }
 
@@ -42,7 +43,7 @@ final class SpotifyOAuthController
             return new RedirectResponse($this->frontendUrl . '/spotify-callback?error=missing_params');
         }
 
-        $redirectUri = $this->redirectUri;
+        $redirectUri = $this->credentials->current()->redirectUri;
         try {
             $link = ($this->exchangeCode)($code, $state, $redirectUri);
             $profileId = $link->getFamilyProfileId();

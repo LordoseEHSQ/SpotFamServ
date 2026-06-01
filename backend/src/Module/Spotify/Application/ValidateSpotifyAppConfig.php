@@ -6,17 +6,24 @@ namespace App\Module\Spotify\Application;
 
 use App\Module\ActivityLog\Application\Port\ActivityLogRepositoryInterface;
 use App\Module\ActivityLog\Domain\ActivityLog;
+use App\Module\Spotify\Application\Port\SpotifyApiClientInterface;
 use App\Module\Spotify\Application\Port\SpotifyAppConfigRepositoryInterface;
+use App\Module\Spotify\Application\Port\SpotifyCredentialsProviderInterface;
+use App\Module\Spotify\Domain\Exception\SpotifyDomainException;
 use App\Module\Spotify\Domain\SpotifyAppConfiguration;
-use App\Module\Spotify\Domain\Exception\SpotifyException;
 
+/**
+ * Prüft die effektiven Spotify-App-Credentials REAL gegen Spotify (client_credentials-Grant),
+ * statt nur deren Vorhandensein zu prüfen. So beweist der "Validieren"-Button, dass
+ * Client ID + Secret tatsächlich für die App gültig sind.
+ */
 final readonly class ValidateSpotifyAppConfig
 {
     public function __construct(
         private SpotifyAppConfigRepositoryInterface $configRepository,
         private ActivityLogRepositoryInterface $activityLog,
-        private string $envClientId,
-        private string $envRedirectUri,
+        private SpotifyCredentialsProviderInterface $credentials,
+        private SpotifyApiClientInterface $apiClient,
     ) {
     }
 
@@ -25,18 +32,22 @@ final readonly class ValidateSpotifyAppConfig
      */
     public function __invoke(): array
     {
+        $creds = $this->credentials->current();
+
+        $valid = false;
+        if (!$creds->isComplete()) {
+            $note = 'Konfiguration unvollständig: Client ID, Client Secret oder Redirect URI fehlt.';
+        } else {
+            try {
+                $this->apiClient->checkClientCredentials($creds->clientId, $creds->clientSecret);
+                $valid = true;
+                $note = sprintf('Credentials von Spotify bestätigt (Quelle: %s).', $creds->source);
+            } catch (SpotifyDomainException $e) {
+                $note = 'Spotify lehnt die Credentials ab: ' . $e->getMessage();
+            }
+        }
+
         $config = $this->configRepository->findActive();
-
-        $clientId = $config?->getSpotifyClientId() ?? $this->envClientId;
-        $redirectUri = $config?->getRedirectUri() ?? $this->envRedirectUri;
-
-        $valid = $clientId !== '' && $clientId !== null
-            && $redirectUri !== '' && $redirectUri !== null;
-
-        $note = $valid
-            ? 'Konfiguration vollständig. Client ID und Redirect URI vorhanden.'
-            : 'Konfiguration unvollständig: Client ID oder Redirect URI fehlt.';
-
         if ($config !== null) {
             $config->recordCheck($valid, $note);
             $this->configRepository->save($config);
@@ -49,7 +60,7 @@ final readonly class ValidateSpotifyAppConfig
             null,
             null,
             null,
-            ['valid' => $valid, 'note' => $note],
+            ['valid' => $valid, 'note' => $note, 'source' => $creds->source],
         );
         $this->activityLog->append($entry);
 
