@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Module\Spotify\Application;
 
+use App\Module\Spotify\Application\Dto\SpotifyCredentials;
 use App\Module\Spotify\Application\GetSpotifyAuthorizationUrl;
 use App\Module\Spotify\Application\GetSpotifyAuthorizationUrlResult;
 use App\Module\Spotify\Application\Port\OAuthStateManagerInterface;
+use App\Module\Spotify\Application\Port\SpotifyCredentialsProviderInterface;
 use PHPUnit\Framework\TestCase;
 
 class GetSpotifyAuthorizationUrlTest extends TestCase
@@ -15,12 +17,19 @@ class GetSpotifyAuthorizationUrlTest extends TestCase
     {
         $stateManager = $this->createMock(OAuthStateManagerInterface::class);
         $stateManager->method('createState')->with('profile-123')->willReturn('generated-state');
-        $useCase = new GetSpotifyAuthorizationUrl(
-            $stateManager,
+
+        $credentials = $this->createMock(SpotifyCredentialsProviderInterface::class);
+        $credentials->method('current')->willReturn(new SpotifyCredentials(
             'test-client-id',
+            'test-secret',
             'https://backend.example.com/api/v1/spotify/callback',
-        );
+            ['user-read-private', 'user-modify-playback-state'],
+            'db',
+        ));
+
+        $useCase = new GetSpotifyAuthorizationUrl($stateManager, $credentials);
         $result = $useCase->__invoke('profile-123');
+
         $this->assertInstanceOf(GetSpotifyAuthorizationUrlResult::class, $result);
         $this->assertStringContainsString('accounts.spotify.com/authorize', $result->authorizationUrl);
         $this->assertStringContainsString('client_id=test-client-id', $result->authorizationUrl);
