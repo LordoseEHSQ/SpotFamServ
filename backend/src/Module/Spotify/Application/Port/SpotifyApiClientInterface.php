@@ -19,6 +19,14 @@ use App\Module\Spotify\Application\Dto\SpotifyUserDto;
 interface SpotifyApiClientInterface
 {
     /**
+     * Verify app client credentials against Spotify via the client_credentials grant.
+     * Does not require a user token; proves that client id + secret are valid for the app.
+     *
+     * @throws \App\Module\Spotify\Domain\Exception\SpotifyDomainException when Spotify rejects the credentials
+     */
+    public function checkClientCredentials(string $clientId, string $clientSecret): void;
+
+    /**
      * Exchange authorization code for tokens.
      *
      * @throws \App\Module\Spotify\Domain\Exception\SpotifyException on API error

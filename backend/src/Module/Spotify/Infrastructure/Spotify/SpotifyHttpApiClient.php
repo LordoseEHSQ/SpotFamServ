@@ -13,6 +13,7 @@ use App\Module\Spotify\Application\Dto\SpotifyTokenResponseDto;
 use App\Module\Spotify\Application\Dto\SpotifyTrackDto;
 use App\Module\Spotify\Application\Dto\SpotifyUserDto;
 use App\Module\Spotify\Application\Port\SpotifyApiClientInterface;
+use App\Module\Spotify\Application\Port\SpotifyCredentialsProviderInterface;
 use App\Module\Spotify\Domain\Exception\SpotifyApiException;
 use App\Module\Spotify\Domain\Exception\SpotifyNoDeviceException;
 use App\Module\Spotify\Domain\Exception\SpotifyScopeMissingException;
@@ -29,20 +30,39 @@ final class SpotifyHttpApiClient implements SpotifyApiClientInterface
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-        private readonly string $clientId,
-        private readonly string $clientSecret,
+        private readonly SpotifyCredentialsProviderInterface $credentials,
     ) {
+    }
+
+    public function checkClientCredentials(string $clientId, string $clientSecret): void
+    {
+        $response = $this->httpClient->request('POST', self::TOKEN_URL, [
+            'body' => ['grant_type' => 'client_credentials'],
+            'auth_basic' => [$clientId, $clientSecret],
+            'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
+        ]);
+        $status = $response->getStatusCode();
+        if ($status >= 400) {
+            $body = $response->toArray(false);
+            $detail = $body['error_description'] ?? $body['error'] ?? ('HTTP ' . $status);
+            $message = is_string($detail) && $detail !== '' ? $detail : 'Ungültige Client-Credentials';
+            if ($status === 400 || $status === 401) {
+                throw new SpotifyTokenInvalidException($message);
+            }
+            throw new SpotifyApiException('Spotify credential check failed: ' . $message, $status);
+        }
     }
 
     public function exchangeCode(string $code, string $redirectUri): SpotifyTokenResponseDto
     {
+        $creds = $this->credentials->current();
         $response = $this->httpClient->request('POST', self::TOKEN_URL, [
             'body' => [
                 'grant_type' => 'authorization_code',
                 'code' => $code,
                 'redirect_uri' => $redirectUri,
             ],
-            'auth_basic' => [$this->clientId, $this->clientSecret],
+            'auth_basic' => [$creds->clientId, $creds->clientSecret],
             'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
         ]);
         return $this->parseTokenResponse($response, false, $code);
@@ -50,12 +70,13 @@ final class SpotifyHttpApiClient implements SpotifyApiClientInterface
 
     public function refreshToken(string $refreshToken): SpotifyTokenResponseDto
     {
+        $creds = $this->credentials->current();
         $response = $this->httpClient->request('POST', self::TOKEN_URL, [
             'body' => [
                 'grant_type' => 'refresh_token',
                 'refresh_token' => $refreshToken,
             ],
-            'auth_basic' => [$this->clientId, $this->clientSecret],
+            'auth_basic' => [$creds->clientId, $creds->clientSecret],
             'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
         ]);
         return $this->parseTokenResponse($response, true, $refreshToken);

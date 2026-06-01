@@ -80,19 +80,20 @@ services:
     App\Module\Spotify\Application\Port\OAuthStateManagerInterface: '@App\Module\Spotify\Infrastructure\Spotify\SpotifyOAuthStateManager'
     App\Module\Spotify\Application\Port\SpotifyAppConfigRepositoryInterface: '@App\Module\Spotify\Infrastructure\Repository\DoctrineSpotifyAppConfigRepository'
 
+    # Effektive Credentials: DB-Config (Source of Truth) vor env-Fallback.
+    App\Module\Spotify\Application\Port\SpotifyCredentialsProviderInterface: '@App\Module\Spotify\Infrastructure\Spotify\SpotifyCredentialsProvider'
+    App\Module\Spotify\Infrastructure\Spotify\SpotifyCredentialsProvider:
+        arguments:
+            $envClientId: '%spotify.client_id%'
+            $envClientSecret: '%spotify.client_secret%'
+            $envRedirectUri: '%spotify.redirect_uri%'
+
     App\Module\Spotify\Infrastructure\Spotify\SpotifyOAuthStateManager:
         arguments:
             $cache: '@cache.app'
 
-    App\Module\Spotify\Infrastructure\Spotify\SpotifyHttpApiClient:
-        arguments:
-            $clientId: '%spotify.client_id%'
-            $clientSecret: '%spotify.client_secret%'
-
-    App\Module\Spotify\Application\GetSpotifyAuthorizationUrl:
-        arguments:
-            $clientId: '%spotify.client_id%'
-            $redirectUri: '%spotify.redirect_uri%'
+    # SpotifyHttpApiClient, GetSpotifyAuthorizationUrl und SpotifyOAuthController beziehen
+    # Client ID/Secret/Redirect zur Laufzeit über den SpotifyCredentialsProvider (autowired).
 
     App\Module\Spotify\Application\GetSpotifyAppConfig:
         arguments:
@@ -100,12 +101,6 @@ services:
             $envClientSecret: '%spotify.client_secret%'
             $envRedirectUri: '%spotify.redirect_uri%'
 
-    App\Module\Spotify\Application\ValidateSpotifyAppConfig:
-        arguments:
-            $envClientId: '%spotify.client_id%'
-            $envRedirectUri: '%spotify.redirect_uri%'
-
     App\Module\Spotify\Infrastructure\Http\SpotifyOAuthController:
         arguments:
             $frontendUrl: '%spotify.frontend_url%'
-            $redirectUri: '%spotify.redirect_uri%'
