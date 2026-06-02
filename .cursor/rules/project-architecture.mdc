@@ -17,7 +17,8 @@ alwaysApply: true
 - **Backend = Symfony 7.4 LTS / PHP 8.5.6** in Docker (`app` php-fpm, `nginx`,
   `db` postgres:17). Verwaltet Spotify-OAuth, Profile, RFID-Bindings, Device-Discovery, Playback.
 - **Frontend = React/Vite SPA**, statisch via nginx unter gleichem Origin (`/api/v1` relativ).
-- **Wiedergabe = Spotify Web API** auf die Wobie Box (Spotify Connect, Premium noetig).
+- **Wiedergabe = Spotify Web API** auf ein beliebiges Spotify-Connect-faehiges Wiedergabegeraet
+ (austauschbares Connect-Target, kein spezifisches Produkt; Premium noetig).
 
 ## Deployment-Paket (Pi)
 - Stack laeuft auf dem Pi via `docker compose` (v2-Plugin). Runbook + Specs:

@@ -6,10 +6,11 @@
 ## Was ist das Projekt?
 RFID-gesteuerte Spotify-Wiedergabe für die Familie: Ein **ESP32 (WROOM-32)** liest RFID-Tags
 und schickt HTTP-Requests an ein **Symfony-Backend** (Docker, auf einem Raspberry Pi), das per
-**Spotify Web API** Wiedergabe auf der **Wobie Box** (Spotify Connect) steuert.
+**Spotify Web API** die Wiedergabe auf einem **beliebigen Spotify-Connect-fähigen Wiedergabegerät**
+(austauschbares Connect-Target, kein spezifisches Produkt) steuert.
 
 ## Architektur (Kurz)
-`ESP32 → HTTP /api/v1/readers/{scan|next|previous} → Backend (Symfony/PHP 8.5) → Spotify API → Wobie Box`
+`ESP32 → HTTP /api/v1/readers/{scan|next|previous} → Backend (Symfony/PHP 8.5) → Spotify API → Spotify-Connect-Gerät`
 Frontend = React/Vite SPA (nginx, gleicher Origin, `/api/v1`).
 
 ## Verzeichnis-Landkarte

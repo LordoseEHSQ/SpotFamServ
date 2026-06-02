@@ -81,7 +81,7 @@ class ProcessScanTest extends TestCase
         );
         $this->tokenManager->method('getValidLinkForProfile')->willReturn($this->link());
         $profile = new FamilyProfile('Kids', null);
-        $profile->setDefaultDevice('device-1', 'Wobie Box');
+        $profile->setDefaultDevice('device-1', 'Connect Box');
         $this->profileRepo->method('find')->willReturn($profile);
         $this->sessionStore->expects($this->once())->method('remember')->with('profile-1', 'reader-1');
 

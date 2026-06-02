@@ -52,7 +52,7 @@ final readonly class StartPlayback
             $this->play($accessToken, $contextUri, $defaultDeviceId);
         } catch (SpotifyNoDeviceException $e) {
             // The stored default device id can become stale (Spotify hands out a new id when the
-            // Wobie Box reconnects). Re-resolve by the stored device name once and retry.
+            // Connect device reconnects). Re-resolve by the stored device name once and retry.
             $newDeviceId = $this->reResolveByName($accessToken, $profile->getDefaultDeviceName(), $defaultDeviceId);
             if ($newDeviceId === null) {
                 throw $e;
