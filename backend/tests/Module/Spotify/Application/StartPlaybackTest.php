@@ -113,4 +113,33 @@ class StartPlaybackTest extends TestCase
         $useCase = new StartPlayback($tokenManager, $apiClient, $repo);
         $useCase->__invoke('profile-1', 'spotify:playlist:abc', 'explicit-id');
     }
+
+    public function test_reresolves_stale_reader_device_by_name_and_retries(): void
+    {
+        // Reader→Box (D-015): stale reader box id is re-resolved by name (no persist, caller owns mapping).
+        $tokenManager = $this->createMock(SpotifyTokenManagerInterface::class);
+        $tokenManager->method('getValidLinkForProfile')->willReturn($this->link());
+
+        $apiClient = $this->createMock(SpotifyApiClientInterface::class);
+        $apiClient->method('transferPlayback')->willReturnCallback(
+            function (string $token, string $deviceId): void {
+                if ($deviceId === 'stale-reader-id') {
+                    throw new SpotifyNoDeviceException('Device not found');
+                }
+            }
+        );
+        $apiClient->method('getAvailableDevices')->willReturn([
+            new SpotifyDeviceDto('fresh-reader-id', 'Wohnzimmer', 'speaker', false),
+        ]);
+        $apiClient->expects($this->once())
+            ->method('startPlayback')
+            ->with('access-token', 'spotify:playlist:abc', 'fresh-reader-id');
+
+        $repo = $this->createMock(FamilyProfileRepositoryInterface::class);
+        // Profile must NOT be saved – the reader owns its mapping, not StartPlayback.
+        $repo->expects($this->never())->method('save');
+
+        $useCase = new StartPlayback($tokenManager, $apiClient, $repo);
+        $useCase->__invoke('profile-1', 'spotify:playlist:abc', 'stale-reader-id', 'Wohnzimmer');
+    }
 }

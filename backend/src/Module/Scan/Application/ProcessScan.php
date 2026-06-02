@@ -69,11 +69,15 @@ final readonly class ProcessScan
         // pass null so StartPlayback falls back to the card profile's default device.
         $readerDeviceTargetId = $readerDevice?->getDefaultSpotifyDeviceId();
         $readerDeviceTargetName = $readerDevice?->getDefaultDeviceName();
+        $deviceSource = $readerDeviceTargetId !== null ? 'reader' : 'profile';
 
         try {
             ($this->startPlayback)($profileId, $context->playlistUri, $readerDeviceTargetId, $readerDeviceTargetName);
         } catch (SpotifyNoDeviceException $e) {
-            $this->logScan($cardUid, ScanOutcome::NO_DEVICE, $readerId, $readerDeviceId, $cardId, $profileId, ['error' => $e->getMessage()]);
+            $this->logScan($cardUid, ScanOutcome::NO_DEVICE, $readerId, $readerDeviceId, $cardId, $profileId, [
+                'error' => $e->getMessage(),
+                'device_source' => $deviceSource,
+            ]);
             return new ProcessScanResult(ScanOutcome::NO_DEVICE, $e->getMessage());
         } catch (SpotifyNotConnectedException $e) {
             $this->logScan($cardUid, ScanOutcome::TOKEN_INVALID, $readerId, $readerDeviceId, $cardId, $profileId, ['error' => $e->getMessage()]);
@@ -87,7 +91,11 @@ final readonly class ProcessScan
         }
 
         $this->sessionStore->remember($profileId, $readerId);
-        $this->logScan($cardUid, ScanOutcome::SUCCESS, $readerId, $readerDeviceId, $cardId, $profileId, ['context_uri' => $context->playlistUri]);
+        $this->logScan($cardUid, ScanOutcome::SUCCESS, $readerId, $readerDeviceId, $cardId, $profileId, [
+            'context_uri' => $context->playlistUri,
+            'device_source' => $deviceSource,
+            'device_id' => $readerDeviceTargetId,
+        ]);
         return new ProcessScanResult(ScanOutcome::SUCCESS, 'Playback started.');
     }
 
