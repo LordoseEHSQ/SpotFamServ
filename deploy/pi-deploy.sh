@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Tag-getriggertes Pull-Deploy auf dem Raspberry Pi.
 # Idempotent: deployt nur, wenn ein neuerer v*-Tag vorliegt als der aktuelle Stand.
-# Ablauf: fetch tags -> (falls neu) backup -> checkout Tag -> conditional build/composer
-#         -> up -d -> migrate -> cache:clear -> healthcheck.
+# Ablauf: fetch tags -> (falls neu) backup -> checkout Tag -> conditional app-build/composer
+#         -> Web-Image aus GHCR ziehen (Retry) -> up -d -> migrate -> cache:clear -> healthcheck.
+# Frontend wird NICHT mehr auf dem Pi gebaut (D-012): das Web-Image kommt fertig aus CI/GHCR.
 set -euo pipefail
 
 REPO_DIR="${REPO_DIR:-/home/lars/SpotFamServ}"
@@ -43,16 +44,27 @@ echo "$CHANGED" | grep -qE '^backend/composer\.lock' && need_composer=true
 # 4) Ziel-Tag auschecken (untracked Secrets/.env.local/dist/vendor bleiben erhalten)
 git checkout -f "$LATEST_TAG"
 
-# 5) Frontend-Build (statisch) – nur falls frontend sich geaendert hat und Node verfuegbar ist.
-if echo "$CHANGED" | grep -qE '^frontend/' && command -v pnpm >/dev/null 2>&1; then
-  log "Frontend-Aenderung erkannt – baue dist/"
-  ( cd frontend && pnpm install --frozen-lockfile && pnpm build ) || log "WARN: Frontend-Build fehlgeschlagen (altes dist bleibt)."
-fi
+# 5) Frontend wird NICHT mehr auf dem Pi gebaut (D-012/L-011). Das Web-Image (SPA + nginx)
+#    kommt aus GHCR. WEB_IMAGE_TAG bindet das Image an den deployten v*-Tag.
+export WEB_IMAGE_TAG="$LATEST_TAG"
 
-# 6) Image bauen (nur bei relevanten Aenderungen)
+# 6) App-Image bauen (nur bei relevanten Aenderungen; Backend baut weiterhin lokal)
 if [ "$need_build" = true ]; then
   log "Baue app-Image (Dockerfile/compose/composer geaendert)"
   docker compose build app
+fi
+
+# 6b) Web-Image ziehen (mit Retry: CI baut das Image parallel zum Tag; Pull kann anfangs 404en)
+log "Web-Image ziehen ($WEB_IMAGE_TAG)"
+pull_ok=false
+for i in $(seq 1 5); do
+  if docker compose pull nginx >/dev/null 2>&1; then pull_ok=true; break; fi
+  log "Web-Image noch nicht verfuegbar (Versuch $i/5) – warte 30s (CI-Build evtl. noch nicht fertig)."
+  sleep 30
+done
+if [ "$pull_ok" != true ]; then
+  log "FEHLER – Web-Image $WEB_IMAGE_TAG nicht ziehbar. Abbruch; naechster Timer-Tick versucht erneut."
+  exit 1
 fi
 
 # 7) Container starten/aktualisieren
