@@ -11,8 +11,6 @@ import type { SpotifyPlaylistItem } from '@/api/endpoints/spotify';
 import { useSpotifyPlaylists } from '@/hooks/useSpotifyPlaylists';
 import { useSpotifyAppConfig } from '@/hooks/useSpotifyAppConfig';
 import { api } from '@/api/client';
-import { useQueryClient } from '@tanstack/react-query';
-
 interface MusicTabProps {
   profile: FamilyProfileDto;
 }
@@ -22,11 +20,10 @@ export function MusicTab({ profile }: MusicTabProps) {
   const [activeSection, setActiveSection] = useState<'playlists' | 'search'>('playlists');
   const { data: sysConfig } = useSpotifyAppConfig();
   const { data: playlistData } = useSpotifyPlaylists(profile.id, profile.spotify_status === 'connected');
-  const qc = useQueryClient();
   const playlists = playlistData?.items ?? [];
 
   const isConnected = profile.spotify_status === 'connected';
-  const isExpired = profile.spotify_status === 'expired';
+  const needsReauth = profile.spotify_status === 'reauth_required';
 
   const handleConnect = async () => {
     try {
@@ -34,15 +31,6 @@ export function MusicTab({ profile }: MusicTabProps) {
       window.location.href = res.authorization_url;
     } catch {
       /* will show error state */
-    }
-  };
-
-  const handleValidate = async () => {
-    try {
-      await api.post(`/profiles/${profile.id}/spotify/validate`, {});
-      qc.invalidateQueries({ queryKey: ['profiles', profile.id] });
-    } catch {
-      /* error handled via react-query toast */
     }
   };
 
@@ -69,22 +57,16 @@ export function MusicTab({ profile }: MusicTabProps) {
         <div>
           <h3 className="font-semibold mb-1">Spotify nicht verbunden</h3>
           <p className="text-sm text-muted-foreground">
-            {isExpired
-              ? 'Die Spotify-Verbindung ist abgelaufen. Bitte neu verbinden.'
+            {needsReauth
+              ? 'Die Spotify-Verbindung muss neu autorisiert werden. Bitte neu verbinden.'
               : 'Verbinde das Spotify-Konto, um den Musikbereich zu nutzen.'}
           </p>
         </div>
         <div className="flex gap-2 flex-wrap justify-center">
           <Button size="sm" onClick={handleConnect}>
             <ExternalLink className="h-4 w-4" />
-            {isExpired ? 'Neu verbinden' : 'Mit Spotify verbinden'}
+            {needsReauth ? 'Neu verbinden' : 'Mit Spotify verbinden'}
           </Button>
-          {isExpired && (
-            <Button variant="outline" size="sm" onClick={handleValidate}>
-              <CheckCircle2 className="h-4 w-4" />
-              Token prüfen
-            </Button>
-          )}
         </div>
       </div>
     );

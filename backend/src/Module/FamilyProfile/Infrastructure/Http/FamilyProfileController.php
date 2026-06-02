@@ -12,8 +12,8 @@ use App\Module\FamilyProfile\Application\SetDefaultDevice;
 use App\Module\FamilyProfile\Application\UpdateFamilyProfile;
 use App\Module\FamilyProfile\Domain\FamilyProfile;
 use App\Module\FamilyProfile\Infrastructure\Http\Dto\FamilyProfileRequest;
+use App\Module\Spotify\Application\GetSpotifyStatus;
 use App\Module\Spotify\Application\Port\SpotifyAccountLinkRepositoryInterface;
-use App\Module\Spotify\Domain\SpotifyAccountLink;
 use App\Module\SetupWizard\Application\GetCompleteness;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -96,7 +96,7 @@ final class FamilyProfileController
     private function profileToArray(FamilyProfile $p): array
     {
         $link          = $this->accountLinkRepository->findByProfileId((string) $p->getId());
-        $spotifyStatus = $this->resolveSpotifyStatus($link);
+        $spotifyStatus = GetSpotifyStatus::resolve($link);
 
         $completeness = null;
         try {
@@ -120,21 +120,5 @@ final class FamilyProfileController
             'created_at'                => $p->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'updated_at'                => $p->getUpdatedAt()->format(\DateTimeInterface::ATOM),
         ];
-    }
-
-    private function resolveSpotifyStatus(?SpotifyAccountLink $link): string
-    {
-        if ($link === null) {
-            return 'not_connected';
-        }
-
-        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
-
-        // Wenn Token bereits abgelaufen (mit 5-Minuten-Puffer)
-        if ($link->getExpiresAt() < $now->modify('-5 minutes')) {
-            return 'expired';
-        }
-
-        return 'connected';
     }
 }

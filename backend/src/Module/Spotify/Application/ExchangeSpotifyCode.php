@@ -48,6 +48,8 @@ final readonly class ExchangeSpotifyCode
         // Persist the human-readable display name and mark the link as validated right after consent,
         // so status/UI no longer require a separate manual validate call.
         $link->markValidated($displayName);
+        // Fresh consent resolves any prior re-auth requirement (#25, D-014).
+        $link->clearNeedsReauth();
         $this->linkRepository->save($link);
 
         $this->activityRepository->append(new ActivityLog(

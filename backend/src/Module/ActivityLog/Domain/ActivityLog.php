@@ -28,6 +28,7 @@ class ActivityLog
     public const TYPE_SPOTIFY_DISCONNECTED  = 'spotify_disconnected';
     public const TYPE_SPOTIFY_VALIDATED     = 'spotify_validated';
     public const TYPE_SPOTIFY_TOKEN_REFRESH = 'spotify_token_refreshed';
+    public const TYPE_SPOTIFY_REAUTH_REQUIRED = 'spotify_reauth_required';
     public const TYPE_DEVICE_ASSIGNED       = 'device_assigned';
     public const TYPE_DEVICE_UNASSIGNED     = 'device_unassigned';
     public const TYPE_DEVICE_DISCOVERED     = 'device_discovered';

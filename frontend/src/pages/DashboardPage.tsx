@@ -138,13 +138,13 @@ export function DashboardPage() {
                       <div className={cn(
                         'h-2 w-2 rounded-full shrink-0',
                         p.spotify_status === 'connected' ? 'bg-success' :
-                        p.spotify_status === 'expired' ? 'bg-warning' : 'bg-muted-foreground'
+                        p.spotify_status === 'reauth_required' ? 'bg-warning' : 'bg-muted-foreground'
                       )} />
                       <span className="flex-1 text-sm font-medium">{p.name}</span>
                       {p.spotify_status === 'connected' ? (
                         <Badge variant="success" className="text-xs">Spotify OK</Badge>
-                      ) : p.spotify_status === 'expired' ? (
-                        <Badge variant="warning" className="text-xs">Abgelaufen</Badge>
+                      ) : p.spotify_status === 'reauth_required' ? (
+                        <Badge variant="warning" className="text-xs">Neu verbinden</Badge>
                       ) : (
                         <Badge variant="muted" className="text-xs">Nicht verbunden</Badge>
                       )}

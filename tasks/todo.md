@@ -26,6 +26,12 @@ Releases: v0.2.0 (Sprint-2-Code), v0.2.1 (Spotify-Config-Fix), v0.2.2 (Frontend-
 - [~] #10 ESP32 + E2E — Firmware-Fix (lowercase outcome) + secrets.h.example-IP fertig.
       **Verbleibend (Hardware): ESP32 an /dev/ttyUSB0 flashen + realer Scan.**
 
+## Sprint 2 – Nachzügler-WPs
+- [x] #25 Spotify-Status irreführend „abgelaufen" → Refresh-getriebener Status (`connected | reauth_required |
+      not_connected`), persistiertes `needs_reauth`-Flag (D-014, Option B). Single-Source `GetSpotifyStatus::resolve()`,
+      Controller-Duplikat entfernt, Frontend-Enum + Consumer + Labels. Lokal grün (PHPStan/PHPUnit 28/Frontend-Build),
+      OpenAPI 0-Diff. Release v0.2.3.
+
 ## Bugs (GitHub)
 - [x] #18 Spotify-App-Credentials aus UI wurden zur Laufzeit ignoriert → `SpotifyCredentialsProvider` (DB vor env). Gefixt, v0.2.1.
 - [x] #20 Frontend wird auf dem Pi nie gebaut (kein Node/pnpm) → Sprint-Stände erreichen die UI nicht.

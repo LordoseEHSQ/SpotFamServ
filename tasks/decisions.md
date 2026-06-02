@@ -170,3 +170,27 @@ kleinstem Diff gegenüber dem bestehenden Stack.
 `frontend/package.json`-Bump. **Rollback:** echter Rollback = neuer höherer Tag vom älteren Commit
 (`pi-deploy.sh` zieht stets den neuesten `v*`); ad-hoc `WEB_IMAGE_TAG=v0.2.1 docker compose up -d nginx`.
 **Status:** Accepted
+
+---
+
+### D-014 | 2026-06-02 | Spotify-Status: Refresh-getrieben statt Access-Token-Takt (#25)
+
+**Kontext:** Die UI zeigte nach Ablauf des 1h-Access-Tokens fälschlich „abgelaufen", obwohl der
+`SpotifyTokenManager` den Token automatisch per Refresh erneuert. Der Access-Token-Zeitstempel ist
+kein sinnvoller Status-Indikator; relevant ist allein, ob eine **echte Neu-Autorisierung** nötig ist.
+**Optionen:**
+- A) Ohne Persistenz: „Refresh-Token vorhanden" ⇒ `connected`; Re-Auth-Bedarf wird erst sichtbar, wenn
+  eine echte Aktion scheitert. Vorteil: kein Schema. Nachteil: ein dauerhaft kaputter Refresh-Token
+  (revoked / `invalid_grant` / APP_SECRET-Wechsel) bleibt unsichtbar, bis der User zufällig etwas auslöst.
+- B) **Persistiertes `needs_reauth`-Flag** auf `spotify_account_link`: gesetzt bei dauerhaftem
+  Refresh-Fehler (`SpotifyTokenInvalidException`/`invalid_grant`), gelöscht bei erfolgreichem Refresh
+  und bei Re-Consent. Status = `not_connected` (kein Link) / `reauth_required` (Flag) / `connected`.
+**Entscheidung:** **B.** Akkurat und proaktiv: surfacet echten Re-Auth-Bedarf, ohne den User vom
+Access-Token-Takt zu behelligen. Transiente Fehler (Netz/5xx → `SpotifyApiException`) setzen das Flag
+**nicht** (kein false-positive). Kosten: additive Mini-Migration + Wiring.
+**Konsequenzen:** Domain-Feld + Methoden, Migration `Version20260602120000_spotify_needs_reauth`
+(separater Commit), `SpotifyTokenManager.refreshAndPersist` (set/clear + ActivityLog
+`spotify_reauth_required`), `ExchangeSpotifyCode` (clear), `GetSpotifyStatus::resolve()` als **einzige**
+Status-Quelle (Duplikat in `FamilyProfileController` entfernt), Frontend-Enum `expired`→`reauth_required`
+(alle Consumer + Labels), Release v0.2.3. **Rollback:** Migration-`down()` droppt die Spalte additiv;
+Status fällt ohne Flag auf das alte Verhalten zurück. **Status:** Accepted

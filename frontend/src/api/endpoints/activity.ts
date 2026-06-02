@@ -10,6 +10,7 @@ export type ActivityType =
   | 'spotify_disconnected'
   | 'spotify_validated'
   | 'spotify_token_refreshed'
+  | 'spotify_reauth_required'
   | 'device_assigned'
   | 'device_unassigned'
   | 'device_discovered'
