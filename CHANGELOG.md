@@ -1,8 +1,33 @@
 # Changelog
 
-## [Unreleased] – Sprint 4 (laufend)
+## [Unreleased] – Sprint 4 → v0.3.0 (ausstehend: CI grün + Pi-E2E)
 
-<!-- Sprint-4-Änderungen hier eintragen (WP1 Gerätewahl, WP2 DataGrid, WP3 Daemon, WP4 Onboarding) -->
+### WP2 – Kartenverwaltung als DataGrid (#40)
+
+#### Backend (WP2a)
+- **`GET /api/v1/profiles/{profileId}/rfid-cards` liefert jetzt `binding: {id, name} | null`** – additiv/nullable, oasdiff non-breaking. Vermeidet N+1: neuer UseCase `ListRfidCardsWithBindings` macht 3 SQL-Queries total (Cards + Bindings-Batch + PlaylistRef-Batch). Neue Interface-Methoden `findByCardIds` (CardPlaylistBinding) und `findByIds` (SpotifyPlaylistReference), je mit 1 SQL-Query.
+- OpenAPI `GET rfid-cards` 200-Response mit `binding`-Schema dokumentiert.
+- PHPUnit: 4 neue Tests (`ListRfidCardsWithBindingsTest`): leer, ohne Binding, mit Binding, gemischt.
+
+#### Frontend (WP2b)
+- **`CardsPage` vollständig neu als shadcn-Table DataGrid.** Spalten: UID (monospace) · Label (inline edit: Click → Input → Enter/Blur speichert) · Playlist (Binding-Badge) · Aktionen.
+- **Kein fixed-overlay-Modal mehr.** Label-Bearbeitung inline; Binding-Änderung via Row-Select; Löschen via `AlertDialog`; Anlegen via expandierbarem Footer-Panel.
+- **Scan-to-Create** erhalten (Polling nur bei aktivem Scan-Modus).
+- `tsc --noEmit` + `pnpm build` grün.
+
+### WP1 – Playback-Diagnose-Logging (#39)
+- `ProcessScan` loggt `device_source` (`'reader'|'profile'`) + `device_id` in `scan_event.details` beim `SUCCESS`- und `NO_DEVICE`-Outcome. Ermöglicht Pi-Diagnose ohne DB-Query.
+- `StartPlaybackTest`: neuer Test `test_reresolves_stale_reader_device_by_name_and_retries` (Reader-Gerät Stale-Re-Resolve, kein `profileRepo->save()` da Caller die Mapping-Ownership hat).
+- Kern-Logik (Reader→Gerät → Fallback Profil-Default + Stale-Re-Resolve) war bereits in v0.2.5 vollständig implementiert.
+
+### WP3 – Pi-Reader-Daemon vollständig (#41)
+- `firmware/pi_reader/secrets.example.env` hinzugefügt (war im README referenziert, fehlte).
+- `.gitignore`-Fix: `!secrets.example.env` (war durch `secrets.*.env`-Glob mitignoriert).
+- Daemon-Code, systemd-Unit und Karten-Präsenz-Entprellung waren bereits vollständig in v0.2.5 vorhanden.
+
+### WP4 – Gerätewahl-Onboarding (#42)
+- `docs/pi-deployment.md`: Neuer Runbook-Abschnitt „Wiedergabegerät sicherstellen" (D-S4-DEV): Reader→Gerät (ReadersPage) vs. Profil-Default (ProfileDetailPage), Priorität, `no_device`-Outcome-Hinweis.
+- Frontend: `ReadersPage` (Reader→Gerät-Select) + `ProfileDetailPage` (Standardlautsprecher mit „Kein Standardlautsprecher konfiguriert."-Anzeige) waren bereits vollständig vorhanden.
 
 ---
 

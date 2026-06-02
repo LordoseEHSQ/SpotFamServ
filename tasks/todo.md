@@ -34,12 +34,14 @@ Altlasten absorbiert in Sprint 4: ProcessScan nutzt Reader-Gerät NICHT (WP1); k
 
 ## Sprint 4 – Card-UX & Playback-Reliability (Milestone 5) — IN ARBEIT
 Branch: `feat/sprint-04-card-ux-playback` · Worktree: `../SpotFamServ-sprint-04` · Ziel: `v0.3.0`
-Plan: `tasks/plan-sprint-04.md`. Entscheidungen: D-S4-VER, D-S4-DEV, D-S4-GH.
-- [ ] #39 WP1: Gerätewahl beim Scan (Reader→Gerät + Fallback Profil-Default) + PHPUnit
-- [ ] #40 WP2: Kartenverwaltung als DataGrid (rfid-cards+binding, shadcn-Table, modal-frei)
-- [ ] #41 WP3: Pi-Reader-Daemon ins Repo + systemd + Entprellung
-- [ ] #42 WP4: Gerät im UI setzbar + Onboarding
-Blockiert (User/Hardware): Connect-Gerät online; realer Scan am Pi; systemd-Install/Reboot.
+Plan: `tasks/plan-sprint-04.md`. Doku: `docs/sprints/sprint-04.md`.
+- [x] #39 WP1: device_source-Logging + Reader-Stale-Test (Kern-Logik war bereits v0.2.5)
+- [x] #40 WP2: rfid-cards +binding API (WP2a) + CardsPage DataGrid (WP2b)
+- [x] #41 WP3: secrets.example.env + .gitignore-Fix (Daemon/Unit waren bereits v0.2.5)
+- [x] #42 WP4: pi-deployment.md Onboarding-Runbook (UI war bereits vorhanden)
+- [ ] E2E: Deploy v0.3.0 auf Pi + Gerät setzen + realer Scan (Hardware/User-blockiert)
+Blockiert: Connect-Gerät online; systemd-Install am Pi; realer Scan.
+Nächste Schritte: PR erstellen → CI grün → Squash-Merge → v0.3.0-Tag → Pi-Deploy.
 
 ## Bugs (GitHub)
 - [x] #18 Spotify-App-Credentials aus UI ignoriert → SpotifyCredentialsProvider. Gefixt v0.2.1.
