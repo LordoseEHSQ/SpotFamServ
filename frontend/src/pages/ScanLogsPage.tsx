@@ -38,6 +38,9 @@ export function ScanLogsPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['scan-events', profileId || null, page],
     queryFn: () => scanApi.listEvents({ profile_id: profileId || undefined, limit, offset: page * limit }),
+    // Live-Tail: neue Scans (auch vom Pi-/ESP-Leser) erscheinen ohne manuelles Neuladen.
+    refetchInterval: 3000,
+    refetchOnWindowFocus: true,
   });
 
   const items: ScanEventDto[] = data?.items ?? [];

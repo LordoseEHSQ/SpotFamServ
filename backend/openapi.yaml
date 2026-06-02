@@ -271,6 +271,74 @@ paths:
       responses:
         default:
           description: ''
+  /api/v1/rfid-cards/lookup:
+    get:
+      operationId: get_api_rfid_lookup
+      responses:
+        default:
+          description: ''
+  /api/v1/readers:
+    get:
+      operationId: get_api_readers_list
+      responses:
+        default:
+          description: ''
+  '/api/v1/readers/{readerId}/default-device':
+    put:
+      operationId: put_api_readers_set_default_device
+      parameters:
+        -
+          name: readerId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[^/]+'
+      responses:
+        default:
+          description: ''
+    delete:
+      operationId: delete_api_readers_clear_default_device
+      parameters:
+        -
+          name: readerId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[^/]+'
+      responses:
+        default:
+          description: ''
+  '/api/v1/readers/{readerId}/api-key':
+    post:
+      summary: "Generates (or rotates) a dedicated API key for this reader. The plain key is\nreturned exactly once and never stored or logged; only its hash is persisted."
+      operationId: post_api_readers_generate_api_key
+      parameters:
+        -
+          name: readerId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[^/]+'
+      responses:
+        default:
+          description: ''
+    delete:
+      summary: "Removes the reader's dedicated API key, re-activating the global-key fallback."
+      operationId: delete_api_readers_revoke_api_key
+      parameters:
+        -
+          name: readerId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[^/]+'
+      responses:
+        default:
+          description: ''
   /api/v1/readers/scan:
     post:
       operationId: post_api_scan_scan

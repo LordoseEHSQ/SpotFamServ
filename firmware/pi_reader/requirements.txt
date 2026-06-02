@@ -1,0 +1,15 @@
+# SpotFam Pi-Leser – Python-Abhaengigkeiten (Raspberry Pi, aarch64).
+# Installation in einem venv, siehe README.md.
+#
+# Versionen sind als Minimum gepinnt (>=), damit Sicherheits-/Bugfixes auf dem
+# Pi nachgezogen werden koennen. Fuer reproduzierbare Deployments kann nach
+# erstem erfolgreichem Lauf ein `pip freeze > requirements.lock.txt` erfolgen.
+
+# PN532-Treiber (I2C/SPI/UART) – High-Level-API read_passive_target().
+adafruit-circuitpython-pn532>=2.4.1
+
+# Blinka stellt board/busio (CircuitPython-Kompatibilitaet) auf dem Pi bereit.
+adafruit-blinka>=8.51.0
+
+# HTTP-Client fuer die Scan-Meldungen an das Backend.
+requests>=2.32.0

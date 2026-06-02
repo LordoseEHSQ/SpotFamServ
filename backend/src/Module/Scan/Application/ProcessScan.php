@@ -8,6 +8,7 @@ use App\Module\Scan\Application\Port\PlaybackSessionStoreInterface;
 use App\Module\Scan\Application\Port\ReaderDeviceRepositoryInterface;
 use App\Module\Scan\Application\Port\ScanCardResolverInterface;
 use App\Module\Scan\Application\Port\ScanEventRepositoryInterface;
+use App\Module\Scan\Domain\ReaderDevice;
 use App\Module\Scan\Domain\ScanOutcome;
 use App\Module\Spotify\Application\StartPlayback;
 use App\Module\Spotify\Domain\Exception\SpotifyNoDeviceException;
@@ -39,9 +40,15 @@ final readonly class ProcessScan
             return new ProcessScanResult(ScanOutcome::INVALID_REQUEST, 'Missing card_uid.');
         }
 
-        $readerDeviceId = $readerId !== ''
-            ? $this->readerDeviceRepository->findByReaderId($readerId)?->getId()
-            : null;
+        // Resolve the reader, auto-registering it on first contact (D-R1 A) so it becomes
+        // visible in the admin UI and can be mapped to a room box. Self-registration carries
+        // no auth weight (no api key) – it only makes the reader configurable.
+        $readerDevice = $readerId !== '' ? $this->readerDeviceRepository->findByReaderId($readerId) : null;
+        if ($readerDevice === null && $readerId !== '') {
+            $readerDevice = new ReaderDevice($readerId);
+            $this->readerDeviceRepository->save($readerDevice);
+        }
+        $readerDeviceId = $readerDevice?->getId();
 
         if ($this->scanEventRepository->findRecentScan($cardUid, self::DEBOUNCE_SECONDS, $readerId) !== null) {
             $this->logScan($cardUid, ScanOutcome::DEBOUNCED, $readerId, $readerDeviceId, null, null, ['debounce_seconds' => self::DEBOUNCE_SECONDS]);
@@ -58,8 +65,13 @@ final readonly class ProcessScan
         $profileId = $context->profileId;
         $cardId = $context->cardId;
 
+        // Reader→Box mapping (D-015): if this reader has a default box, play there; otherwise
+        // pass null so StartPlayback falls back to the card profile's default device.
+        $readerDeviceTargetId = $readerDevice?->getDefaultSpotifyDeviceId();
+        $readerDeviceTargetName = $readerDevice?->getDefaultDeviceName();
+
         try {
-            ($this->startPlayback)($profileId, $context->playlistUri, null);
+            ($this->startPlayback)($profileId, $context->playlistUri, $readerDeviceTargetId, $readerDeviceTargetName);
         } catch (SpotifyNoDeviceException $e) {
             $this->logScan($cardUid, ScanOutcome::NO_DEVICE, $readerId, $readerDeviceId, $cardId, $profileId, ['error' => $e->getMessage()]);
             return new ProcessScanResult(ScanOutcome::NO_DEVICE, $e->getMessage());

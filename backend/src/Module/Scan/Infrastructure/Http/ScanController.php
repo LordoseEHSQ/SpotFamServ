@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Module\Scan\Infrastructure\Http;
 
 use App\Module\Scan\Application\ListScanEvents;
+use App\Module\Scan\Application\Port\ReaderDeviceRepositoryInterface;
 use App\Module\Scan\Application\ProcessReaderControl;
 use App\Module\Scan\Application\ProcessScan;
 use App\Module\Scan\Domain\ScanEvent;
@@ -16,7 +17,9 @@ use Symfony\Component\Routing\Attribute\Route;
 /**
  * Reader scan endpoint.
  * Request payload: { "reader_id": "optional", "card_uid": "required" }.
- * Reader auth (MVP): if READER_API_KEY env is set, require X-API-Key or Authorization: Bearer <key>.
+ * Reader auth (D-K1, Option B): if the addressed reader has its own API key, ONLY that
+ * per-reader key is accepted. Otherwise we fall back to the global READER_API_KEY
+ * (today's behaviour). If neither is configured, auth stays open (dev default).
  */
 #[Route(path: '/readers', name: 'api_scan_', format: 'json')]
 final class ScanController
@@ -25,6 +28,7 @@ final class ScanController
         private readonly ProcessScan $processScan,
         private readonly ListScanEvents $listScanEvents,
         private readonly ProcessReaderControl $processReaderControl,
+        private readonly ReaderDeviceRepositoryInterface $readerDevices,
         private readonly string $readerApiKey = '',
     ) {
     }
@@ -32,15 +36,13 @@ final class ScanController
     #[Route(path: '/scan', name: 'scan', methods: ['POST'])]
     public function scan(Request $request): JsonResponse
     {
-        if ($this->readerApiKey !== '' && !$this->validateReaderAuth($request)) {
-            return new JsonResponse([
-                'outcome' => ScanOutcome::INVALID_REQUEST,
-                'message' => 'Missing or invalid API key. Use X-API-Key or Authorization: Bearer.',
-            ], 401);
+        $body = $this->parseBody($request);
+        $readerId = isset($body['reader_id']) ? trim((string) $body['reader_id']) : '';
+
+        if (!$this->validateReaderAuth($request, $readerId)) {
+            return $this->unauthorized();
         }
 
-        $body = $request->toArray();
-        $readerId = isset($body['reader_id']) ? trim((string) $body['reader_id']) : '';
         $cardUid = isset($body['card_uid']) ? trim((string) $body['card_uid']) : '';
         if ($cardUid === '') {
             return new JsonResponse(['outcome' => ScanOutcome::INVALID_REQUEST, 'message' => 'Missing card_uid.'], 400);
@@ -64,15 +66,12 @@ final class ScanController
 
     private function control(Request $request, string $action): JsonResponse
     {
-        if ($this->readerApiKey !== '' && !$this->validateReaderAuth($request)) {
-            return new JsonResponse([
-                'outcome' => ScanOutcome::INVALID_REQUEST,
-                'message' => 'Missing or invalid API key. Use X-API-Key or Authorization: Bearer.',
-            ], 401);
-        }
-
-        $body = $request->getContent() !== '' ? $request->toArray() : [];
+        $body = $this->parseBody($request);
         $readerId = isset($body['reader_id']) ? trim((string) $body['reader_id']) : '';
+
+        if (!$this->validateReaderAuth($request, $readerId)) {
+            return $this->unauthorized();
+        }
 
         $result = ($this->processReaderControl)($readerId, $action);
         $status = $result->outcome === ScanOutcome::SUCCESS ? 200 : 409;
@@ -95,16 +94,65 @@ final class ScanController
         return new JsonResponse(['items' => $items]);
     }
 
-    private function validateReaderAuth(Request $request): bool
+    /**
+     * Authenticates a reader request (D-K1, Option B):
+     *  - If the addressed reader has its own key hash, ONLY that per-reader key is
+     *    accepted; the global key is intentionally rejected for it. This makes a
+     *    compromised reader isolable: delete the key (fall back) or delete the reader (401).
+     *  - Otherwise (reader has no key, or reader_id is empty/unknown) we fall back to
+     *    the global READER_API_KEY, preserving today's behaviour.
+     *  - If neither is configured, auth stays open (dev/MVP default).
+     */
+    private function validateReaderAuth(Request $request, string $readerId): bool
+    {
+        $presentedKey = $this->extractPresentedKey($request);
+
+        $reader = $readerId !== '' ? $this->readerDevices->findByReaderId($readerId) : null;
+        if ($reader !== null && $reader->hasApiKey()) {
+            return $presentedKey !== '' && $reader->validateApiKey($presentedKey);
+        }
+
+        if ($this->readerApiKey === '') {
+            return true;
+        }
+
+        return $presentedKey !== '' && hash_equals($this->readerApiKey, $presentedKey);
+    }
+
+    private function extractPresentedKey(Request $request): string
     {
         $key = $request->headers->get('X-API-Key');
         if ($key !== null && $key !== '') {
-            return hash_equals($this->readerApiKey, $key);
+            return $key;
         }
         $auth = $request->headers->get('Authorization');
         if ($auth !== null && str_starts_with($auth, 'Bearer ')) {
-            return hash_equals($this->readerApiKey, trim(substr($auth, 7)));
+            return trim(substr($auth, 7));
         }
-        return false;
+        return '';
+    }
+
+    private function unauthorized(): JsonResponse
+    {
+        return new JsonResponse([
+            'outcome' => ScanOutcome::INVALID_REQUEST,
+            'message' => 'Missing or invalid API key. Use X-API-Key or Authorization: Bearer.',
+        ], 401);
+    }
+
+    /**
+     * Parses the JSON body once, tolerating an empty body (control endpoints may
+     * be called without a payload). Auth needs reader_id before the body is used.
+     *
+     * @return array<string, mixed>
+     */
+    private function parseBody(Request $request): array
+    {
+        if ($request->getContent() === '') {
+            return [];
+        }
+        /** @var array<string, mixed> $data */
+        $data = $request->toArray();
+        return $data;
     }
 }

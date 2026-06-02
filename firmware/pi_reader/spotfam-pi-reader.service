@@ -1,0 +1,53 @@
+# systemd-Unit fuer den SpotFam Pi-Leser (PN532 via I2C).
+#
+# Installation (System-Dienst, startet beim Boot ohne Login):
+#   sudo cp spotfam-pi-reader.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now spotfam-pi-reader.service
+#
+# Pfade unten ggf. an die reale Installation anpassen (User, Verzeichnis, venv).
+# Laeuft UNPRIVILEGIERT als User `lars` mit Zusatzgruppen `i2c`/`gpio` fuer den
+# Hardware-Zugriff (kein root). Siehe README.md.
+
+[Unit]
+Description=SpotFam Pi-Leser (PN532 RFID -> Backend Scan)
+Documentation=file:///home/lars/SpotFamServ/firmware/pi_reader/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# Unprivilegiert: dedizierter User + Hardware-Gruppen statt root.
+User=lars
+Group=lars
+SupplementaryGroups=i2c gpio
+
+WorkingDirectory=/home/lars/SpotFamServ/firmware/pi_reader
+
+# Geheimnisse/Konfiguration NICHT im Unit-File, sondern aus secrets.env.
+EnvironmentFile=/home/lars/SpotFamServ/firmware/pi_reader/secrets.env
+
+# venv-Python (siehe README: python3 -m venv .venv).
+ExecStart=/home/lars/SpotFamServ/firmware/pi_reader/.venv/bin/python /home/lars/SpotFamServ/firmware/pi_reader/pi_reader.py
+
+# Robustheit: bei Absturz/Hardware-Hakeln automatisch neu starten.
+Restart=on-failure
+RestartSec=3
+# Bremse bei Dauer-Crash-Schleife (5 Starts in 60s -> Pause).
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Logging nach journald (journalctl -u spotfam-pi-reader).
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=spotfam-pi-reader
+
+# Defensives Hardening (Hardware-Zugriff via Gruppen bleibt erhalten).
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

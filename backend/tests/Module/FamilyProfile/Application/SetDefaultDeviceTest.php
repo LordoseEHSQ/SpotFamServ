@@ -20,10 +20,10 @@ class SetDefaultDeviceTest extends TestCase
         $repo->expects($this->once())->method('save')->with($profile);
 
         $useCase = new SetDefaultDevice($repo);
-        $result = $useCase->__invoke('profile-1', '  device-abc  ', '  Wobie Box  ');
+        $result = $useCase->__invoke('profile-1', '  device-abc  ', '  Connect Box  ');
 
         $this->assertSame('device-abc', $result->getDefaultSpotifyDeviceId());
-        $this->assertSame('Wobie Box', $result->getDefaultDeviceName());
+        $this->assertSame('Connect Box', $result->getDefaultDeviceName());
     }
 
     public function test_clears_default_when_device_id_null(): void
@@ -47,6 +47,6 @@ class SetDefaultDeviceTest extends TestCase
 
         $useCase = new SetDefaultDevice($repo);
         $this->expectException(NotFoundException::class);
-        $useCase->__invoke('missing', 'device-abc', 'Wobie Box');
+        $useCase->__invoke('missing', 'device-abc', 'Connect Box');
     }
 }

@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import type { RfidCardDto, CardPlaylistBindingDto } from '../api/endpoints/rfid';
+import { scanApi } from '../api/endpoints/scan';
 import {
   useRfidCards,
   useCardBinding,
+  useCardLookup,
   usePlaylistReferences,
   useCreateRfidCard,
   useUpdateRfidCard,
@@ -21,6 +24,12 @@ export function CardsPage() {
   const [bindingCard, setBindingCard] = useState<RfidCardDto | null>(null);
   const [bindingRefId, setBindingRefId] = useState<string>('');
 
+  // Scan-to-Create: wartet auf einen NEUEN Scan (Baseline = jüngstes Event beim Start),
+  // prüft die UID per Lookup gegen alle Profile und zeigt belegt/frei.
+  const [scanMode, setScanMode] = useState(false);
+  const [scannedUid, setScannedUid] = useState<string | null>(null);
+  const [baseline, setBaseline] = useState<{ set: boolean; id: string | null }>({ set: false, id: null });
+
   const { data, isLoading, error } = useRfidCards(profileId);
   const { data: playlistRefs } = usePlaylistReferences(profileId, !!bindingCard);
   const { data: currentBinding } = useCardBinding(profileId, bindingCard?.id);
@@ -29,6 +38,53 @@ export function CardsPage() {
   const updateMutation = useUpdateRfidCard(profileId!);
   const deleteMutation = useDeleteRfidCard(profileId!);
   const setBindingMutation = useSetCardBinding(profileId!);
+
+  const { data: scanEvents } = useQuery({
+    queryKey: ['scan-events', 'enroll'],
+    queryFn: () => scanApi.listEvents({ limit: 5 }),
+    refetchInterval: 2000,
+    enabled: scanMode && !scannedUid,
+  });
+
+  const { data: lookup, isLoading: lookupLoading } = useCardLookup(scannedUid);
+
+  useEffect(() => {
+    if (!scanMode) return;
+    const events = scanEvents?.items ?? [];
+    const newest = events[0];
+    if (!baseline.set) {
+      setBaseline({ set: true, id: newest?.id ?? null });
+      return;
+    }
+    if (!scannedUid && newest && newest.id !== baseline.id) {
+      setScannedUid(newest.card_uid_raw);
+    }
+  }, [scanMode, scanEvents, baseline, scannedUid]);
+
+  const startScan = () => {
+    setScannedUid(null);
+    setBaseline({ set: false, id: null });
+    setScanMode(true);
+  };
+
+  const stopScan = () => {
+    setScanMode(false);
+    setScannedUid(null);
+    setBaseline({ set: false, id: null });
+  };
+
+  const rescan = () => {
+    setScannedUid(null);
+    setBaseline({ set: false, id: null });
+  };
+
+  const adoptScannedUid = () => {
+    if (!scannedUid) return;
+    setCreateUid(scannedUid);
+    setCreateLabel('');
+    setCreateOpen(true);
+    stopScan();
+  };
 
   const openEdit = (c: RfidCardDto) => {
     setEditingCard(c);
@@ -74,14 +130,87 @@ export function CardsPage() {
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1 style={{ margin: 0 }}>RFID-Karten</h1>
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          style={{ padding: '0.5rem 1rem', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}
-        >
-          Neue Karte
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            onClick={scanMode ? stopScan : startScan}
+            style={{ padding: '0.5rem 1rem', borderRadius: 6, border: 'none', background: scanMode ? '#6b7280' : '#d97706', color: '#fff', cursor: 'pointer' }}
+          >
+            {scanMode ? 'Scan abbrechen' : 'Karte scannen'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            style={{ padding: '0.5rem 1rem', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}
+          >
+            Neue Karte
+          </button>
+        </div>
       </div>
+
+      {scanMode && (
+        <div style={{ marginBottom: '1.5rem', padding: '1rem', border: '1px solid #fcd34d', background: '#fffbeb', borderRadius: 8 }}>
+          {!scannedUid ? (
+            <div style={{ color: '#92400e' }}>
+              <strong>Leser bereit</strong> – jetzt eine Karte auf den Leser legen…
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div>
+                <span style={{ fontSize: 13, color: '#92400e', fontWeight: 600 }}>Gescannte UID: </span>
+                <span style={{ fontFamily: 'monospace', fontSize: 15 }}>{scannedUid}</span>
+              </div>
+
+              {lookupLoading && <div style={{ color: '#6b7280' }}>Prüfe…</div>}
+
+              {!lookupLoading && lookup?.status === 'free' && (
+                <>
+                  <div style={{ color: '#15803d', fontWeight: 600 }}>Frei – noch keinem Profil zugeordnet.</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={adoptScannedUid}
+                      style={{ padding: '0.5rem 1rem', borderRadius: 6, border: 'none', background: '#2563eb', color: '#fff', cursor: 'pointer' }}
+                    >
+                      Diese UID übernehmen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={rescan}
+                      style={{ padding: '0.5rem 1rem', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}
+                    >
+                      Andere Karte scannen
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {!lookupLoading && lookup?.status === 'assigned' && (
+                <>
+                  <div style={{ color: '#b91c1c', fontWeight: 600 }}>
+                    Belegt
+                    {lookup.profile_name ? ` von „${lookup.profile_name}“` : ''}
+                    {lookup.profile_id === profileId ? ' (dieses Profil)' : ''}.
+                  </div>
+                  <div style={{ color: '#6b7280', fontSize: 14 }}>
+                    {lookup.label ? `Label: ${lookup.label}. ` : ''}
+                    {lookup.has_binding ? `Playlist: ${lookup.binding_name ?? '—'}.` : 'Keine Playlist gebunden.'}
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={rescan}
+                      style={{ padding: '0.5rem 1rem', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}
+                    >
+                      Andere Karte scannen
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {createOpen && (
         <div style={{ marginBottom: '1.5rem', padding: '1rem', border: '1px solid #e5e7eb', borderRadius: 8 }}>

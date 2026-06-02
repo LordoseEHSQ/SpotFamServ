@@ -1,0 +1,12 @@
+# Lokale Geheimnisse/Konfiguration – niemals committen
+secrets.env
+secrets.py
+secrets.*.env
+
+# Python venv & Caches
+.venv/
+__pycache__/
+*.pyc
+
+# Reproduzierbarkeits-Lockfile (optional, nach erstem Lauf generiert)
+requirements.lock.txt

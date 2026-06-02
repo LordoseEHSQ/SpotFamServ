@@ -29,7 +29,7 @@ Stand: 2026-06-01. Begleitende Stolpersteine: siehe `tasks/lessons.md` (L-001..L
 | Hostname | `spotfam` |
 | LAN-IP | `192.168.1.91` (DHCP – **nicht reserviert**, siehe Risiken) |
 | Pi-MAC | `dc-a6-32-5a-73-9e` (für DHCP-Reservierung) |
-| Wobie Box IP | `192.168.1.10` |
+| Connect-Wiedergabegerät IP (Beispiel) | `192.168.1.10` |
 
 ## Zugang
 
@@ -100,7 +100,7 @@ ssh lars@192.168.1.91 'cd ~/SpotFamServ && docker compose exec -T app php bin/co
   ```
 - Spotify-Dashboard Redirect-URI muss exakt sein: `http://127.0.0.1:8080/api/v1/spotify/callback`
 
-## E2E-Runbook: Scan → Spotify → Wobie Box (Sprint 2)
+## E2E-Runbook: Scan → Spotify → Connect-Gerät (Sprint 2)
 
 Reihenfolge ist zwingend: **#8 → #9 → #10** (ohne Token kein Discovery/Playback).
 
@@ -113,11 +113,11 @@ Reihenfolge ist zwingend: **#8 → #9 → #10** (ohne Token kein Discovery/Playb
    - Tunnel: `ssh -N -L 127.0.0.1:8080:localhost:8080 lars@192.168.1.91` → Browser `http://127.0.0.1:8080`
      → Profil → „Mit Spotify verbinden" → Consent.
    - Verifizieren: `GET /api/v1/profiles/{id}/spotify/status` = `connected`; `GET …/spotify/devices` liefert ≥1 Gerät.
-2. **#9 – Default-Device:** Wobie Box einschalten (Spotify Connect aktiv).
+2. **#9 – Default-Device:** Connect-Wiedergabegerät einschalten (Spotify Connect aktiv).
    - Discovery: `POST /api/v1/devices/discover` (oder Profil-Tab „Lautsprecher" → „Geräte abrufen").
    - Standard setzen: im Tab „Lautsprecher" auf „Als Standard" — ruft `PUT /profiles/{id}/default-device`.
    - Verifizieren: `GET /profiles/{id}` zeigt `default_spotify_device_id` + `default_device_name`;
-     `POST …/spotify/playback/start` mit `context_uri` und **ohne** `device_id` spielt auf der Wobie Box.
+     `POST …/spotify/playback/start` mit `context_uri` und **ohne** `device_id` spielt auf dem Connect-Gerät.
 3. **#10 – ESP32 flashen + Scan:** ESP32 an `/dev/ttyUSB0` (Gruppe `dialout`).
    - `firmware/spotfam_reader/secrets.h`: `BACKEND_BASE_URL=http://192.168.1.91:8080`, `READER_API_KEY`
      identisch zu Root-`.env` auf dem Pi. Flash via `arduino-cli`.
@@ -129,11 +129,11 @@ Reihenfolge ist zwingend: **#8 → #9 → #10** (ohne Token kein Discovery/Playb
      # Erwartung: {"outcome":"success","message":"Playback started."}
      ```
    - Realer Scan: Serial-Monitor zeigt `-> 200: {"outcome":"success",...}`, Reader-LED 1× langer Blink,
-     Wobie Box spielt hörbar.
+     Connect-Gerät spielt hörbar.
 
 ## Offene Härtung / Risiken
 
 - **Auto-Start fehlt:** `restart: unless-stopped` je Service ergänzen (L-007).
 - **DHCP-IP nicht fix:** Reservierung für MAC `dc-a6-32-5a-73-9e` setzen, sonst brechen ESP32 (`firmware/.../secrets.h` → `BACKEND_BASE_URL`) und Bookmarks.
 - **`APP_ENV=dev`** auf dem Pi: Debug/Profiler aktiv, nicht prod-gehärtet.
-- **Spotify Premium** für Wiedergabe-Steuerung nötig; Wobie Box muss zum Discovery-Zeitpunkt online sein.
+- **Spotify Premium** für Wiedergabe-Steuerung nötig; das Connect-Wiedergabegerät muss zum Discovery-Zeitpunkt online sein.

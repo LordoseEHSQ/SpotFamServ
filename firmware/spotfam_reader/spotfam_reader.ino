@@ -2,10 +2,10 @@
 // SpotFam RFID Reader  –  ESP32 + MFRC522
 //
 // Liest RFID-Karten und meldet sie an das SpotFam-Backend, das daraufhin die
-// gebundene Playlist auf der Wobie Box (Spotify Connect) startet.
+// gebundene Playlist auf einem Spotify-Connect-Geraet startet.
 // Zwei Taster steuern Vor/Zurueck der laufenden Wiedergabe.
 //
-// Architektur: ESP -> HTTP -> Backend -> Spotify Web API -> Wobie Box.
+// Architektur: ESP -> HTTP -> Backend -> Spotify Web API -> Spotify-Connect-Geraet.
 // Es liegen KEINE Spotify-Tokens auf dem ESP (sicher by design).
 //
 // Konfiguration: secrets.h (Geheimnisse) + config.h (Pinout/Verhalten).

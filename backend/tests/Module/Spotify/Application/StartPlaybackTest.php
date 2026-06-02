@@ -43,7 +43,7 @@ class StartPlaybackTest extends TestCase
     public function test_reresolves_stale_default_device_by_name_and_retries(): void
     {
         $profile = new FamilyProfile('Kids', null);
-        $profile->setDefaultDevice('stale-id', 'Wobie Box');
+        $profile->setDefaultDevice('stale-id', 'Connect Box');
 
         $tokenManager = $this->createMock(SpotifyTokenManagerInterface::class);
         $tokenManager->method('getValidLinkForProfile')->willReturn($this->link());
@@ -58,7 +58,7 @@ class StartPlaybackTest extends TestCase
             }
         );
         $apiClient->method('getAvailableDevices')->willReturn([
-            new SpotifyDeviceDto('fresh-id', 'Wobie Box', 'speaker', false),
+            new SpotifyDeviceDto('fresh-id', 'Connect Box', 'speaker', false),
         ]);
         $apiClient->expects($this->once())
             ->method('startPlayback')
@@ -72,13 +72,13 @@ class StartPlaybackTest extends TestCase
         $useCase->__invoke('profile-1', 'spotify:playlist:abc', null);
 
         $this->assertSame('fresh-id', $profile->getDefaultSpotifyDeviceId());
-        $this->assertSame('Wobie Box', $profile->getDefaultDeviceName());
+        $this->assertSame('Connect Box', $profile->getDefaultDeviceName());
     }
 
     public function test_rethrows_when_no_matching_device_name(): void
     {
         $profile = new FamilyProfile('Kids', null);
-        $profile->setDefaultDevice('stale-id', 'Wobie Box');
+        $profile->setDefaultDevice('stale-id', 'Connect Box');
 
         $tokenManager = $this->createMock(SpotifyTokenManagerInterface::class);
         $tokenManager->method('getValidLinkForProfile')->willReturn($this->link());

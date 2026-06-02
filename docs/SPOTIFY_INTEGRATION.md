@@ -57,7 +57,7 @@ Alle Spotify-Anfragen laufen über den Port `SpotifyApiClientInterface`; keine d
   - `PUT /api/v1/profiles/{id}/default-device` mit Body `{ "device_id": "<spotify_device_id>", "device_name": "<anzeigename, optional>" }`
   - `DELETE /api/v1/profiles/{id}/default-device` entfernt das Standardgerät.
   - Persistiert `default_spotify_device_id` **und** `default_device_name` (Migration `Version20260601090000`). Der Setup-Wizard-Schritt `default_speaker` setzt weiterhin nur die ID.
-- **Stale-Device-Re-Resolve (ab Sprint 2, R2):** Spotify-`device_id`s sind ephemer (ändern sich z. B. nach Reboot der Wobie Box). Schlägt `StartPlayback` mit `SpotifyNoDeviceException` fehl, versucht der UseCase **einmal**, anhand des gespeicherten `default_device_name` ein aktuell verfügbares Gerät gleichen Namens zu finden, aktualisiert die gespeicherte ID und wiederholt. Findet sich kein Namens-Match, wird der Fehler durchgereicht.
+- **Stale-Device-Re-Resolve (ab Sprint 2, R2):** Spotify-`device_id`s sind ephemer (ändern sich z. B. nach Reboot des Connect-Geräts). Schlägt `StartPlayback` mit `SpotifyNoDeviceException` fehl, versucht der UseCase **einmal**, anhand des gespeicherten `default_device_name` ein aktuell verfügbares Gerät gleichen Namens zu finden, aktualisiert die gespeicherte ID und wiederholt. Findet sich kein Namens-Match, wird der Fehler durchgereicht.
 
 ## Token-Refresh
 

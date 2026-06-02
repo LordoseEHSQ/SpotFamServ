@@ -194,3 +194,96 @@ Access-Token-Takt zu behelligen. Transiente Fehler (Netz/5xx → `SpotifyApiExce
 Status-Quelle (Duplikat in `FamilyProfileController` entfernt), Frontend-Enum `expired`→`reauth_required`
 (alle Consumer + Labels), Release v0.2.3. **Rollback:** Migration-`down()` droppt die Spalte additiv;
 Status fällt ohne Flag auf das alte Verhalten zurück. **Status:** Accepted
+
+---
+
+### D-015 | 2026-06-02 | Reader/Playback (Multi-Raum)
+
+**Kontext:** Bisher bestimmt allein das **Profil der gescannten Karte** den Lautsprecher
+(`family_profile.default_spotify_device_id`); der Reader-Standort ist irrelevant. Für Multi-Raum
+("Karte spielt dort, wo ich sie scanne") muss der **Reader** die Box bestimmen können.
+**Optionen:**
+1. A) So lassen (Profil bestimmt Box) — Vorteile: nichts zu tun · Nachteile: kein Raum-Kontext.
+2. B) Reader→Box-Mapping (`reader_device.default_spotify_device_id`), Override beim Scan —
+   Vorteile: echtes Multi-Raum, rückwärtskompatibel (`StartPlayback` akzeptiert bereits explizites
+   `deviceId`) · Nachteile: Schema + Endpunkt + UI.
+**Entscheidung:** **B** (User, 2026-06-02). Zusätzlich bestätigt: **alle Zielboxen sind/werden
+Spotify-Connect-fähig** → kein Bluetooth-/`raspotify`-Zwischenschritt nötig.
+**Begründung:** Minimaler, additiver Eingriff; Profil-Default bleibt Fallback.
+**Konsequenzen:** Plan `tasks/plan-reader-box-mapping.md`. **Harte Grenze dokumentiert:** ein
+Spotify-Account spielt nur auf **einem** Gerät gleichzeitig → echtes paralleles Multi-Raum nur über
+**verschiedene Profile/Accounts**. Offene Unter-Entscheidungen in den Plänen: D-R1 (Herkunft der
+`reader_device`-Zeilen), D-P1/D-P2 (Pi-Leser-Hardware/Laufzeit), D-K1/D-O1 (Auth-Migration, OTA-Mechanismus).
+**Status:** Accepted
+
+---
+
+### D-016 | 2026-06-02 | Architektur-Grenze (verworfen: Bluetooth-Audio vom ESP)
+
+**Kontext:** Idee, den ESP32 per Bluetooth (A2DP) direkt auf eine Box streamen zu lassen statt über
+Spotify Connect.
+**Entscheidung:** **Verworfen.** Der ESP bleibt reiner Trigger; Audio streamt Spotifys Cloud auf die
+Connect-Box.
+**Begründung:** Auf dem ESP liegt kein Spotify-Audio (DRM/Widevine, lizenzierter Client nötig); ESP32
+kann den Stream weder beziehen noch dekodieren. A2DP-Source brächte nur schlechte SBC-Qualität, würde
+die gesamte Spotify-Connect-Integration (Qualität, Multiroom, Account-Steuerung) opfern und ist
+fragiler. Das bestehende „dummer Trigger"-Modell ist einfacher und korrekt.
+**Status:** Accepted
+
+---
+
+### D-017 | 2026-06-02 | Hardware (Pi-Leser)
+
+**Kontext:** Welcher RFID-Leser hängt am Pi (bestimmt Daemon-Sprache/Lib/UID-Handling)?
+**Fakt (User):** Der Pi-Leser ist ein **HW-147** = **NXP-PN532-Modul** (13,56 MHz, MIFARE Classic 1K/4K,
+NTAG; I2C/SPI/UART, Default HSU).
+**Entscheidung:** Pi-Daemon in **Python** mit **Adafruit CircuitPython PN532** (+ Blinka), Interface
+bevorzugt **I2C** (Restentscheidung D-P1 beim Verkabeln). Kein HID-Sonderfall.
+**Begründung:** PN532 liest dieselbe Kartenfamilie wie der MFRC522 am ESP → UID nach Hex-Normalisierung
+identisch (zu verifizieren mit bekannter Karte); Adafruit-Lib deckt alle drei Interfaces ab.
+**Konsequenzen:** Plan `tasks/plan-pi-reader-daemon.md` aktualisiert; Pflicht-Verifikation UID-Gleichheit
+PN532↔MFRC522 (4- vs. 7-Byte, Byte-Reihenfolge).
+**Status:** Accepted
+
+---
+
+### D-S3 | 2026-06-02 | Workflow (Sprint 3)
+
+**Kontext:** Spannung zwischen der harten Regel „EIN Sprint = EIN Branch (WP1..WPn als Commits) → ein
+PR → gemerged" und Sprint-Ziel 1 „CI grün → **mergen** → Pi-Migration → E2E", das einen Zwischen-Merge
+von PR #32 (nur Reader→Box) vor Sprint-Ende impliziert.
+**Optionen:**
+- A) Strikt ein PR: alle Sprint-3-WPs auf `feat/sprint-03-reader-lifecycle` sammeln, **einmal** am
+  Sprint-Ende mergen + Tag `v0.3.0`. Multi-Raum-E2E auf dem Pi erst nach Sprint-Ende (hängt ohnehin an
+  Hardware: mehrere Premium-Accounts + Connect-Boxen). Konfliktfrei mit der Regel.
+- B) Zwischen-Merge von #32 jetzt + Zwischen-Tag, Rest in neuem Branch/PR. Verstößt gegen „ein Sprint =
+  ein PR" / „keine parallelen Einzel-PRs".
+**Entscheidung:** **A** (User, 2026-06-02). Kein Merge von #32 vor Sprint-Ende.
+**Begründung:** Regelkonform; Multi-Raum-E2E ist hardware-blockiert → später Merge kostet keine reale Zeit.
+**Konsequenzen:** Provisioning/OTA (Teil 2/3 aus `plan-esp-ota-perreader-keys.md`) → **Sprint 4**.
+Terminologie „Wobie": nur produktive Doku/Kommentare generisieren, Historie bleibt als Audit-Spur.
+**Status:** Superseded by D-S3b (Deploy-Teil), 2026-06-02
+
+---
+
+### D-S3b | 2026-06-02 | Früher Feature-Deploy + Interim-Tag (revidiert D-S3)
+
+**Kontext:** User will Scan-to-Create real am Pi nutzen → früher Deploy nötig (vor Sprint-Ende).
+Widerspricht D-S3=A (Merge + `v0.3.0` erst am Sprint-Ende).
+**Befund (empirisch):** `pi-deploy.sh:18` wählt `git tag -l 'v*' --sort=-v:refname | head -1`. Git-Versionsort
+ohne `versionsort.suffix` sortiert `v0.3.0-rc.1` **über** `v0.3.0` → ein RC-Tag würde den finalen
+`v0.3.0`-Deploy blockieren. Verifiziert in Scratch-Repo.
+**Optionen:** (a) `v0.3.0` jetzt → verbrennt Sprint-Minor vor Sprint-Done (verstößt SemVer „Minor=Sprint").
+(b) `v0.3.0-rc.1` → bricht spätere `v0.3.0`-Auswahl (siehe Befund). (c) Interim-Patch `v0.2.4` → sortiert
+über `v0.2.3`, unter `v0.3.0`; Tooling-kompatibel; SemVer-unsauber (Feature unter Patch).
+**Entscheidung:** **(c) `v0.2.4`** als Interim-Feature-Release. **Regelkonform via `main`**: Branch
+verifizieren → **Squash-Merge nach `main`** → Tag `v0.2.4` auf `main` → Pi zieht diese Version.
+(Revidiert: früher Vorschlag „Tag auf Branch-HEAD ohne main-Merge" verworfen — Sonderweg, der `main`
+umgeht; User hat zu Recht den Standardweg eingefordert, 2026-06-02.)
+Sprint-Abschluss weiterhin: finaler `v0.3.0` (sortiert über `v0.2.4`).
+**Begründung:** Standard-Workflow (`parallel-branch-workflow.mdc`); `v0.2.4` hält `v0.3.0` für den echten
+Sprint-Close frei und sortiert tooling-korrekt. SemVer-Impurität (Feature unter Patch) = kleineres Übel
+für ein Interim. `-rc`-Suffix bleibt verboten (git-Versionsort-Falle).
+**Konsequenzen:** Lookup-Endpoint = additive API (oasdiff non-breaking, keine Migration). Voraussetzung
+vor Merge: CI grün (PHPStan L8, PHPUnit, tsc, oasdiff). Lessons-Eintrag zur git-Versionsort-Falle.
+**Status:** Accepted (User, 2026-06-02)
