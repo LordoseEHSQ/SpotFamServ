@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+### Feature – Reader→Box-Mapping / Multi-Raum (D-015)
+
+#### Hinzugefügt
+- **Jeder RFID-Leser kann einer festen Box (Spotify-Connect-Gerät) zugewiesen werden.** Ein Scan
+  spielt dann auf der Box des Lesers statt auf dem Standard-Lautsprecher des Karten-Profils
+  (Multi-Raum). Ohne Zuweisung bleibt das bisherige Verhalten (Profil-Default) – additiv und
+  rückwärtskompatibel.
+  - Schema: `reader_device.default_spotify_device_id` + `default_device_name`
+    (Migration `Version20260602140000_reader_default_device`, additiv/nullable, kein Datenverlust).
+  - **Leser registrieren sich beim ersten Scan automatisch** (`ProcessScan`, D-R1 A) und werden so im
+    Admin-UI konfigurierbar – ohne Auth-Gewicht (kein API-Key beim Self-Register).
+  - `StartPlayback` akzeptiert nun optional einen Gerätenamen und re-resolved eine **stale** Box-ID
+    einmalig per Name (wie beim Profil-Default), damit Playback nach Box-Reconnect nicht bricht.
+  - Neue Endpunkte: `GET /api/v1/readers` (Liste), `PUT|DELETE /api/v1/readers/{readerId}/default-device`.
+  - Frontend: neue Seite **„RFID-Leser"** (Box zuweisen/entfernen, Box-Auswahl aus dem Geräte-Inventar).
+- **Bekannte Grenze (Spotify):** ein Account spielt nur auf einem Gerät gleichzeitig. Echtes
+  paralleles Multi-Raum funktioniert über **verschiedene Profile/Accounts** (jedes Profil eigenes
+  Premium-Konto). Dieselbe Karte/dasselbe Profil kann nicht gleichzeitig in zwei Räumen spielen.
+
 ### Fix – Spotify-Status: irreführendes „abgelaufen" (#25, D-014)
 
 #### Behoben

@@ -11,6 +11,7 @@ use App\Module\Scan\Application\Port\ReaderDeviceRepositoryInterface;
 use App\Module\Scan\Application\Port\ScanCardResolverInterface;
 use App\Module\Scan\Application\Port\ScanEventRepositoryInterface;
 use App\Module\Scan\Application\ProcessScan;
+use App\Module\Scan\Domain\ReaderDevice;
 use App\Module\Scan\Domain\ScanCardContext;
 use App\Module\Scan\Domain\ScanOutcome;
 use App\Module\Spotify\Application\Port\SpotifyApiClientInterface;
@@ -83,6 +84,28 @@ class ProcessScanTest extends TestCase
         $profile->setDefaultDevice('device-1', 'Wobie Box');
         $this->profileRepo->method('find')->willReturn($profile);
         $this->sessionStore->expects($this->once())->method('remember')->with('profile-1', 'reader-1');
+
+        $result = $this->processScan()->__invoke('reader-1', 'ABCD1234');
+        $this->assertSame(ScanOutcome::SUCCESS, $result->outcome);
+    }
+
+    public function test_reader_with_mapped_box_plays_on_that_box(): void
+    {
+        // Reader→Box (D-015): a mapped reader box wins over the profile default.
+        $reader = new ReaderDevice('reader-1');
+        $reader->setDefaultDevice('reader-box-9', 'Küche');
+        $this->readerDevices = $this->createMock(ReaderDeviceRepositoryInterface::class);
+        $this->readerDevices->method('findByReaderId')->willReturn($reader);
+
+        $this->resolver->method('resolveCard')->willReturn(
+            new ScanCardContext('card-1', 'profile-1', 'spotify:playlist:abc')
+        );
+        $this->tokenManager->method('getValidLinkForProfile')->willReturn($this->link());
+
+        $this->apiClient->expects($this->once())->method('transferPlayback')
+            ->with('access-token', 'reader-box-9');
+        $this->apiClient->expects($this->once())->method('startPlayback')
+            ->with('access-token', 'spotify:playlist:abc', 'reader-box-9');
 
         $result = $this->processScan()->__invoke('reader-1', 'ABCD1234');
         $this->assertSame(ScanOutcome::SUCCESS, $result->outcome);

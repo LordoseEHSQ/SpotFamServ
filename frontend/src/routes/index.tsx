@@ -7,6 +7,7 @@ import { SetupWizardPage } from '../features/setup-wizard/SetupWizardPage';
 import { CardsPage } from '../pages/CardsPage';
 import { ScanLogsPage } from '../pages/ScanLogsPage';
 import { DevicesPage } from '../pages/DevicesPage';
+import { ReadersPage } from '../pages/ReadersPage';
 import { ActivityPage } from '../pages/ActivityPage';
 import { SystemPage } from '../pages/SystemPage';
 
@@ -19,6 +20,7 @@ export function AppRoutes() {
       <Route path="/profiles/:profileId" element={<ProfileDetailPage />} />
       <Route path="/profiles/:profileId/setup" element={<SetupWizardPage />} />
       <Route path="/devices" element={<DevicesPage />} />
+      <Route path="/readers" element={<ReadersPage />} />
       <Route path="/cards" element={<CardsPage />} />
       <Route path="/activity" element={<ActivityPage />} />
       <Route path="/scan-logs" element={<ScanLogsPage />} />
