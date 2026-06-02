@@ -326,6 +326,31 @@ paths:
       responses:
         default:
           description: ''
+  '/api/v1/readers/{readerId}/api-key':
+    post:
+      operationId: post_api_readers_generate_api_key
+      parameters:
+        -
+          name: readerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        default:
+          description: ''
+    delete:
+      operationId: delete_api_readers_revoke_api_key
+      parameters:
+        -
+          name: readerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        default:
+          description: ''
   '/api/v1/profiles/{profileId}/setup':
     get:
       operationId: get_api_setup_state

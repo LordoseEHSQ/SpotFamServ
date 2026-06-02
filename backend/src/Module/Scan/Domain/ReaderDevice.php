@@ -75,6 +75,31 @@ class ReaderDevice
         return password_verify($apiKey, $this->apiKeyHash);
     }
 
+    public function hasApiKey(): bool
+    {
+        return $this->apiKeyHash !== null;
+    }
+
+    /**
+     * Sets (or rotates) the reader's dedicated API key by storing only its hash.
+     * The plain key is never persisted; the caller hands it to the operator once.
+     */
+    public function setApiKey(string $plainKey): void
+    {
+        $this->apiKeyHash = password_hash($plainKey, PASSWORD_DEFAULT);
+        $this->updatedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+    }
+
+    /**
+     * Removes the reader's dedicated key so authentication falls back to the
+     * global READER_API_KEY again (used to revoke a compromised key).
+     */
+    public function clearApiKey(): void
+    {
+        $this->apiKeyHash = null;
+        $this->updatedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+    }
+
     public function getDefaultSpotifyDeviceId(): ?string
     {
         return $this->defaultSpotifyDeviceId;
