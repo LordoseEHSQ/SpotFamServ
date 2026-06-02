@@ -4,6 +4,7 @@ export interface RfidCardDto {
   id: string;
   card_uid: string;
   label: string | null;
+  binding: { id: string; name: string } | null;
 }
 
 export interface RfidCardListResponse {

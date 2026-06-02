@@ -20,6 +20,24 @@ final class DoctrineCardPlaylistBindingRepository implements CardPlaylistBinding
         return $this->em->getRepository(CardPlaylistBinding::class)->findOneBy(['rfidCardId' => $rfidCardId]);
     }
 
+    /**
+     * @param string[] $cardIds
+     * @return array<string, CardPlaylistBinding> indexed by rfid_card_id
+     */
+    public function findByCardIds(array $cardIds): array
+    {
+        if ($cardIds === []) {
+            return [];
+        }
+        $results = $this->em->getRepository(CardPlaylistBinding::class)
+            ->findBy(['rfidCardId' => $cardIds]);
+        $indexed = [];
+        foreach ($results as $binding) {
+            $indexed[$binding->getRfidCardId()] = $binding;
+        }
+        return $indexed;
+    }
+
     public function save(CardPlaylistBinding $binding): void
     {
         $this->em->persist($binding);

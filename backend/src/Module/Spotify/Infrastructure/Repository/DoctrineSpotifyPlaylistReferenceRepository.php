@@ -20,6 +20,27 @@ final class DoctrineSpotifyPlaylistReferenceRepository implements SpotifyPlaylis
         return $this->em->find(SpotifyPlaylistReference::class, $id);
     }
 
+    /**
+     * @param string[] $ids
+     * @return array<string, SpotifyPlaylistReference> indexed by id
+     */
+    public function findByIds(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+        $results = $this->em->getRepository(SpotifyPlaylistReference::class)
+            ->findBy(['id' => $ids]);
+        $indexed = [];
+        foreach ($results as $ref) {
+            $refId = $ref->getId();
+            if ($refId !== null) {
+                $indexed[$refId] = $ref;
+            }
+        }
+        return $indexed;
+    }
+
     /** @return list<SpotifyPlaylistReference> */
     public function findByProfileId(string $profileId): array
     {
