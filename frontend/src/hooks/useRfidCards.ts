@@ -18,6 +18,15 @@ export function useRfidCards(profileId: string | undefined) {
   });
 }
 
+export function useCreatePlaylistReference(profileId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { spotify_playlist_id: string; name: string; owner_id?: string | null }) =>
+      spotifyApi.createPlaylistReference(profileId, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: rfidCardKeys.playlistRefs(profileId) }),
+  });
+}
+
 export function useCardLookup(cardUid: string | null) {
   return useQuery({
     queryKey: ['card-lookup', cardUid],

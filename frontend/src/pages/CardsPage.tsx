@@ -8,11 +8,13 @@ import {
   useCardBinding,
   useCardLookup,
   usePlaylistReferences,
+  useCreatePlaylistReference,
   useCreateRfidCard,
   useUpdateRfidCard,
   useDeleteRfidCard,
   useSetCardBinding,
 } from '../hooks/useRfidCards';
+import { useSpotifyPlaylists } from '../hooks/useSpotifyPlaylists';
 
 export function CardsPage() {
   const { profileId } = useParams<{ profileId: string }>();
@@ -22,7 +24,9 @@ export function CardsPage() {
   const [editingCard, setEditingCard] = useState<RfidCardDto | null>(null);
   const [editLabel, setEditLabel] = useState('');
   const [bindingCard, setBindingCard] = useState<RfidCardDto | null>(null);
-  const [bindingRefId, setBindingRefId] = useState<string>('');
+  const [bindingPlaylistId, setBindingPlaylistId] = useState<string>('');
+  const [bindingBusy, setBindingBusy] = useState(false);
+  const [bindingError, setBindingError] = useState<string | null>(null);
 
   // Scan-to-Create: wartet auf einen NEUEN Scan (Baseline = jüngstes Event beim Start),
   // prüft die UID per Lookup gegen alle Profile und zeigt belegt/frei.
@@ -33,11 +37,14 @@ export function CardsPage() {
   const { data, isLoading, error } = useRfidCards(profileId);
   const { data: playlistRefs } = usePlaylistReferences(profileId, !!bindingCard);
   const { data: currentBinding } = useCardBinding(profileId, bindingCard?.id);
+  const { data: spotifyPlaylists, isLoading: playlistsLoading, error: playlistsError } =
+    useSpotifyPlaylists(profileId!, !!bindingCard);
 
   const createMutation = useCreateRfidCard(profileId!);
   const updateMutation = useUpdateRfidCard(profileId!);
   const deleteMutation = useDeleteRfidCard(profileId!);
   const setBindingMutation = useSetCardBinding(profileId!);
+  const createRefMutation = useCreatePlaylistReference(profileId!);
 
   const { data: scanEvents } = useQuery({
     queryKey: ['scan-events', 'enroll'],
@@ -93,12 +100,13 @@ export function CardsPage() {
 
   const openBinding = (c: RfidCardDto) => {
     setBindingCard(c);
-    setBindingRefId('');
+    setBindingPlaylistId('');
+    setBindingError(null);
   };
 
   useEffect(() => {
     if (bindingCard && currentBinding !== undefined) {
-      setBindingRefId((currentBinding as CardPlaylistBindingDto)?.id ?? '');
+      setBindingPlaylistId((currentBinding as CardPlaylistBindingDto)?.spotify_playlist_id ?? '');
     }
   }, [bindingCard, currentBinding]);
 
@@ -115,7 +123,42 @@ export function CardsPage() {
 
   const handleBindingSuccess = () => {
     setBindingCard(null);
-    setBindingRefId('');
+    setBindingPlaylistId('');
+    setBindingError(null);
+  };
+
+  // Bindet die Karte an die gewählte Spotify-Playlist. Legt bei Bedarf zuerst eine
+  // Playlist-Referenz an (das Binding referenziert intern eine Referenz-ID, nicht
+  // die Spotify-ID direkt), sucht aber eine bestehende Referenz wieder, um Duplikate
+  // zu vermeiden.
+  const saveBinding = async () => {
+    if (!bindingCard) return;
+    setBindingError(null);
+
+    if (!bindingPlaylistId) {
+      setBindingMutation.mutate({ cardId: bindingCard.id, refId: null }, { onSuccess: handleBindingSuccess });
+      return;
+    }
+
+    setBindingBusy(true);
+    try {
+      const existing = (playlistRefs?.items ?? []).find((r) => r.spotify_playlist_id === bindingPlaylistId);
+      let refId = existing?.id;
+      if (!refId) {
+        const pl = (spotifyPlaylists?.items ?? []).find((p) => p.id === bindingPlaylistId);
+        const created = await createRefMutation.mutateAsync({
+          spotify_playlist_id: bindingPlaylistId,
+          name: pl?.name ?? bindingPlaylistId,
+          owner_id: pl?.owner_id ?? null,
+        });
+        refId = created.id;
+      }
+      setBindingMutation.mutate({ cardId: bindingCard.id, refId }, { onSuccess: handleBindingSuccess });
+    } catch (e) {
+      setBindingError((e as Error).message);
+    } finally {
+      setBindingBusy(false);
+    }
   };
 
   const items = data?.items ?? [];
@@ -341,43 +384,55 @@ export function CardsPage() {
 
       {bindingCard && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
-          <div style={{ background: '#fff', padding: '1.5rem', borderRadius: 8, minWidth: 320 }}>
-            <h3 style={{ marginTop: 0 }}>Playlist-Bindung: {bindingCard.card_uid}</h3>
+          <div style={{ background: '#fff', padding: '1.5rem', borderRadius: 8, minWidth: 360 }}>
+            <h3 style={{ marginTop: 0 }}>Playlist verbinden: {bindingCard.card_uid}</h3>
             <label style={{ display: 'block', marginBottom: 8 }}>
-              Playlist-Referenz
-              <select
-                value={bindingRefId}
-                onChange={(e) => setBindingRefId(e.target.value)}
-                style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: 2, border: '1px solid #d1d5db', borderRadius: 4 }}
-              >
-                <option value="">— Keine —</option>
-                {(playlistRefs?.items ?? []).map((r: { id: string; name: string }) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-              </select>
+              Playlist aus deiner Spotify-Bibliothek
+              {playlistsLoading ? (
+                <p style={{ color: '#6b7280', fontSize: 14, marginTop: 4 }}>Lade Playlists…</p>
+              ) : playlistsError ? (
+                <p style={{ color: '#dc2626', fontSize: 14, marginTop: 4 }}>
+                  Playlists konnten nicht geladen werden – ist Spotify für dieses Profil verbunden?
+                </p>
+              ) : (
+                <select
+                  value={bindingPlaylistId}
+                  onChange={(e) => setBindingPlaylistId(e.target.value)}
+                  style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: 2, border: '1px solid #d1d5db', borderRadius: 4 }}
+                >
+                  <option value="">— Keine —</option>
+                  {(spotifyPlaylists?.items ?? []).map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              )}
             </label>
+            {!playlistsLoading && !playlistsError && (spotifyPlaylists?.items?.length ?? 0) === 0 && (
+              <p style={{ color: '#6b7280', fontSize: 13, marginTop: 0 }}>
+                Keine Playlists gefunden. Lege in Spotify eine Playlist an oder verbinde das Profil mit Spotify.
+              </p>
+            )}
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <button
                 type="button"
-                onClick={() => setBindingMutation.mutate(
-                  { cardId: bindingCard.id, refId: bindingRefId || null },
-                  { onSuccess: handleBindingSuccess },
-                )}
-                disabled={setBindingMutation.isPending}
+                onClick={saveBinding}
+                disabled={bindingBusy || setBindingMutation.isPending}
                 style={{ padding: '0.5rem 1rem', borderRadius: 6, border: 'none', background: '#2563eb', color: '#fff', cursor: 'pointer' }}
               >
-                Speichern
+                {bindingBusy || setBindingMutation.isPending ? 'Speichern…' : 'Speichern'}
               </button>
               <button
                 type="button"
-                onClick={() => { setBindingCard(null); setBindingRefId(''); }}
+                onClick={() => { setBindingCard(null); setBindingPlaylistId(''); setBindingError(null); }}
                 style={{ padding: '0.5rem 1rem', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}
               >
                 Abbrechen
               </button>
             </div>
-            {setBindingMutation.isError && (
-              <p style={{ color: '#dc2626', fontSize: 14, marginTop: 8 }}>{(setBindingMutation.error as Error).message}</p>
+            {(bindingError || setBindingMutation.isError) && (
+              <p style={{ color: '#dc2626', fontSize: 14, marginTop: 8 }}>
+                {bindingError ?? (setBindingMutation.error as Error).message}
+              </p>
             )}
           </div>
         </div>
