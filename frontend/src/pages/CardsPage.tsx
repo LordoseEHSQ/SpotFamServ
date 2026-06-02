@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import type { RfidCardDto, CardPlaylistBindingDto } from '../api/endpoints/rfid';
+import { scanApi, type ScanEventDto } from '../api/endpoints/scan';
 import {
   useRfidCards,
   useCardBinding,
@@ -29,6 +31,15 @@ export function CardsPage() {
   const updateMutation = useUpdateRfidCard(profileId!);
   const deleteMutation = useDeleteRfidCard(profileId!);
   const setBindingMutation = useSetCardBinding(profileId!);
+
+  // Scan-to-Enroll: juengste unbekannte Karte (outcome === 'unknown_card') per
+  // Polling holen. Bewusst OHNE profile_id-Filter, da unbekannte Karten an kein
+  // Profil gebunden sind und sonst nicht erscheinen wuerden.
+  const { data: scanEvents } = useQuery({
+    queryKey: ['scan-events', 'enroll'],
+    queryFn: () => scanApi.listEvents({ limit: 20 }),
+    refetchInterval: 3000,
+  });
 
   const openEdit = (c: RfidCardDto) => {
     setEditingCard(c);
@@ -64,6 +75,23 @@ export function CardsPage() {
 
   const items = data?.items ?? [];
 
+  // Juengste unbekannte UID ermitteln, die in diesem Profil noch nicht angelegt
+  // ist. scan-events kommen absteigend nach Zeit; wir nehmen das erste passende.
+  const latestUnknownUid = useMemo(() => {
+    const events: ScanEventDto[] = scanEvents?.items ?? [];
+    const existing = new Set(items.map((c) => c.card_uid));
+    const hit = events.find(
+      (e) => e.outcome === 'unknown_card' && !existing.has(e.card_uid_raw),
+    );
+    return hit?.card_uid_raw ?? null;
+  }, [scanEvents, items]);
+
+  const startEnroll = (uid: string) => {
+    setCreateUid(uid);
+    setCreateLabel('');
+    setCreateOpen(true);
+  };
+
   if (isLoading) return <p>Lade Karten…</p>;
   if (error) return <p style={{ color: '#dc2626' }}>Karten konnten nicht geladen werden.</p>;
 
@@ -82,6 +110,22 @@ export function CardsPage() {
           Neue Karte
         </button>
       </div>
+
+      {latestUnknownUid && (
+        <div style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', border: '1px solid #fcd34d', background: '#fffbeb', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <div>
+            <div style={{ fontSize: 13, color: '#92400e', fontWeight: 600 }}>Zuletzt gescannte unbekannte Karte</div>
+            <span style={{ fontFamily: 'monospace', fontSize: 15 }}>{latestUnknownUid}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => startEnroll(latestUnknownUid)}
+            style={{ padding: '0.5rem 1rem', borderRadius: 6, border: 'none', background: '#d97706', color: '#fff', cursor: 'pointer' }}
+          >
+            Karte mit dieser UID anlegen
+          </button>
+        </div>
+      )}
 
       {createOpen && (
         <div style={{ marginBottom: '1.5rem', padding: '1rem', border: '1px solid #e5e7eb', borderRadius: 8 }}>
