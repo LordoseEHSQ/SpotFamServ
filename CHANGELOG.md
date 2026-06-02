@@ -1,6 +1,24 @@
 # Changelog
 
-## [Unreleased]
+## [Unreleased] – Sprint 4 (laufend)
+
+<!-- Sprint-4-Änderungen hier eintragen (WP1 Gerätewahl, WP2 DataGrid, WP3 Daemon, WP4 Onboarding) -->
+
+---
+
+## [v0.2.3 – v0.2.5] – 2026-06-02 (Sprint 3: Reader-Lifecycle, Pi-Leser, Spotify-Status)
+
+> Sprint 3 retroaktiv geschlossen per D-S4-VER. Milestones: Sprint 3 (#4) closed.
+> Einzel-Tags: v0.2.3 (Spotify-Status), v0.2.4 (Sprint 3 Interim), v0.2.5 (Playlist-Binding-Fix).
+
+### v0.2.5 – Playlist-Binding-Fix (#34 / #38)
+- **Playlist-Bindings aus echter Spotify-Bibliothek** – Binding-UI holte Playlists bisher aus
+  der gespeicherten DB-Bibliothek statt aus der aktuellen Spotify-Bibliothek des Profils.
+  Behoben: API-Call gegen echte Spotify-Bibliothek; Footer-Versionsfix (L-016).
+
+### v0.2.4 – Sprint 3 Interim: Reader-Lifecycle, Pi-Leser, Pro-Reader-Keys, Wobie→Connect
+
+### v0.2.3 – Spotify-Status refresh-getrieben (#25, D-014)
 
 ### Feature – Reader→Box-Mapping / Multi-Raum (D-015)
 
