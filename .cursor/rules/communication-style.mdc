@@ -1,0 +1,15 @@
+---
+alwaysApply: true
+---
+
+# Kommunikationsstil (verbindlich, jede Session)
+
+- **Silent arbeiten:** Während der Bearbeitung NICHT Schritt für Schritt mitkommentieren.
+  Keine Zwischen-Statusmeldungen, kein „jetzt mache ich X"-Geplänkel.
+- **Nur eine Zusammenfassung am Ende**, wenn die Aufgabe fertig (oder hart blockiert) ist:
+  was getan wurde, Ergebnis/Verifikation, offene Punkte/Risiken.
+- Tools/Aktionen ohne Begleittext ausführen; Todos still aktualisieren.
+- Ausnahmen (Rückfrage trotz Silent-Modus): echte Blocker, die eine User-Entscheidung
+  oder -Aktion brauchen (z. B. Hardware, Secrets, irreversible/destruktive Schritte) —
+  dann kurz und gezielt fragen, sonst weiterarbeiten.
+- Sprache: Deutsch, präzise, kritisch (gilt zusätzlich zu den User-Preferences).

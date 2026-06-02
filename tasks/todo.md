@@ -18,7 +18,7 @@ Board: https://github.com/users/LordoseEHSQ/projects/2 · Milestones: `/mileston
 - [x] #7 restart: unless-stopped
 
 ## Sprint 2 – Core E2E: Spotify→Wobie via ESP32 (Milestone 3) — IN ARBEIT
-Releases: v0.2.0 (Sprint-2-Code), v0.2.1 (Spotify-Config-Fix). Beide auf Pi deployed.
+Releases: v0.2.0 (Sprint-2-Code), v0.2.1 (Spotify-Config-Fix), v0.2.2 (Frontend-CI-Image #20). Alle auf Pi deployed.
 - [~] #8 Spotify-Login — Code fertig + Config-Fix (#18) live; Pi: Config `source=db`, real validiert.
       **Verbleibend (nur User): OAuth-Consent im Browser mit dem Box-Konto via SSH-Tunnel.** Technisch sonst entsperrt.
 - [~] #9 Default-Device — Backend+Frontend fertig (`PUT/DELETE /profiles/{id}/default-device`,
@@ -28,8 +28,10 @@ Releases: v0.2.0 (Sprint-2-Code), v0.2.1 (Spotify-Config-Fix). Beide auf Pi depl
 
 ## Bugs (GitHub)
 - [x] #18 Spotify-App-Credentials aus UI wurden zur Laufzeit ignoriert → `SpotifyCredentialsProvider` (DB vor env). Gefixt, v0.2.1.
-- [ ] #20 Frontend wird auf dem Pi nie gebaut (kein Node/pnpm) → Sprint-Stände erreichen die UI nicht.
-      **Stopgap erledigt** (dist manuell gebaut+kopiert, nginx neu gestartet). **Permanent offen: CI-Image (D-012).**
+- [x] #20 Frontend wird auf dem Pi nie gebaut (kein Node/pnpm) → Sprint-Stände erreichen die UI nicht.
+      **Gelöst (v0.2.2, D-012/D-013):** CI baut Web-Image (multi-arch) → GHCR (public); Pi zieht nur noch.
+      Verifiziert live: nginx=ghcr.io/lordoseehsq/spotfamserv-web (arm64), `/`=200, Bundle 0.2.2, `/api`=200.
+      Folge-Lessons: L-013 (GHCR private-default), L-014 (pi-deploy self-update / langsamer app-rebuild).
 
 ## Offene Entscheidungen
 - D-009 (Default-Device-Endpunkt), D-010 (Firmware lowercase), D-011 (Spotify-Config DB=SoT),
