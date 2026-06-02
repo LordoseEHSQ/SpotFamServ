@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+### Fix – Spotify-Status: irreführendes „abgelaufen" (#25, D-014)
+
+#### Behoben
+- **Status spiegelt jetzt echten Re-Auth-Bedarf, nicht den Access-Token-Takt.** Bisher zeigte die UI
+  nach Ablauf des 1h-Access-Tokens „abgelaufen", obwohl der `SpotifyTokenManager` automatisch per
+  Refresh-Token erneuert. Neuer Status: `connected | reauth_required | not_connected`.
+  - Neues persistiertes Flag `spotify_account_link.needs_reauth` (Migration
+    `Version20260602120000_spotify_needs_reauth`, additiv, Default `false`).
+  - `SpotifyTokenManager` setzt das Flag nur bei **dauerhaftem** Refresh-Fehler
+    (`SpotifyTokenInvalidException`/`invalid_grant`) + ActivityLog `spotify_reauth_required`; transiente
+    5xx/Netzfehler setzen es **nicht**. Erfolgreicher Refresh und Re-Consent (`ExchangeSpotifyCode`) löschen es.
+  - `GetSpotifyStatus::resolve()` ist die **einzige** Status-Quelle; die Duplikat-Logik in
+    `FamilyProfileController` wurde entfernt.
+  - Frontend: Enum `expired`→`reauth_required` in allen Consumern (Profile/Dashboard/MusicTab/Activity),
+    klare Labels („Neu verbinden" / „Neu-Autorisierung erforderlich").
+
 ### Deploy – Frontend via CI-gebautes Image (#20, D-012/D-013)
 
 #### Geändert

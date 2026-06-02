@@ -1,7 +1,7 @@
 # Plan: Spotify-Status – Refresh-getrieben statt Access-Token-Takt (#25)
 
 **Erstellt:** 2026-06-02
-**Status:** In Progress (zur Bestätigung im Ausführungs-Chat)
+**Status:** Abgeschlossen (umgesetzt, Decision D-014 = Option B akzeptiert)
 **Branch/Worktree:** `feat/spotify-status-reauth` / `../SpotFamServ-status-reauth`
 **Issue:** #25 · **Decision:** D-014 (vorzulegen) · **Lessons:** L-004 (APP_SECRET/Token), L-011 (verifizieren am Effekt)
 
@@ -55,7 +55,7 @@ gelöscht wird. Frontend-Labels + OpenAPI + Tests mitziehen.
 **Optionen:**
 - A) Ohne Persistenz: „Refresh-Token vorhanden" ⇒ `connected`; Re-Auth-Bedarf erst sichtbar, wenn eine echte Aktion scheitert. Vorteile: kein Schema. Nachteile: zeigt kaputten Refresh-Token erst verspätet.
 - B) **Persistiertes `needs_reauth`-Flag**, gesetzt bei echtem Refresh-Fehler, gelöscht bei Re-Consent/erfolgreichem Refresh. Vorteile: korrekt & proaktiv sichtbar. Nachteile: Mini-Schema-Migration + Wiring.
-**Empfehlung:** **B** (akkurat, surfacet echten Bedarf). **Status:** Proposed.
+**Empfehlung:** **B** (akkurat, surfacet echten Bedarf). **Status:** Accepted (User-Freigabe „sauber zu Ende").
 
 ## Risiken / Blind Spots
 - **R1 oasdiff:** Enum-Änderung könnte als breaking gemeldet werden → ggf. bewusst akzeptieren/anpassen.
@@ -70,7 +70,15 @@ gelöscht wird. Frontend-Labels + OpenAPI + Tests mitziehen.
 - Seriell: Domain/Migration → TokenManager/Resolver → Controller-Entdopplung → Frontend → OpenAPI/Tests.
 
 ## Verifikations-Log
-- (im Ausführungs-Chat füllen; u. a. lokal in Docker testen wie CI, Pi-Verifikation am Effekt L-011)
+- Lokal (wie CI): PHPStan Level 8 = OK; PHPUnit = 28 Tests/75 Assertions OK (inkl. 3 neue: Refresh-Fehler→`needs_reauth`,
+  erfolgreicher Refresh cleart Flag, Resolver-3-Zustände); Frontend `tsc -b && vite build` = OK; vitest = no test files.
+- OpenAPI (`nelmio:apidoc:dump`) gegen Baseline: **0 Zeilen Diff** → `spotify_status` ist im Spec nicht enumeriert,
+  daher kein API-Drift (oasdiff unkritisch). AK5 „OpenAPI regeneriert" = erfüllt (keine Änderung nötig).
+- R4 bestätigt: `SpotifyHttpApiClient.refreshToken` wirft bei 401/`invalid_grant` `SpotifyTokenInvalidException`,
+  bei 5xx/transient `SpotifyApiException` → nur Ersteres setzt `needs_reauth` (kein false-positive).
 
 ## Abgeschlossen
-- (offen)
+- Umgesetzt auf `feat/spotify-status-reauth`: Domain-Flag + Migration (separat), TokenManager set/clear,
+  ExchangeSpotifyCode clear, `GetSpotifyStatus::resolve()` als einzige Quelle (Controller-Duplikat entfernt),
+  Frontend-Enum + alle Consumer + Labels + ActivityLog-Label. Status: `connected | reauth_required | not_connected`.
+- Release-Tag/Pi-Verifikation: siehe CHANGELOG v0.2.3 + Pi-Effekt-Check (L-011).

@@ -27,9 +27,10 @@ Releases: v0.2.0 (Sprint-2-Code), v0.2.1 (Spotify-Config-Fix), v0.2.2 (Frontend-
       **Verbleibend (Hardware): ESP32 an /dev/ttyUSB0 flashen + realer Scan.**
 
 ## Sprint 2 – Nachzügler-WPs
-- [ ] #25 Spotify-Status irreführend „abgelaufen" → Refresh-getriebener Status + `reauth_required`.
-      Vorbereitet: Plan `tasks/plan-spotify-status-reauth.md`, Starter `docs/sprints/wp-25-spotify-status-starter.md`,
-      Branch `feat/spotify-status-reauth`. **Läuft in eigenem Chat** (GATE chat-isolation).
+- [x] #25 Spotify-Status irreführend „abgelaufen" → Refresh-getriebener Status (`connected | reauth_required |
+      not_connected`), persistiertes `needs_reauth`-Flag (D-014, Option B). Single-Source `GetSpotifyStatus::resolve()`,
+      Controller-Duplikat entfernt, Frontend-Enum + Consumer + Labels. Lokal grün (PHPStan/PHPUnit 28/Frontend-Build),
+      OpenAPI 0-Diff. Release v0.2.3.
 
 ## Bugs (GitHub)
 - [x] #18 Spotify-App-Credentials aus UI wurden zur Laufzeit ignoriert → `SpotifyCredentialsProvider` (DB vor env). Gefixt, v0.2.1.
