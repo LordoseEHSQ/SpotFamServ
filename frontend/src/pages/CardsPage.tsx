@@ -1,62 +1,244 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import type { RfidCardDto, CardPlaylistBindingDto } from '../api/endpoints/rfid';
+import {
+  CreditCard, ChevronLeft, RefreshCw, Plus, X, Scan, Check, Trash2, Music2,
+} from 'lucide-react';
+import type { RfidCardDto } from '../api/endpoints/rfid';
 import { scanApi } from '../api/endpoints/scan';
 import {
   useRfidCards,
-  useCardBinding,
-  useCardLookup,
   usePlaylistReferences,
   useCreatePlaylistReference,
   useCreateRfidCard,
   useUpdateRfidCard,
   useDeleteRfidCard,
   useSetCardBinding,
+  useCardLookup,
 } from '../hooks/useRfidCards';
 import { useSpotifyPlaylists } from '../hooks/useSpotifyPlaylists';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
-export function CardsPage() {
-  const { profileId } = useParams<{ profileId: string }>();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createUid, setCreateUid] = useState('');
-  const [createLabel, setCreateLabel] = useState('');
-  const [editingCard, setEditingCard] = useState<RfidCardDto | null>(null);
-  const [editLabel, setEditLabel] = useState('');
-  const [bindingCard, setBindingCard] = useState<RfidCardDto | null>(null);
-  const [bindingPlaylistId, setBindingPlaylistId] = useState<string>('');
-  const [bindingBusy, setBindingBusy] = useState(false);
-  const [bindingError, setBindingError] = useState<string | null>(null);
+const NONE_VALUE = '__none__';
 
-  // Scan-to-Create: wartet auf einen NEUEN Scan (Baseline = jüngstes Event beim Start),
-  // prüft die UID per Lookup gegen alle Profile und zeigt belegt/frei.
-  const [scanMode, setScanMode] = useState(false);
+// ─── Binding-Zelle ────────────────────────────────────────────────────────────
+
+interface BindingCellProps {
+  card: RfidCardDto;
+  profileId: string;
+  isEditing: boolean;
+  onDone: () => void;
+}
+
+function BindingCell({ card, profileId, isEditing, onDone }: BindingCellProps) {
+  const { data: plRefs, isLoading: refsLoading } = usePlaylistReferences(profileId, isEditing);
+  const { data: spotifyPls, isLoading: plsLoading } = useSpotifyPlaylists(profileId, isEditing);
+  const setBinding = useSetCardBinding(profileId);
+  const createRef = useCreatePlaylistReference(profileId);
+
+  const [selectedId, setSelectedId] = useState<string>(NONE_VALUE);
+  const [busy, setBusy] = useState(false);
+  const [bindErr, setBindErr] = useState<string | null>(null);
+
+  // Sobald Refs geladen sind: aktuellen Wert vorausfüllen
+  useEffect(() => {
+    if (!isEditing || refsLoading) return;
+    if (!card.binding?.id) {
+      setSelectedId(NONE_VALUE);
+      return;
+    }
+    const match = (plRefs?.items ?? []).find((r) => r.id === card.binding!.id);
+    setSelectedId(match?.spotify_playlist_id ?? NONE_VALUE);
+  }, [isEditing, refsLoading, card.binding, plRefs]);
+
+  const handleSelect = async (v: string) => {
+    const spotifyId = v === NONE_VALUE ? null : v;
+    setSelectedId(v);
+    setBindErr(null);
+    setBusy(true);
+    try {
+      if (!spotifyId) {
+        await setBinding.mutateAsync({ cardId: card.id, refId: null });
+      } else {
+        const refs = plRefs?.items ?? [];
+        const existing = refs.find((r) => r.spotify_playlist_id === spotifyId);
+        let refId = existing?.id;
+        if (!refId) {
+          const pl = (spotifyPls?.items ?? []).find((p) => p.id === spotifyId);
+          const newRef = await createRef.mutateAsync({
+            spotify_playlist_id: spotifyId,
+            name: pl?.name ?? spotifyId,
+            owner_id: pl?.owner_id ?? null,
+          });
+          refId = newRef.id;
+        }
+        await setBinding.mutateAsync({ cardId: card.id, refId });
+      }
+      onDone();
+    } catch (e) {
+      setBindErr((e as Error).message ?? 'Fehler beim Speichern');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!isEditing) {
+    return card.binding ? (
+      <Badge variant="secondary" className="font-normal max-w-[180px] truncate">
+        <Music2 className="h-3 w-3 mr-1 shrink-0" />
+        {card.binding.name}
+      </Badge>
+    ) : (
+      <span className="text-muted-foreground text-sm">—</span>
+    );
+  }
+
+  const loading = refsLoading || plsLoading;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1.5">
+        {loading ? (
+          <Skeleton className="h-7 w-44" />
+        ) : (
+          <Select value={selectedId} onValueChange={handleSelect} disabled={busy}>
+            <SelectTrigger className="h-7 w-52 text-xs">
+              <SelectValue placeholder="Playlist wählen…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE_VALUE}>— Keine —</SelectItem>
+              {(spotifyPls?.items ?? []).map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0 text-muted-foreground"
+          onClick={onDone}
+          disabled={busy}
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      {bindErr && <p className="text-xs text-destructive">{bindErr}</p>}
+    </div>
+  );
+}
+
+// ─── Label-Zelle ─────────────────────────────────────────────────────────────
+
+interface LabelCellProps {
+  card: RfidCardDto;
+  profileId: string;
+  isEditing: boolean;
+  onStartEdit: () => void;
+  onDone: () => void;
+}
+
+function LabelCell({ card, profileId, isEditing, onStartEdit, onDone }: LabelCellProps) {
+  const update = useUpdateRfidCard(profileId);
+  const [value, setValue] = useState(card.label ?? '');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      setValue(card.label ?? '');
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [isEditing, card.label]);
+
+  const save = () => {
+    const newLabel = value.trim() || null;
+    if (newLabel === card.label) { onDone(); return; }
+    update.mutate({ cardId: card.id, label: newLabel }, { onSuccess: onDone, onError: onDone });
+  };
+
+  if (!isEditing) {
+    return (
+      <button
+        type="button"
+        onClick={onStartEdit}
+        className="text-left text-sm hover:text-primary transition-colors min-w-[80px]"
+        title="Klicken zum Bearbeiten"
+      >
+        {card.label ?? <span className="text-muted-foreground italic">kein Label</span>}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') save();
+          if (e.key === 'Escape') onDone();
+        }}
+        onBlur={save}
+        className="h-7 text-xs w-36"
+        placeholder="Label eingeben…"
+        disabled={update.isPending}
+      />
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 w-7 p-0 text-success"
+        onClick={save}
+        disabled={update.isPending}
+      >
+        <Check className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+}
+
+// ─── Scan-to-Create Panel ─────────────────────────────────────────────────────
+
+interface ScanPanelProps {
+  profileId: string;
+  onAdoptUid: (uid: string) => void;
+  onStop: () => void;
+}
+
+function ScanPanel({ profileId, onAdoptUid, onStop }: ScanPanelProps) {
   const [scannedUid, setScannedUid] = useState<string | null>(null);
   const [baseline, setBaseline] = useState<{ set: boolean; id: string | null }>({ set: false, id: null });
-
-  const { data, isLoading, error } = useRfidCards(profileId);
-  const { data: playlistRefs } = usePlaylistReferences(profileId, !!bindingCard);
-  const { data: currentBinding } = useCardBinding(profileId, bindingCard?.id);
-  const { data: spotifyPlaylists, isLoading: playlistsLoading, error: playlistsError } =
-    useSpotifyPlaylists(profileId!, !!bindingCard);
-
-  const createMutation = useCreateRfidCard(profileId!);
-  const updateMutation = useUpdateRfidCard(profileId!);
-  const deleteMutation = useDeleteRfidCard(profileId!);
-  const setBindingMutation = useSetCardBinding(profileId!);
-  const createRefMutation = useCreatePlaylistReference(profileId!);
 
   const { data: scanEvents } = useQuery({
     queryKey: ['scan-events', 'enroll'],
     queryFn: () => scanApi.listEvents({ limit: 5 }),
     refetchInterval: 2000,
-    enabled: scanMode && !scannedUid,
+    enabled: !scannedUid,
   });
 
   const { data: lookup, isLoading: lookupLoading } = useCardLookup(scannedUid);
 
   useEffect(() => {
-    if (!scanMode) return;
     const events = scanEvents?.items ?? [];
     const newest = events[0];
     if (!baseline.set) {
@@ -66,377 +248,359 @@ export function CardsPage() {
     if (!scannedUid && newest && newest.id !== baseline.id) {
       setScannedUid(newest.card_uid_raw);
     }
-  }, [scanMode, scanEvents, baseline, scannedUid]);
-
-  const startScan = () => {
-    setScannedUid(null);
-    setBaseline({ set: false, id: null });
-    setScanMode(true);
-  };
-
-  const stopScan = () => {
-    setScanMode(false);
-    setScannedUid(null);
-    setBaseline({ set: false, id: null });
-  };
+  }, [scanEvents, baseline, scannedUid]);
 
   const rescan = () => {
     setScannedUid(null);
     setBaseline({ set: false, id: null });
   };
 
-  const adoptScannedUid = () => {
-    if (!scannedUid) return;
-    setCreateUid(scannedUid);
-    setCreateLabel('');
-    setCreateOpen(true);
-    stopScan();
-  };
-
-  const openEdit = (c: RfidCardDto) => {
-    setEditingCard(c);
-    setEditLabel(c.label ?? '');
-  };
-
-  const openBinding = (c: RfidCardDto) => {
-    setBindingCard(c);
-    setBindingPlaylistId('');
-    setBindingError(null);
-  };
-
-  useEffect(() => {
-    if (bindingCard && currentBinding !== undefined) {
-      setBindingPlaylistId((currentBinding as CardPlaylistBindingDto)?.spotify_playlist_id ?? '');
-    }
-  }, [bindingCard, currentBinding]);
-
-  const handleCreateSuccess = () => {
-    setCreateOpen(false);
-    setCreateUid('');
-    setCreateLabel('');
-  };
-
-  const handleUpdateSuccess = () => {
-    setEditingCard(null);
-    setEditLabel('');
-  };
-
-  const handleBindingSuccess = () => {
-    setBindingCard(null);
-    setBindingPlaylistId('');
-    setBindingError(null);
-  };
-
-  // Bindet die Karte an die gewählte Spotify-Playlist. Legt bei Bedarf zuerst eine
-  // Playlist-Referenz an (das Binding referenziert intern eine Referenz-ID, nicht
-  // die Spotify-ID direkt), sucht aber eine bestehende Referenz wieder, um Duplikate
-  // zu vermeiden.
-  const saveBinding = async () => {
-    if (!bindingCard) return;
-    setBindingError(null);
-
-    if (!bindingPlaylistId) {
-      setBindingMutation.mutate({ cardId: bindingCard.id, refId: null }, { onSuccess: handleBindingSuccess });
-      return;
-    }
-
-    setBindingBusy(true);
-    try {
-      const existing = (playlistRefs?.items ?? []).find((r) => r.spotify_playlist_id === bindingPlaylistId);
-      let refId = existing?.id;
-      if (!refId) {
-        const pl = (spotifyPlaylists?.items ?? []).find((p) => p.id === bindingPlaylistId);
-        const created = await createRefMutation.mutateAsync({
-          spotify_playlist_id: bindingPlaylistId,
-          name: pl?.name ?? bindingPlaylistId,
-          owner_id: pl?.owner_id ?? null,
-        });
-        refId = created.id;
-      }
-      setBindingMutation.mutate({ cardId: bindingCard.id, refId }, { onSuccess: handleBindingSuccess });
-    } catch (e) {
-      setBindingError((e as Error).message);
-    } finally {
-      setBindingBusy(false);
-    }
-  };
-
-  const items = data?.items ?? [];
-
-  if (isLoading) return <p>Lade Karten…</p>;
-  if (error) return <p style={{ color: '#dc2626' }}>Karten konnten nicht geladen werden.</p>;
-
   return (
-    <div>
-      <div style={{ marginBottom: '1rem' }}>
-        <Link to={`/profiles/${profileId}`} style={{ color: '#6b7280', fontSize: 14 }}>← Profil</Link>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h1 style={{ margin: 0 }}>RFID-Karten</h1>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            type="button"
-            onClick={scanMode ? stopScan : startScan}
-            style={{ padding: '0.5rem 1rem', borderRadius: 6, border: 'none', background: scanMode ? '#6b7280' : '#d97706', color: '#fff', cursor: 'pointer' }}
-          >
-            {scanMode ? 'Scan abbrechen' : 'Karte scannen'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            style={{ padding: '0.5rem 1rem', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}
-          >
-            Neue Karte
-          </button>
+    <div className="mx-6 mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Scan className="h-4 w-4 text-amber-700" />
+          <span className="text-sm font-medium text-amber-800">Karte scannen</span>
         </div>
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-amber-700" onClick={onStop}>
+          <X className="h-3.5 w-3.5" />
+        </Button>
       </div>
 
-      {scanMode && (
-        <div style={{ marginBottom: '1.5rem', padding: '1rem', border: '1px solid #fcd34d', background: '#fffbeb', borderRadius: 8 }}>
-          {!scannedUid ? (
-            <div style={{ color: '#92400e' }}>
-              <strong>Leser bereit</strong> – jetzt eine Karte auf den Leser legen…
+      {!scannedUid ? (
+        <p className="text-sm text-amber-700">Leser bereit – jetzt eine Karte auflegen…</p>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-amber-700 font-medium">Gescannte UID:</span>
+            <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-900 text-xs">{scannedUid}</code>
+          </div>
+
+          {lookupLoading && <p className="text-sm text-amber-600">Prüfe…</p>}
+
+          {!lookupLoading && lookup?.status === 'free' && (
+            <div className="flex items-center gap-2">
+              <Badge variant="success">Frei</Badge>
+              <span className="text-sm text-amber-700">Noch keinem Profil zugeordnet.</span>
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => { onAdoptUid(scannedUid); onStop(); }}
+              >
+                UID übernehmen
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={rescan}>
+                Neu scannen
+              </Button>
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div>
-                <span style={{ fontSize: 13, color: '#92400e', fontWeight: 600 }}>Gescannte UID: </span>
-                <span style={{ fontFamily: 'monospace', fontSize: 15 }}>{scannedUid}</span>
-              </div>
+          )}
 
-              {lookupLoading && <div style={{ color: '#6b7280' }}>Prüfe…</div>}
-
-              {!lookupLoading && lookup?.status === 'free' && (
-                <>
-                  <div style={{ color: '#15803d', fontWeight: 600 }}>Frei – noch keinem Profil zugeordnet.</div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button
-                      type="button"
-                      onClick={adoptScannedUid}
-                      style={{ padding: '0.5rem 1rem', borderRadius: 6, border: 'none', background: '#2563eb', color: '#fff', cursor: 'pointer' }}
-                    >
-                      Diese UID übernehmen
-                    </button>
-                    <button
-                      type="button"
-                      onClick={rescan}
-                      style={{ padding: '0.5rem 1rem', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}
-                    >
-                      Andere Karte scannen
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {!lookupLoading && lookup?.status === 'assigned' && (
-                <>
-                  <div style={{ color: '#b91c1c', fontWeight: 600 }}>
-                    Belegt
-                    {lookup.profile_name ? ` von „${lookup.profile_name}“` : ''}
-                    {lookup.profile_id === profileId ? ' (dieses Profil)' : ''}.
-                  </div>
-                  <div style={{ color: '#6b7280', fontSize: 14 }}>
-                    {lookup.label ? `Label: ${lookup.label}. ` : ''}
-                    {lookup.has_binding ? `Playlist: ${lookup.binding_name ?? '—'}.` : 'Keine Playlist gebunden.'}
-                  </div>
-                  <div>
-                    <button
-                      type="button"
-                      onClick={rescan}
-                      style={{ padding: '0.5rem 1rem', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}
-                    >
-                      Andere Karte scannen
-                    </button>
-                  </div>
-                </>
-              )}
+          {!lookupLoading && lookup?.status === 'assigned' && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="destructive">Belegt</Badge>
+              <span className="text-sm text-amber-700">
+                {lookup.profile_name ? `von „${lookup.profile_name}"` : ''}
+                {lookup.profile_id === profileId ? ' (dieses Profil)' : ''}
+                {lookup.label ? ` · Label: ${lookup.label}` : ''}
+              </span>
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={rescan}>
+                Neu scannen
+              </Button>
             </div>
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Karte anlegen Panel ──────────────────────────────────────────────────────
+
+interface CreateCardPanelProps {
+  profileId: string;
+  initialUid?: string;
+  onDone: () => void;
+}
+
+function CreateCardPanel({ profileId, initialUid = '', onDone }: CreateCardPanelProps) {
+  const createMutation = useCreateRfidCard(profileId);
+  const [uid, setUid] = useState(initialUid);
+  const [label, setLabel] = useState('');
+
+  useEffect(() => { setUid(initialUid); }, [initialUid]);
+
+  const handleCreate = () => {
+    if (!uid.trim()) return;
+    createMutation.mutate(
+      { card_uid: uid.trim(), label: label.trim() || null },
+      { onSuccess: () => { setUid(''); setLabel(''); onDone(); } },
+    );
+  };
+
+  return (
+    <div className="border-t bg-muted/20 px-6 py-4">
+      <h3 className="text-sm font-medium mb-3">Neue Karte anlegen</h3>
+      <div className="flex items-end gap-3 flex-wrap">
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Card UID <span className="text-destructive">*</span></label>
+          <Input
+            value={uid}
+            onChange={(e) => setUid(e.target.value)}
+            placeholder="z. B. 04A1B2C3D4E5F6"
+            className="h-8 text-sm w-52"
+            onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); }}
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Label (optional)</label>
+          <Input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="z. B. Kinderzimmer"
+            className="h-8 text-sm w-44"
+            onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); }}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            className="h-8"
+            onClick={handleCreate}
+            disabled={!uid.trim() || createMutation.isPending}
+          >
+            {createMutation.isPending ? 'Anlegen…' : 'Anlegen'}
+          </Button>
+          <Button variant="outline" size="sm" className="h-8" onClick={onDone}>
+            Abbrechen
+          </Button>
+        </div>
+      </div>
+      {createMutation.isError && (
+        <p className="text-xs text-destructive mt-2">{(createMutation.error as Error).message}</p>
+      )}
+    </div>
+  );
+}
+
+// ─── Hauptseite ───────────────────────────────────────────────────────────────
+
+export function CardsPage() {
+  const { profileId } = useParams<{ profileId: string }>();
+
+  const { data, isLoading, error, refetch, isFetching } = useRfidCards(profileId);
+  const deleteMutation = useDeleteRfidCard(profileId!);
+
+  const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
+  const [editingBindingId, setEditingBindingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<RfidCardDto | null>(null);
+  const [scanMode, setScanMode] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [adoptedUid, setAdoptedUid] = useState('');
+
+  const items = data?.items ?? [];
+
+  const openCreate = (uid = '') => {
+    setAdoptedUid(uid);
+    setCreateOpen(true);
+  };
+
+  if (!profileId) return null;
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b px-6 py-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <Link
+            to={`/profiles/${profileId}`}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight">RFID-Karten</h1>
+            {!isLoading && (
+              <p className="text-sm text-muted-foreground">{items.length} Karte{items.length !== 1 ? 'n' : ''}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={scanMode ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={() => { setScanMode((v) => !v); }}
+          >
+            <Scan className="h-4 w-4" />
+            {scanMode ? 'Scan beenden' : 'Karte scannen'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
+          </Button>
+        </div>
+      </div>
+
+      {/* Scan Panel */}
+      {scanMode && (
+        <div className="shrink-0 pt-4">
+          <ScanPanel
+            profileId={profileId}
+            onAdoptUid={(uid) => openCreate(uid)}
+            onStop={() => setScanMode(false)}
+          />
+        </div>
+      )}
+
+      {/* Tabelle */}
+      <div className="flex-1 overflow-auto">
+        {isLoading ? (
+          <div className="p-6 space-y-3">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-64 text-center">
+            <p className="text-sm text-destructive">Karten konnten nicht geladen werden.</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
+              Erneut versuchen
+            </Button>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-center">
+            <CreditCard className="h-8 w-8 text-muted-foreground mb-3" />
+            <p className="text-sm text-muted-foreground mb-3">
+              Noch keine Karten für dieses Profil.
+            </p>
+            <Button size="sm" onClick={() => openCreate()}>
+              <Plus className="h-4 w-4" />
+              Erste Karte anlegen
+            </Button>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-[200px]">UID</TableHead>
+                <TableHead className="w-[200px]">Label</TableHead>
+                <TableHead>Playlist</TableHead>
+                <TableHead className="w-[120px] text-right">Aktionen</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((card) => (
+                <TableRow key={card.id}>
+                  {/* UID */}
+                  <TableCell>
+                    <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
+                      {card.card_uid}
+                    </code>
+                  </TableCell>
+
+                  {/* Label */}
+                  <TableCell>
+                    <LabelCell
+                      card={card}
+                      profileId={profileId}
+                      isEditing={editingLabelId === card.id}
+                      onStartEdit={() => {
+                        setEditingBindingId(null);
+                        setEditingLabelId(card.id);
+                      }}
+                      onDone={() => setEditingLabelId(null)}
+                    />
+                  </TableCell>
+
+                  {/* Playlist / Binding */}
+                  <TableCell>
+                    <BindingCell
+                      card={card}
+                      profileId={profileId}
+                      isEditing={editingBindingId === card.id}
+                      onDone={() => setEditingBindingId(null)}
+                    />
+                  </TableCell>
+
+                  {/* Aktionen */}
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'h-7 text-xs',
+                          editingBindingId === card.id && 'text-primary',
+                        )}
+                        onClick={() => {
+                          setEditingLabelId(null);
+                          setEditingBindingId(
+                            editingBindingId === card.id ? null : card.id,
+                          );
+                        }}
+                      >
+                        <Music2 className="h-3.5 w-3.5" />
+                        Playlist
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteTarget(card)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+
+      {/* Neue Karte Button / Create Panel */}
+      {!createOpen && items.length > 0 && (
+        <div className="border-t px-6 py-3 shrink-0">
+          <Button variant="outline" size="sm" onClick={() => openCreate()}>
+            <Plus className="h-4 w-4" />
+            Neue Karte
+          </Button>
+        </div>
+      )}
 
       {createOpen && (
-        <div style={{ marginBottom: '1.5rem', padding: '1rem', border: '1px solid #e5e7eb', borderRadius: 8 }}>
-          <h3 style={{ marginTop: 0 }}>Karte anlegen</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: 320 }}>
-            <label>
-              Card UID <span style={{ color: '#dc2626' }}>*</span>
-              <input
-                value={createUid}
-                onChange={(e) => setCreateUid(e.target.value)}
-                placeholder="z. B. 04A1B2C3D4E5F6"
-                style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: 2, border: '1px solid #d1d5db', borderRadius: 4 }}
-              />
-            </label>
-            <label>
-              Label (optional)
-              <input
-                value={createLabel}
-                onChange={(e) => setCreateLabel(e.target.value)}
-                placeholder="z. B. Kinderzimmer"
-                style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: 2, border: '1px solid #d1d5db', borderRadius: 4 }}
-              />
-            </label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                type="button"
-                onClick={() => createMutation.mutate(
-                  { card_uid: createUid.trim(), label: createLabel.trim() || null },
-                  { onSuccess: handleCreateSuccess },
-                )}
-                disabled={!createUid.trim() || createMutation.isPending}
-                style={{ padding: '0.5rem 1rem', borderRadius: 6, border: 'none', background: '#2563eb', color: '#fff', cursor: 'pointer' }}
-              >
-                {createMutation.isPending ? 'Speichern…' : 'Anlegen'}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setCreateOpen(false); setCreateUid(''); setCreateLabel(''); }}
-                style={{ padding: '0.5rem 1rem', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}
-              >
-                Abbrechen
-              </button>
-            </div>
-            {createMutation.isError && (
-              <span style={{ color: '#dc2626', fontSize: 14 }}>{(createMutation.error as Error).message}</span>
-            )}
-          </div>
+        <div className="shrink-0">
+          <CreateCardPanel
+            profileId={profileId}
+            initialUid={adoptedUid}
+            onDone={() => { setCreateOpen(false); setAdoptedUid(''); }}
+          />
         </div>
       )}
 
-      {items.length === 0 && !createOpen ? (
-        <p style={{ color: '#6b7280' }}>Noch keine Karten für dieses Profil.</p>
-      ) : (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {items.map((c) => (
-            <li key={c.id} style={{ padding: '0.75rem 0', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-              <div>
-                <span style={{ fontFamily: 'monospace' }}>{c.card_uid}</span>
-                {c.label && <span style={{ color: '#6b7280', marginLeft: 8 }}>– {c.label}</span>}
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => openBinding(c)}
-                  style={{ padding: '0.25rem 0.5rem', fontSize: 13, border: '1px solid #d1d5db', borderRadius: 4, background: '#fff', cursor: 'pointer' }}
-                >
-                  Playlist
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openEdit(c)}
-                  style={{ padding: '0.25rem 0.5rem', fontSize: 13, border: '1px solid #d1d5db', borderRadius: 4, background: '#fff', cursor: 'pointer' }}
-                >
-                  Bearbeiten
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.confirm('Karte wirklich löschen?') && deleteMutation.mutate(c.id)}
-                  disabled={deleteMutation.isPending}
-                  style={{ padding: '0.25rem 0.5rem', fontSize: 13, border: '1px solid #dc2626', color: '#dc2626', borderRadius: 4, background: '#fff', cursor: 'pointer' }}
-                >
-                  Löschen
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {editingCard && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
-          <div style={{ background: '#fff', padding: '1.5rem', borderRadius: 8, minWidth: 320 }}>
-            <h3 style={{ marginTop: 0 }}>Karte bearbeiten</h3>
-            <label style={{ display: 'block', marginBottom: 8 }}>
-              Label
-              <input
-                value={editLabel}
-                onChange={(e) => setEditLabel(e.target.value)}
-                style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: 2, border: '1px solid #d1d5db', borderRadius: 4 }}
-              />
-            </label>
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button
-                type="button"
-                onClick={() => updateMutation.mutate(
-                  { cardId: editingCard.id, label: editLabel.trim() || null },
-                  { onSuccess: handleUpdateSuccess },
-                )}
-                disabled={updateMutation.isPending}
-                style={{ padding: '0.5rem 1rem', borderRadius: 6, border: 'none', background: '#2563eb', color: '#fff', cursor: 'pointer' }}
-              >
-                Speichern
-              </button>
-              <button
-                type="button"
-                onClick={() => { setEditingCard(null); setEditLabel(''); }}
-                style={{ padding: '0.5rem 1rem', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}
-              >
-                Abbrechen
-              </button>
-            </div>
-            {updateMutation.isError && (
-              <p style={{ color: '#dc2626', fontSize: 14, marginTop: 8 }}>{(updateMutation.error as Error).message}</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {bindingCard && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
-          <div style={{ background: '#fff', padding: '1.5rem', borderRadius: 8, minWidth: 360 }}>
-            <h3 style={{ marginTop: 0 }}>Playlist verbinden: {bindingCard.card_uid}</h3>
-            <label style={{ display: 'block', marginBottom: 8 }}>
-              Playlist aus deiner Spotify-Bibliothek
-              {playlistsLoading ? (
-                <p style={{ color: '#6b7280', fontSize: 14, marginTop: 4 }}>Lade Playlists…</p>
-              ) : playlistsError ? (
-                <p style={{ color: '#dc2626', fontSize: 14, marginTop: 4 }}>
-                  Playlists konnten nicht geladen werden – ist Spotify für dieses Profil verbunden?
-                </p>
-              ) : (
-                <select
-                  value={bindingPlaylistId}
-                  onChange={(e) => setBindingPlaylistId(e.target.value)}
-                  style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: 2, border: '1px solid #d1d5db', borderRadius: 4 }}
-                >
-                  <option value="">— Keine —</option>
-                  {(spotifyPlaylists?.items ?? []).map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              )}
-            </label>
-            {!playlistsLoading && !playlistsError && (spotifyPlaylists?.items?.length ?? 0) === 0 && (
-              <p style={{ color: '#6b7280', fontSize: 13, marginTop: 0 }}>
-                Keine Playlists gefunden. Lege in Spotify eine Playlist an oder verbinde das Profil mit Spotify.
-              </p>
-            )}
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button
-                type="button"
-                onClick={saveBinding}
-                disabled={bindingBusy || setBindingMutation.isPending}
-                style={{ padding: '0.5rem 1rem', borderRadius: 6, border: 'none', background: '#2563eb', color: '#fff', cursor: 'pointer' }}
-              >
-                {bindingBusy || setBindingMutation.isPending ? 'Speichern…' : 'Speichern'}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setBindingCard(null); setBindingPlaylistId(''); setBindingError(null); }}
-                style={{ padding: '0.5rem 1rem', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}
-              >
-                Abbrechen
-              </button>
-            </div>
-            {(bindingError || setBindingMutation.isError) && (
-              <p style={{ color: '#dc2626', fontSize: 14, marginTop: 8 }}>
-                {bindingError ?? (setBindingMutation.error as Error).message}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Löschen-Bestätigung */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Karte löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Karte <code className="font-mono text-xs">{deleteTarget?.card_uid}</code>
+              {deleteTarget?.label ? ` (${deleteTarget.label})` : ''} wird unwiderruflich gelöscht.
+              Eine eventuell vorhandene Playlist-Bindung wird ebenfalls entfernt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={() => {
+                if (!deleteTarget) return;
+                deleteMutation.mutate(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) });
+              }}
+            >
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
