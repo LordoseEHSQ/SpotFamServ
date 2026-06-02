@@ -194,3 +194,53 @@ Access-Token-Takt zu behelligen. Transiente Fehler (Netz/5xx → `SpotifyApiExce
 Status-Quelle (Duplikat in `FamilyProfileController` entfernt), Frontend-Enum `expired`→`reauth_required`
 (alle Consumer + Labels), Release v0.2.3. **Rollback:** Migration-`down()` droppt die Spalte additiv;
 Status fällt ohne Flag auf das alte Verhalten zurück. **Status:** Accepted
+
+---
+
+### D-015 | 2026-06-02 | Reader/Playback (Multi-Raum)
+
+**Kontext:** Bisher bestimmt allein das **Profil der gescannten Karte** den Lautsprecher
+(`family_profile.default_spotify_device_id`); der Reader-Standort ist irrelevant. Für Multi-Raum
+("Karte spielt dort, wo ich sie scanne") muss der **Reader** die Box bestimmen können.
+**Optionen:**
+1. A) So lassen (Profil bestimmt Box) — Vorteile: nichts zu tun · Nachteile: kein Raum-Kontext.
+2. B) Reader→Box-Mapping (`reader_device.default_spotify_device_id`), Override beim Scan —
+   Vorteile: echtes Multi-Raum, rückwärtskompatibel (`StartPlayback` akzeptiert bereits explizites
+   `deviceId`) · Nachteile: Schema + Endpunkt + UI.
+**Entscheidung:** **B** (User, 2026-06-02). Zusätzlich bestätigt: **alle Zielboxen sind/werden
+Spotify-Connect-fähig** → kein Bluetooth-/`raspotify`-Zwischenschritt nötig.
+**Begründung:** Minimaler, additiver Eingriff; Profil-Default bleibt Fallback.
+**Konsequenzen:** Plan `tasks/plan-reader-box-mapping.md`. **Harte Grenze dokumentiert:** ein
+Spotify-Account spielt nur auf **einem** Gerät gleichzeitig → echtes paralleles Multi-Raum nur über
+**verschiedene Profile/Accounts**. Offene Unter-Entscheidungen in den Plänen: D-R1 (Herkunft der
+`reader_device`-Zeilen), D-P1/D-P2 (Pi-Leser-Hardware/Laufzeit), D-K1/D-O1 (Auth-Migration, OTA-Mechanismus).
+**Status:** Accepted
+
+---
+
+### D-016 | 2026-06-02 | Architektur-Grenze (verworfen: Bluetooth-Audio vom ESP)
+
+**Kontext:** Idee, den ESP32 per Bluetooth (A2DP) direkt auf eine Box streamen zu lassen statt über
+Spotify Connect.
+**Entscheidung:** **Verworfen.** Der ESP bleibt reiner Trigger; Audio streamt Spotifys Cloud auf die
+Connect-Box.
+**Begründung:** Auf dem ESP liegt kein Spotify-Audio (DRM/Widevine, lizenzierter Client nötig); ESP32
+kann den Stream weder beziehen noch dekodieren. A2DP-Source brächte nur schlechte SBC-Qualität, würde
+die gesamte Spotify-Connect-Integration (Qualität, Multiroom, Account-Steuerung) opfern und ist
+fragiler. Das bestehende „dummer Trigger"-Modell ist einfacher und korrekt.
+**Status:** Accepted
+
+---
+
+### D-017 | 2026-06-02 | Hardware (Pi-Leser)
+
+**Kontext:** Welcher RFID-Leser hängt am Pi (bestimmt Daemon-Sprache/Lib/UID-Handling)?
+**Fakt (User):** Der Pi-Leser ist ein **HW-147** = **NXP-PN532-Modul** (13,56 MHz, MIFARE Classic 1K/4K,
+NTAG; I2C/SPI/UART, Default HSU).
+**Entscheidung:** Pi-Daemon in **Python** mit **Adafruit CircuitPython PN532** (+ Blinka), Interface
+bevorzugt **I2C** (Restentscheidung D-P1 beim Verkabeln). Kein HID-Sonderfall.
+**Begründung:** PN532 liest dieselbe Kartenfamilie wie der MFRC522 am ESP → UID nach Hex-Normalisierung
+identisch (zu verifizieren mit bekannter Karte); Adafruit-Lib deckt alle drei Interfaces ab.
+**Konsequenzen:** Plan `tasks/plan-pi-reader-daemon.md` aktualisiert; Pflicht-Verifikation UID-Gleichheit
+PN532↔MFRC522 (4- vs. 7-Byte, Byte-Reihenfolge).
+**Status:** Accepted
