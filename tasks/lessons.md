@@ -158,3 +158,22 @@ Für schnellere Deploys ein `backend/.dockerignore` (vendor/var/cache) erwägen 
 **Status:** Aktiv
 
 ---
+
+### L-015 | 2026-06-02 | Deploy/Schema-Code-Reihenfolge
+
+**Fehlermuster:** Während des v0.2.3-Deploys lieferte `/api/v1/profiles` kurz **HTTP 500**, obwohl
+der Release korrekt war. `root=200`, `api=500` für ein paar Minuten.
+**Root Cause:** Schema-Änderung (Spalte `needs_reauth`) + Code, der die Spalte über das Doctrine-Mapping
+hydratisiert, im selben Release. `pi-deploy.sh`-Reihenfolge ist `up -d` (startet **neuen** App-Code)
+**vor** `doctrine:migrations:migrate`. Im Fenster dazwischen selektiert der neue Code die noch fehlende
+Spalte → SQL-Fehler → 500. Die Pull-Retry-Wartezeit auf das CI-Web-Image (hier 2 Versuche × 30 s)
+**verbreitert** dieses Fenster zusätzlich, weil `up -d`/migrate erst nach dem Pull laufen.
+**Regel:** Bei „neues Schema + Code, der es liest" ist ein kurzes 500-Fenster im Auto-Deploy
+**erwartbar und transient** (kein Rollback-Grund) – nach `migrate` ist es weg (hier: „OK – v0.2.3 live,
+Health 200"). Verifikation immer **nach** Deploy-Ende (Log-Zeile abwarten), nicht mitten im Lauf.
+Für echte Zero-Downtime später: additive Migration in einem **vorgelagerten** Release deployen
+(expand), Code erst im **Folge**-Release lesen (contract) – derzeit für das Heimsystem nicht nötig.
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
