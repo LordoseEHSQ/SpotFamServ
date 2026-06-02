@@ -17,17 +17,23 @@ Board: https://github.com/users/LordoseEHSQ/projects/2 · Milestones: `/mileston
 - [x] #6 Branch Protection (main) + CI-Härtung
 - [x] #7 restart: unless-stopped
 
-## Sprint 2 – Core E2E: Spotify→Wobie via ESP32 (Milestone 3) — IN ARBEIT (Branch feat/sprint-02-core-e2e)
-- [~] #8 Spotify-Login abschließen — Code-Härtung fertig (Activity-Log, Display-Name, Exception);
-      **verbleibend blockiert: Nutzer-Consent im Browser (SSH-Tunnel)**.
-- [~] #9 Wobie-Box-Discovery + Default-Device — fertig: `PUT/DELETE /profiles/{id}/default-device`,
-      UseCase `SetDefaultDevice`, Spalte `default_device_name`, Frontend-Auswahl, Stale-ID-Re-Resolve.
-- [~] #10 ESP32 flashen + E2E-Test — Firmware-Outcome-Case-Fix + secrets.h.example-IP fertig;
-      **verbleibend blockiert: physisches Gerät + serieller Zugriff**.
-- Verifiziert lokal: PHPUnit 17 grün, PHPStan L8 sauber, Frontend-Build grün, OpenAPI additiv.
+## Sprint 2 – Core E2E: Spotify→Wobie via ESP32 (Milestone 3) — IN ARBEIT
+Releases: v0.2.0 (Sprint-2-Code), v0.2.1 (Spotify-Config-Fix). Beide auf Pi deployed.
+- [~] #8 Spotify-Login — Code fertig + Config-Fix (#18) live; Pi: Config `source=db`, real validiert.
+      **Verbleibend (nur User): OAuth-Consent im Browser mit dem Box-Konto via SSH-Tunnel.** Technisch sonst entsperrt.
+- [~] #9 Default-Device — Backend+Frontend fertig (`PUT/DELETE /profiles/{id}/default-device`,
+      `SetDefaultDevice`, `default_device_name`, Stale-ID-Re-Resolve). UI seit Stopgap auf dem Pi sichtbar.
+- [~] #10 ESP32 + E2E — Firmware-Fix (lowercase outcome) + secrets.h.example-IP fertig.
+      **Verbleibend (Hardware): ESP32 an /dev/ttyUSB0 flashen + realer Scan.**
+
+## Bugs (GitHub)
+- [x] #18 Spotify-App-Credentials aus UI wurden zur Laufzeit ignoriert → `SpotifyCredentialsProvider` (DB vor env). Gefixt, v0.2.1.
+- [ ] #20 Frontend wird auf dem Pi nie gebaut (kein Node/pnpm) → Sprint-Stände erreichen die UI nicht.
+      **Stopgap erledigt** (dist manuell gebaut+kopiert, nginx neu gestartet). **Permanent offen: CI-Image (D-012).**
 
 ## Offene Entscheidungen
-- _(keine blockierenden)_ — D-009 (Default-Device-Endpunkt) + D-010 (Firmware lowercase) entschieden.
+- D-009 (Default-Device-Endpunkt), D-010 (Firmware lowercase), D-011 (Spotify-Config DB=SoT),
+  D-012 (Frontend-Deploy via CI-gebautes Image) — alle entschieden. Keine blockierenden offen.
 
 ## Legende
 `[ ]` offen · `[~]` in Arbeit · `[x]` erledigt (Issue closed)

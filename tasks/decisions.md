@@ -127,3 +127,20 @@ Bootstrap/Dev erhalten; risikoarm rückrollbar (env-Pfad intakt).
 **Konsequenzen:** Konstruktor-Signatur `SpotifyHttpApiClient` geändert (nur via DI genutzt);
 `ValidateSpotifyAppConfig` + `SpotifyApiClientInterface::checkClientCredentials()` erweitert; kein Schema.
 **Status:** Accepted
+
+---
+
+### D-012 | 2026-06-02 | Frontend-Deploy auf den Pi (Bug #20)
+
+**Kontext:** `pi-deploy.sh` baut das Frontend auf dem Pi (Schritt 5), aber der Pi hat **kein Node/pnpm** →
+Build wird still übersprungen, `frontend/dist` blieb seit v0.1.0 unverändert (Sprint-2-UI fehlte auf dem Pi).
+**Optionen:** A) CI baut nginx-Image mit fertigem `dist` (multi-arch arm64) → Pi zieht Image ·
+B) CI baut `dist` als Release-Artefakt → Skript lädt/entpackt · C) Node+pnpm auf dem Pi installieren.
+**Entscheidung:** **A – CI-gebautes Image.** Kein Build-Toolchain auf dem Runtime-Gerät; Pi macht nur
+`docker compose pull && up -d`. Versionslabel dynamisch aus `package.json` (bereits umgesetzt, PR #21).
+**Begründung:** Sauberste Trennung Build (CI) vs. Laufzeit (Pi); reproduzierbar, arm64-tauglich; behebt
+zugleich den Host-Bind-Mount-Hack für `dist`.
+**Konsequenzen (offen, eigener PR):** Frontend-`Dockerfile` (nginx + dist), CI-Job mit buildx→GHCR,
+`docker-compose.yml` nginx auf Image statt Bind-Mount, `pi-deploy.sh` auf `pull` umstellen,
+Registry-Auth auf dem Pi. **Sofort-Stopgap (erledigt):** dist manuell gebaut + auf Pi kopiert.
+**Status:** Accepted (Umsetzung ausstehend)
