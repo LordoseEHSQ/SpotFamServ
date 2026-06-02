@@ -123,3 +123,38 @@ Einträge sind immutabel nach Erstellung. Bei Wiederholung eines Musters: Vorkom
 **Status:** Aktiv
 
 ---
+
+### L-013 | 2026-06-02 | CI/GHCR
+
+**Fehlermuster:** Nach dem ersten `v*`-Tag-Build lag das Web-Image in GHCR vor, aber der Pi-Pull
+schlug fehl – das Package war **private**. Kein Umschalten per `gh`/REST möglich.
+**Root Cause:** GHCR legt ein neu gepushtes Package **private** an. Der vorhandene PAT hatte keinen
+`read:packages`/`write:packages`-Scope, und für die Sichtbarkeit eines **User**-Packages gibt es
+**keinen** REST-Endpoint (404) – Änderung nur über die Package-Settings-UI.
+**Regel:** Nach dem **ersten** Image-Push einmalig die Package-Visibility in der UI auf **public** setzen
+(`/users/<owner>/packages/container/<name>/settings`) – danach bleiben alle künftigen Pushes public.
+Vor Verlass auf Pi-Auto-Deploy Pullbarkeit prüfen (`docker buildx imagetools inspect <ref>` ohne Login).
+Alternative bei „private": Pi-`docker login ghcr.io` mit Read-PAT (Secret-Handling wie L-009).
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
+### L-014 | 2026-06-02 | Deploy/Self-Update
+
+**Fehlermuster:** Der v0.2.2-Deploy zog `spotfamserv-web:latest` statt `:v0.2.2` und ohne die neue
+Pull-Retry-Logik – obwohl `pi-deploy.sh` genau das jetzt enthält.
+**Root Cause:** `pi-deploy.sh` checkt mitten im Lauf eine **neuere Version seiner selbst** aus
+(`git checkout -f <tag>`). Der bereits laufende bash-Prozess führt aber die **alte** Skriptlogik aus
+(Datei war beim Start geladen). Der `nginx`-Pull lief daher nur als Nebeneffekt von `docker compose up -d`
+gegen die neue compose-Datei → `WEB_IMAGE_TAG` ungesetzt → `:latest`. Funktionierte nur, weil `:latest`
+== v0.2.2-Inhalt und public. Zusätzlich: Da `docker-compose.yml` im Diff lag, rebuildete das app-Image
+komplett (inkl. `COPY` von 86M vendor + `dump-autoload`) → Pi-Deploy ~25 min.
+**Regel:** Änderungen an `pi-deploy.sh`/Deploy-Logik greifen erst **ab dem nächsten** Release; nicht auf
+neue Skriptlogik im einführenden Release verlassen. Bei kritischen Deploy-Skript-Änderungen nach dem
+Checkout einmalig manuell `pi-deploy.sh` (bzw. `WEB_IMAGE_TAG=<tag> docker compose up -d nginx`) ausführen.
+Für schnellere Deploys ein `backend/.dockerignore` (vendor/var/cache) erwägen (Folge-WP).
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
