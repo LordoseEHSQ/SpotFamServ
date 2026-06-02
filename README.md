@@ -4,14 +4,14 @@ Privat gehostetes Familien-Musiksystem: Ein Admin verwaltet Familienprofile mit 
 
 ## Tech Stack
 
-- **Backend:** Symfony 7, PHP 8.3+, Doctrine ORM, PostgreSQL 15
+- **Backend:** Symfony 7.4 (LTS), PHP 8.4+ (Docker-Image/Pi: 8.5.6), Doctrine ORM 3, PostgreSQL 17
 - **Frontend:** React 18, TypeScript, Vite, React Router, TanStack Query, React Hook Form
 - **Infrastruktur:** Docker Compose (PHP-FPM, Nginx, PostgreSQL)
 
 ## Voraussetzungen
 
 - Docker & Docker Compose
-- PHP 8.3+ und Composer (für lokale Backend-Entwicklung ohne Docker)
+- PHP 8.4+ und Composer (für lokale Backend-Entwicklung ohne Docker; Docker-Stack nutzt PHP 8.5.6)
 - Node 20+ und pnpm (Frontend)
 
 ## Schnellstart
