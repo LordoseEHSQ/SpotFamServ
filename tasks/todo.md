@@ -32,6 +32,20 @@ Releases: v0.2.0 (Sprint-2-Code), v0.2.1 (Spotify-Config-Fix), v0.2.2 (Frontend-
       Controller-Duplikat entfernt, Frontend-Enum + Consumer + Labels. Lokal grün (PHPStan/PHPUnit 28/Frontend-Build),
       OpenAPI 0-Diff. Release v0.2.3.
 
+## Sprint 3 – Multi-Raum & Reader-Lifecycle (Milestone NOCH ANZULEGEN) — PLANUNG/IN ARBEIT
+> Starter: `docs/sprints/sprint-03-starter.md`. Pläne liegen vor, GitHub-Milestone/Issues noch NICHT angelegt.
+- [~] Reader→Box-Mapping (D-015) — **implementiert in PR #31** (`feat/reader-box-mapping`): Schema
+      (`reader_device.default_spotify_device_id`/`default_device_name`), Auto-Register beim Scan (D-R1 A),
+      `StartPlayback` Stale-Re-Resolve bei explizitem Device, `GET /readers` + `PUT|DELETE /readers/{id}/default-device`,
+      Frontend „RFID-Leser", Tests/OpenAPI/Docs. **Offen: CI grün, Merge, Pi-Migration, echtes Multi-Raum-E2E.**
+      Lokal nur `php -l`/`tsc -b`/Linter grün (Host-PHP 8.3 < 8.4/8.5 → kein PHPUnit lokal).
+- [ ] Pi-Leser (PN532/HW-147) als Reader + Scan-to-Enroll — Plan `tasks/plan-pi-reader-daemon.md` (D-017). Nicht begonnen.
+- [ ] Pro-Reader-Keys → USB-Provisioning → signiertes OTA — Plan `tasks/plan-esp-ota-perreader-keys.md`. Nicht begonnen.
+
+### Offene PRs (aus Vorchat, NICHT gemergt)
+- #29 README-Versionen · #30 Planungs-Doku + Decisions D-015..D-017 (+ dieser Starter) · #31 Reader→Box-Feature.
+  CI-Status je PR prüfen; in Reihenfolge #29/#30/#31 mergen.
+
 ## Bugs (GitHub)
 - [x] #18 Spotify-App-Credentials aus UI wurden zur Laufzeit ignoriert → `SpotifyCredentialsProvider` (DB vor env). Gefixt, v0.2.1.
 - [x] #20 Frontend wird auf dem Pi nie gebaut (kein Node/pnpm) → Sprint-Stände erreichen die UI nicht.
