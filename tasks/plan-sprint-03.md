@@ -138,5 +138,31 @@ Empfehlung **B) Fallback-Phase** (globaler Key temporär gültig), sonst ESP-Loc
 - 2026-06-02: CI-Fix #32 (PHPStan-L8) lokal im `php:8.5.6`-Container verifiziert (PHPStan grün,
   PHPUnit 32/93, composer audit clean), gepusht (`a52a63e`), Remote-CI grün, PR #32 CLEAN.
 
+## Plan-Delta: Scan-to-Create am Profil (#34-Erweiterung, 2026-06-02)
+
+**Auslöser (User):** Auf der RFID-Karten-Ansicht *am Benutzer* eine Karte auflegen → System sagt
+**„belegt" (mit Profil/Label/Playlist) oder „frei"** → bei frei UID übernehmen, speichern, mit Playlist binden.
+
+**Befunde beim Verifizieren (kritisch):**
+- `ProfileDetailPage → TabRfid` (die „RFID"-Lasche am Profil) ist **read-only** (nur Liste, kein Anlegen/Binden).
+- Die volle CRUD-`CardsPage` existiert, ist aber nur unter Route `/cards` **ohne `profileId`** gemountet → faktisch
+  unbenutzbar. Es gibt aktuell **keinen** funktionierenden UI-Weg, am Profil eine Karte anzulegen.
+- `card_uid` ist **global unique**; Scan/Resolve/Create matchen exakt per `trim()` (keine Normalisierung) →
+  „belegt" = systemweit, ein Lookup per `findByCardUid(trim)` genügt.
+
+**Umsetzung (gewählt: bestehende CRUD-Seite wiederverwenden statt TabRfid neu bauen):**
+1. **Backend (additiv):** `GET /api/v1/rfid-cards/lookup?card_uid=…` → `{status: free|assigned, card_uid,
+   profile_id?, profile_name?, label?, has_binding, binding_name?}`. UseCase `LookupRfidCardByUid`
+   (RfidCardRepo + GetFamilyProfile + GetCardPlaylistBinding). Keine Migration. OpenAPI additiv → oasdiff non-breaking. PHPUnit.
+2. **Frontend Routing:** neue Route `/profiles/:profileId/cards` → `CardsPage`; `TabRfid` bekommt Button
+   „Karten verwalten / scannen". Tote Route `/cards` → Redirect `/profiles`; kaputten Nav-Eintrag bereinigen.
+3. **Frontend CardsPage:** „Karte scannen"-Modus → pollt `scan-events`, nimmt jüngste UID, ruft Lookup →
+   zeigt **belegt** (Profil/Label/Playlist) oder **frei** → bei frei UID ins Anlegen-Formular übernehmen.
+
+**4-Lens (Delta):** L1 unverändert. L2 keine neuen Deps. L3 additive API (oasdiff ok), tsc/PHPStan/PHPUnit.
+L4 Endpoint read-only, gleiche `^/api/v1`-PUBLIC_ACCESS-Ebene wie übrige UI-Endpoints; keine neuen Secrets.
+
+**Deploy:** Interim-Tag **`v0.2.4`** (D-S3b), kein Merge nach `main`. Pi baut Backend lokal + zieht Web-Image.
+
 ## Abgeschlossen
 {Datum + Summary wenn fertig}

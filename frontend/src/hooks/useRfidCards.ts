@@ -18,6 +18,14 @@ export function useRfidCards(profileId: string | undefined) {
   });
 }
 
+export function useCardLookup(cardUid: string | null) {
+  return useQuery({
+    queryKey: ['card-lookup', cardUid],
+    queryFn: () => rfidApi.lookup(cardUid!),
+    enabled: !!cardUid,
+  });
+}
+
 export function useCardBinding(profileId: string | undefined, cardId: string | undefined) {
   return useQuery({
     queryKey: rfidCardKeys.binding(profileId ?? '', cardId ?? ''),

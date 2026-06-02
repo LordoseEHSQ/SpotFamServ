@@ -19,9 +19,10 @@ export function AppRoutes() {
       <Route path="/profiles" element={<ProfilesPage />} />
       <Route path="/profiles/:profileId" element={<ProfileDetailPage />} />
       <Route path="/profiles/:profileId/setup" element={<SetupWizardPage />} />
+      <Route path="/profiles/:profileId/cards" element={<CardsPage />} />
       <Route path="/devices" element={<DevicesPage />} />
       <Route path="/readers" element={<ReadersPage />} />
-      <Route path="/cards" element={<CardsPage />} />
+      <Route path="/cards" element={<Navigate to="/profiles" replace />} />
       <Route path="/activity" element={<ActivityPage />} />
       <Route path="/scan-logs" element={<ScanLogsPage />} />
       <Route path="/system" element={<SystemPage />} />

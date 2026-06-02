@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, Speaker, CreditCard, Activity,
+  LayoutDashboard, Users, Speaker, Activity,
   Clock, Settings, Wifi, ChevronRight, SlidersHorizontal, Radio,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,7 +31,6 @@ const navigation: NavGroup[] = [
       { label: 'Teilnehmer', href: '/profiles', icon: Users },
       { label: 'Lautsprecher & Geräte', href: '/devices', icon: Speaker },
       { label: 'RFID-Leser', href: '/readers', icon: Radio },
-      { label: 'RFID-Karten', href: '/cards', icon: CreditCard },
     ],
   },
   {

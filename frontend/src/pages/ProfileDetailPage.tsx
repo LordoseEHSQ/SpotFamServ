@@ -340,11 +340,16 @@ function TabLautsprecher({ profile }: { profile: FamilyProfileDto }) {
 
 function TabRfid({ profileId }: { profileId: string }) {
   const { data, isLoading } = useRfidCards(profileId);
+  const navigate = useNavigate();
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">{data?.items.length ?? 0} Karten zugeordnet</p>
+        <Button size="sm" onClick={() => navigate(`/profiles/${profileId}/cards`)}>
+          <CreditCard className="h-4 w-4" />
+          Karten verwalten / scannen
+        </Button>
       </div>
       {isLoading ? (
         <Skeleton className="h-24 w-full" />

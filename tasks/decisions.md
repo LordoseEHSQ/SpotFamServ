@@ -262,4 +262,28 @@ von PR #32 (nur Reader→Box) vor Sprint-Ende impliziert.
 **Begründung:** Regelkonform; Multi-Raum-E2E ist hardware-blockiert → später Merge kostet keine reale Zeit.
 **Konsequenzen:** Provisioning/OTA (Teil 2/3 aus `plan-esp-ota-perreader-keys.md`) → **Sprint 4**.
 Terminologie „Wobie": nur produktive Doku/Kommentare generisieren, Historie bleibt als Audit-Spur.
-**Status:** Accepted
+**Status:** Superseded by D-S3b (Deploy-Teil), 2026-06-02
+
+---
+
+### D-S3b | 2026-06-02 | Früher Feature-Deploy + Interim-Tag (revidiert D-S3)
+
+**Kontext:** User will Scan-to-Create real am Pi nutzen → früher Deploy nötig (vor Sprint-Ende).
+Widerspricht D-S3=A (Merge + `v0.3.0` erst am Sprint-Ende).
+**Befund (empirisch):** `pi-deploy.sh:18` wählt `git tag -l 'v*' --sort=-v:refname | head -1`. Git-Versionsort
+ohne `versionsort.suffix` sortiert `v0.3.0-rc.1` **über** `v0.3.0` → ein RC-Tag würde den finalen
+`v0.3.0`-Deploy blockieren. Verifiziert in Scratch-Repo.
+**Optionen:** (a) `v0.3.0` jetzt → verbrennt Sprint-Minor vor Sprint-Done (verstößt SemVer „Minor=Sprint").
+(b) `v0.3.0-rc.1` → bricht spätere `v0.3.0`-Auswahl (siehe Befund). (c) Interim-Patch `v0.2.4` → sortiert
+über `v0.2.3`, unter `v0.3.0`; Tooling-kompatibel; SemVer-unsauber (Feature unter Patch).
+**Entscheidung:** **(c) `v0.2.4`** als Interim-Feature-Release. **Regelkonform via `main`**: Branch
+verifizieren → **Squash-Merge nach `main`** → Tag `v0.2.4` auf `main` → Pi zieht diese Version.
+(Revidiert: früher Vorschlag „Tag auf Branch-HEAD ohne main-Merge" verworfen — Sonderweg, der `main`
+umgeht; User hat zu Recht den Standardweg eingefordert, 2026-06-02.)
+Sprint-Abschluss weiterhin: finaler `v0.3.0` (sortiert über `v0.2.4`).
+**Begründung:** Standard-Workflow (`parallel-branch-workflow.mdc`); `v0.2.4` hält `v0.3.0` für den echten
+Sprint-Close frei und sortiert tooling-korrekt. SemVer-Impurität (Feature unter Patch) = kleineres Übel
+für ein Interim. `-rc`-Suffix bleibt verboten (git-Versionsort-Falle).
+**Konsequenzen:** Lookup-Endpoint = additive API (oasdiff non-breaking, keine Migration). Voraussetzung
+vor Merge: CI grün (PHPStan L8, PHPUnit, tsc, oasdiff). Lessons-Eintrag zur git-Versionsort-Falle.
+**Status:** Accepted (User, 2026-06-02)
