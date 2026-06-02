@@ -43,6 +43,14 @@ class SpotifyAccountLink
     #[ORM\Column(name: 'last_validated_at', type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $lastValidatedAt = null;
 
+    /**
+     * True once a token refresh failed permanently (Spotify invalid_grant) or the connection
+     * was otherwise rejected → the user must re-authorize. Drives the UI status independent of
+     * the short-lived access-token clock (#25, D-014).
+     */
+    #[ORM\Column(name: 'needs_reauth', type: 'boolean', options: ['default' => false])]
+    private bool $needsReauth = false;
+
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
@@ -145,5 +153,26 @@ class SpotifyAccountLink
             $this->spotifyDisplayName = $displayName;
         }
         $this->updatedAt = $this->lastValidatedAt;
+    }
+
+    public function needsReauth(): bool
+    {
+        return $this->needsReauth;
+    }
+
+    public function markNeedsReauth(): void
+    {
+        if (!$this->needsReauth) {
+            $this->needsReauth = true;
+            $this->updatedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        }
+    }
+
+    public function clearNeedsReauth(): void
+    {
+        if ($this->needsReauth) {
+            $this->needsReauth = false;
+            $this->updatedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        }
     }
 }

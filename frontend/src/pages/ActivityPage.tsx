@@ -19,6 +19,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   spotify_disconnected: 'Spotify getrennt',
   spotify_validated: 'Spotify validiert',
   spotify_token_refreshed: 'Token erneuert',
+  spotify_reauth_required: 'Neu-Autorisierung nötig',
   device_assigned: 'Gerät zugewiesen',
   device_unassigned: 'Gerät freigegeben',
   device_discovered: 'Gerät erkannt',

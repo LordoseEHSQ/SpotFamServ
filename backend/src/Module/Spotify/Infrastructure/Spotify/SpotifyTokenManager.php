@@ -11,6 +11,7 @@ use App\Module\Spotify\Application\Port\SpotifyAccountLinkRepositoryInterface;
 use App\Module\Spotify\Application\Port\SpotifyApiClientInterface;
 use App\Module\Spotify\Application\Port\SpotifyTokenManagerInterface;
 use App\Module\Spotify\Domain\Exception\SpotifyNotConnectedException;
+use App\Module\Spotify\Domain\Exception\SpotifyTokenInvalidException;
 use App\Module\Spotify\Domain\SpotifyAccountLink;
 use Symfony\Component\Uid\Uuid;
 
@@ -49,8 +50,26 @@ final class SpotifyTokenManager implements SpotifyTokenManagerInterface
 
     private function refreshAndPersist(SpotifyAccountLink $link): void
     {
-        $dto = $this->apiClient->refreshToken($link->getRefreshToken());
+        try {
+            $dto = $this->apiClient->refreshToken($link->getRefreshToken());
+        } catch (SpotifyTokenInvalidException $e) {
+            // Permanent failure (invalid_grant / revoked) → flag for re-auth, surface to UI, rethrow.
+            // Transient errors (network/5xx) are SpotifyApiException and intentionally NOT flagged.
+            $link->markNeedsReauth();
+            $this->linkRepository->save($link);
+            $this->activityRepository->append(new ActivityLog(
+                ActivityLog::TYPE_SPOTIFY_REAUTH_REQUIRED,
+                'Spotify-Token-Refresh fehlgeschlagen – Neuanmeldung erforderlich.',
+                ActivityLog::SEVERITY_WARNING,
+                Uuid::fromString($link->getFamilyProfileId()),
+                'spotify_account_link',
+                (string) $link->getId(),
+            ));
+            throw $e;
+        }
+
         $this->applyTokenResponse($link, $dto);
+        $link->clearNeedsReauth();
         $this->linkRepository->save($link);
 
         $this->activityRepository->append(new ActivityLog(

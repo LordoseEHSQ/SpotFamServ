@@ -9,7 +9,7 @@ export interface FamilyProfileDto {
   status: ProfileStatus;
   default_spotify_device_id: string | null;
   default_device_name: string | null;
-  spotify_status: 'connected' | 'expired' | 'not_connected';
+  spotify_status: 'connected' | 'reauth_required' | 'not_connected';
   spotify_user_display_name: string | null;
   setup_complete: boolean;
   setup_percent: number;

@@ -140,14 +140,14 @@ function TabSpotify({ profile }: { profile: FamilyProfileDto }) {
           <div className="flex items-center gap-3">
             {status === 'connected' ? (
               <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
-            ) : status === 'expired' ? (
+            ) : status === 'reauth_required' ? (
               <AlertCircle className="h-5 w-5 text-warning shrink-0" />
             ) : (
               <XCircle className="h-5 w-5 text-muted-foreground shrink-0" />
             )}
             <div>
               <p className="text-sm font-medium">
-                {status === 'connected' ? 'Verbunden' : status === 'expired' ? 'Token abgelaufen' : 'Nicht verbunden'}
+                {status === 'connected' ? 'Verbunden' : status === 'reauth_required' ? 'Neu verbinden nötig' : 'Nicht verbunden'}
               </p>
               {profile.spotify_user_display_name && (
                 <p className="text-xs text-muted-foreground">{profile.spotify_user_display_name}</p>
@@ -162,7 +162,14 @@ function TabSpotify({ profile }: { profile: FamilyProfileDto }) {
             </div>
           )}
 
-          {(status === 'connected' || status === 'expired') && (
+          {status === 'reauth_required' && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-3 py-2.5 text-sm text-amber-800 dark:text-amber-300">
+              <p className="font-medium mb-0.5">Neu-Autorisierung erforderlich</p>
+              <p>Die Spotify-Verbindung wurde von Spotify zurückgewiesen (z. B. Zugriff entzogen oder Passwort geändert). Klicke auf <strong>„Mit Spotify verbinden"</strong>, um den Zugriff erneut zu autorisieren.</p>
+            </div>
+          )}
+
+          {status === 'connected' && (
             <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-3 py-2.5 text-sm text-amber-800 dark:text-amber-300">
               <p className="font-medium mb-0.5">Fehlende Berechtigungen? Neu verbinden</p>
               <p>Falls Aktionen wie Playlist-Erstellen mit „Fehlende Berechtigung" fehlschlagen: Klicke auf <strong>„Trennen"</strong> und danach <strong>„Mit Spotify verbinden"</strong>. Spotify fordert dann die vollständigen Berechtigungen neu an.</p>

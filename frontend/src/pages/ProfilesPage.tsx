@@ -21,7 +21,7 @@ import { formatDateRelative } from '@/lib/utils';
 
 function SpotifyStatusBadge({ status }: { status: FamilyProfileDto['spotify_status'] }) {
   if (status === 'connected') return <Badge variant="success">Verbunden</Badge>;
-  if (status === 'expired') return <Badge variant="warning">Abgelaufen</Badge>;
+  if (status === 'reauth_required') return <Badge variant="warning">Neu verbinden</Badge>;
   return <Badge variant="muted">Nicht verbunden</Badge>;
 }
 

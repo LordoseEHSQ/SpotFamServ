@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace App\Module\Spotify\Application;
 
 use App\Module\Spotify\Application\Port\SpotifyAccountLinkRepositoryInterface;
+use App\Module\Spotify\Domain\SpotifyAccountLink;
 
 /**
- * Returns connection status for a profile's Spotify link (connected / not_found / expired).
+ * Single source of truth for a profile's Spotify connection status.
+ *
+ * Status is driven by the refresh-token validity, NOT by the short-lived access-token clock:
+ * the access token (1h) is auto-refreshed by SpotifyTokenManager, so an expired access token
+ * is invisible to the user. Only a persisted re-auth requirement downgrades the status (#25, D-014).
  */
 final readonly class GetSpotifyStatus
 {
@@ -19,10 +24,22 @@ final readonly class GetSpotifyStatus
     public function __invoke(string $profileId): GetSpotifyStatusResult
     {
         $link = $this->repository->findByProfileId($profileId);
+        return new GetSpotifyStatusResult(self::resolve($link), $link?->getId());
+    }
+
+    /**
+     * Pure status mapping, reused by FamilyProfileController to avoid duplicated/divergent logic.
+     *
+     * @return 'connected'|'reauth_required'|'not_connected'
+     */
+    public static function resolve(?SpotifyAccountLink $link): string
+    {
         if ($link === null) {
-            return new GetSpotifyStatusResult('not_connected', null);
+            return 'not_connected';
         }
-        $expired = $link->getExpiresAt() < new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
-        return new GetSpotifyStatusResult($expired ? 'expired' : 'connected', $link->getId());
+        if ($link->needsReauth()) {
+            return 'reauth_required';
+        }
+        return 'connected';
     }
 }
