@@ -103,3 +103,23 @@ Einträge sind immutabel nach Erstellung. Bei Wiederholung eines Musters: Vorkom
 **Status:** Aktiv
 
 ---
+
+### L-011 | 2026-06-02 | Deploy/Frontend
+
+**Fehlermuster:** Frontend-Änderungen (ganze Sprint-2-UI) erreichten den Pi nie; UI zeigte weiter v0.1.0.
+**Root Cause:** `pi-deploy.sh` baut `frontend/dist` nur, wenn `frontend/` im Tag-Diff liegt **und** `pnpm` vorhanden ist. Der Pi hat **kein Node/pnpm** → Build wird still übersprungen (`|| log "WARN: altes dist bleibt"`). `frontend/dist` ist git-ignoriert, kommt also auch nicht per Pull. Zusätzlich war das Versionslabel hartcodiert (`Layout.tsx`) und verdeckte das Problem.
+**Regel:** Frontend NICHT auf dem Runtime-Gerät bauen. Artefakt/Image in CI bauen und ausliefern (D-012, CI-Image). Versionslabel immer aus `package.json` ableiten (nie hartcodieren), damit der ausgelieferte Stand sichtbar ist. Bei Verdacht: ausgeliefertes Bundle prüfen (`curl .../assets/index-*.js | grep <feature-marker>`), nicht das Label.
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
+### L-012 | 2026-06-02 | Docker/Bind-Mount
+
+**Fehlermuster:** Nach Ersetzen eines bind-gemounteten Verzeichnisses per `mv dist dist.old && tar -x` lieferte nginx weiter das ALTE Bundle.
+**Root Cause:** Docker bind-mountet den **Inode**, den der Pfad bei Container-Start hatte. `mv` des gemounteten Verzeichnisses verschiebt diesen Inode (nach `dist.old`); der laufende Container folgt dem alten Inode, nicht dem Pfad.
+**Regel:** Bind-gemountete Verzeichnisse **in place** ersetzen (Inhalt leeren + neu befüllen), NICHT umbenennen/verschieben. Wenn doch passiert: konsumierenden Container neu starten (`docker compose restart <svc>`), dann re-resolved der Mount den Pfad auf den neuen Inode.
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
