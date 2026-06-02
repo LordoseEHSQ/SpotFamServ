@@ -55,6 +55,15 @@ final class ReaderDeviceController
         return new JsonResponse($this->readerToArray($reader));
     }
 
+    /**
+     * @return array{
+     *     id: string|null,
+     *     reader_id: string,
+     *     name: string|null,
+     *     default_spotify_device_id: string|null,
+     *     default_device_name: string|null
+     * }
+     */
     private function readerToArray(ReaderDevice $r): array
     {
         return [
