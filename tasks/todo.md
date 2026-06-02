@@ -32,20 +32,21 @@ Releases: v0.2.0 (Sprint-2-Code), v0.2.1 (Spotify-Config-Fix), v0.2.2 (Frontend-
       Controller-Duplikat entfernt, Frontend-Enum + Consumer + Labels. Lokal grün (PHPStan/PHPUnit 28/Frontend-Build),
       OpenAPI 0-Diff. Release v0.2.3.
 
-## Sprint 3 – Multi-Raum & Reader-Lifecycle (Milestone NOCH ANZULEGEN) — PLANUNG/IN ARBEIT
-> Starter: `docs/sprints/sprint-03-starter.md`. Pläne liegen vor, GitHub-Milestone/Issues noch NICHT angelegt.
-- [~] Reader→Box-Mapping (D-015) — **implementiert** (Branch `feat/sprint-03-reader-lifecycle`): Schema
+## Sprint 3 – Multi-Raum & Reader-Lifecycle (Milestone #4) — IN ARBEIT
+> Starter: `docs/sprints/sprint-03-starter.md`. Sprint-Plan: `tasks/plan-sprint-03.md`.
+> Milestone #4 + WP-Issues #33–#36 angelegt. **Merge-Strategie D-S3 = A** (ein PR, Merge erst am Sprint-Ende + v0.3.0).
+- [~] #33 Reader→Box-Mapping abschließen — **implementiert** (Branch `feat/sprint-03-reader-lifecycle`): Schema
       (`reader_device.default_spotify_device_id`/`default_device_name`), Auto-Register beim Scan (D-R1 A),
-      `StartPlayback` Stale-Re-Resolve bei explizitem Device, `GET /readers` + `PUT|DELETE /readers/{id}/default-device`,
-      Frontend „RFID-Leser", Tests/OpenAPI/Docs. **Offen: CI grün, Merge, Pi-Migration, echtes Multi-Raum-E2E.**
-      Lokal nur `php -l`/`tsc -b`/Linter grün (Host-PHP 8.3 < 8.4/8.5 → kein PHPUnit lokal).
-- [ ] Pi-Leser (PN532/HW-147) als Reader + Scan-to-Enroll — Plan `tasks/plan-pi-reader-daemon.md` (D-017). Nicht begonnen.
-- [ ] Pro-Reader-Keys → USB-Provisioning → signiertes OTA — Plan `tasks/plan-esp-ota-perreader-keys.md`. Nicht begonnen.
+      `StartPlayback` Stale-Re-Resolve, `GET /readers` + `PUT|DELETE /readers/{id}/default-device`,
+      Frontend „RFID-Leser", Tests/OpenAPI/Docs. **CI grün** (PHPStan-L8-Fix `a52a63e`, lokal im 8.5.6-Container
+      verifiziert: PHPUnit 32/93). **Offen: Merge (am Sprint-Ende), Pi-Migration, echtes Multi-Raum-E2E (Hardware-blockiert).**
+- [ ] #34 Pi-Leser (PN532/HW-147) als Reader + Scan-to-Enroll — Plan `plan-pi-reader-daemon.md` (D-017). Nicht begonnen (Hardware-blockiert).
+- [ ] #35 Pro-Reader-Keys (validateReaderAuth) — Plan `plan-esp-ota-perreader-keys.md` Teil 1 (D-K1 B). Nicht begonnen.
+- [ ] #36 Terminologie „Wobie"→Connect-Gerät (Doku/Kommentare, Historie bleibt). Nicht begonnen.
+- ⏭️ USB-Provisioning + signiertes OTA → **Sprint 4** (D-S3, gestaffelt).
 
-### Sprint-Branch (aus Vorchat, NICHT gemergt)
-- **EIN Branch `feat/sprint-03-reader-lifecycle` mit einem PR** (Modell: ein Sprint = ein Branch, WP1..WPn als Commits).
-  WPs/Commits: README-Versionsfix · Planungs-Doku + Decisions D-015..D-017 + Starter · Reader→Box (schema + feat).
-  CI-Status prüfen, dann mergen.
+### Sprint-Branch (ein Sprint = ein PR, NICHT vor Sprint-Ende mergen — D-S3 A)
+- **EIN Branch `feat/sprint-03-reader-lifecycle` / ein PR #32.** WPs als Commits sammeln; Merge + `v0.3.0` erst am Sprint-Ende.
 
 ## Bugs (GitHub)
 - [x] #18 Spotify-App-Credentials aus UI wurden zur Laufzeit ignoriert → `SpotifyCredentialsProvider` (DB vor env). Gefixt, v0.2.1.

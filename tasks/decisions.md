@@ -244,3 +244,22 @@ identisch (zu verifizieren mit bekannter Karte); Adafruit-Lib deckt alle drei In
 **Konsequenzen:** Plan `tasks/plan-pi-reader-daemon.md` aktualisiert; Pflicht-Verifikation UID-Gleichheit
 PN532↔MFRC522 (4- vs. 7-Byte, Byte-Reihenfolge).
 **Status:** Accepted
+
+---
+
+### D-S3 | 2026-06-02 | Workflow (Sprint 3)
+
+**Kontext:** Spannung zwischen der harten Regel „EIN Sprint = EIN Branch (WP1..WPn als Commits) → ein
+PR → gemerged" und Sprint-Ziel 1 „CI grün → **mergen** → Pi-Migration → E2E", das einen Zwischen-Merge
+von PR #32 (nur Reader→Box) vor Sprint-Ende impliziert.
+**Optionen:**
+- A) Strikt ein PR: alle Sprint-3-WPs auf `feat/sprint-03-reader-lifecycle` sammeln, **einmal** am
+  Sprint-Ende mergen + Tag `v0.3.0`. Multi-Raum-E2E auf dem Pi erst nach Sprint-Ende (hängt ohnehin an
+  Hardware: mehrere Premium-Accounts + Connect-Boxen). Konfliktfrei mit der Regel.
+- B) Zwischen-Merge von #32 jetzt + Zwischen-Tag, Rest in neuem Branch/PR. Verstößt gegen „ein Sprint =
+  ein PR" / „keine parallelen Einzel-PRs".
+**Entscheidung:** **A** (User, 2026-06-02). Kein Merge von #32 vor Sprint-Ende.
+**Begründung:** Regelkonform; Multi-Raum-E2E ist hardware-blockiert → später Merge kostet keine reale Zeit.
+**Konsequenzen:** Provisioning/OTA (Teil 2/3 aus `plan-esp-ota-perreader-keys.md`) → **Sprint 4**.
+Terminologie „Wobie": nur produktive Doku/Kommentare generisieren, Historie bleibt als Audit-Spur.
+**Status:** Accepted
