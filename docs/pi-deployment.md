@@ -131,6 +131,16 @@ Reihenfolge ist zwingend: **#8 → #9 → #10** (ohne Token kein Discovery/Playb
    - Realer Scan: Serial-Monitor zeigt `-> 200: {"outcome":"success",...}`, Reader-LED 1× langer Blink,
      Connect-Gerät spielt hörbar.
 
+4. **Sprint-4 – Wiedergabegerät sicherstellen (D-S4-DEV):**
+   Damit ein Scan tatsächlich spielt, muss **mindestens einer** der folgenden Wege gesetzt sein:
+   - **Reader→Gerät:** Frontend → „RFID-Leser" → Reader auswählen → Lautsprecher-Dropdown → Speichern.
+     (Gespeichert in `reader_device.default_spotify_device_id` + `default_device_name`.)
+   - **Profil-Default:** Frontend → Profil → Tab „Lautsprecher" → Gerät abrufen → „Als Standard" setzen.
+     (Gespeichert in `family_profile.default_spotify_device_id` + `default_device_name`.)
+   Priorität beim Scan: Reader→Gerät **vor** Profil-Default.
+   Wenn beides leer: Outcome `no_device`, keine Wiedergabe, Hinweis im UI.
+   → **Das Connect-Gerät muss beim Setzen online sein** (Spotify-Discovery-Zeitpunkt).
+
 ## Offene Härtung / Risiken
 
 - **Auto-Start fehlt:** `restart: unless-stopped` je Service ergänzen (L-007).
