@@ -177,3 +177,20 @@ Für echte Zero-Downtime später: additive Migration in einem **vorgelagerten** 
 **Status:** Aktiv
 
 ---
+
+### L-016 | 2026-06-02 | Release-Tag ohne package.json-Bump → Footer hinkt
+
+**Fehlermuster:** Nach Deploy `v0.2.4` zeigte der SPA-Footer weiter „0.2.3". Kein Cache-Problem.
+**Root Cause:** `__APP_VERSION__ = JSON.stringify(pkg.version)` (vite.config), aber `frontend/package.json`
+wurde beim Release nicht hochgezählt (blieb 0.2.3). Der Footer spiegelt die **package.json-Version**,
+NICHT den git-Tag/Image-Tag. Der ausgelieferte Code war korrekt v0.2.4 (Bundle-Hash + neue Endpoints/Strings
+nachgewiesen).
+**Regel (Release-Checkliste, PFLICHT):** Vor jedem Release-Tag `frontend/package.json` `version` auf den
+Ziel-Tag setzen (ohne führendes „v"), committen, DANN taggen. Footer ist sonst kein verlässlicher
+Deploy-Indikator – stattdessen Bundle-Hash / sichtbare UI-Features prüfen.
+**Behebung:** Mit Release `v0.2.5` `frontend/package.json` auf `0.2.5` gebumpt → Footer stimmt wieder.
+Release-Checkliste (package.json-Bump vor Tag) ist damit etabliert.
+**Vorkommen:** 1
+**Status:** Behoben
+
+---
