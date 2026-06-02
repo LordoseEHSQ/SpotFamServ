@@ -1,0 +1,31 @@
+# Build-Context schlank halten UND Secrets aus dem (oeffentlichen) Image-Layer fernhalten.
+# Das Web-Image braucht nur frontend/ + docker/nginx/default.conf.
+
+.git
+.github
+
+# Secrets (NIE in den Build-Context / Image-Layer)
+.env
+.env.*
+!.env.example
+**/.env.local
+**/secrets.h
+backend/.env.local
+
+# Build-/Cache-/Abhaengigkeits-Artefakte
+**/node_modules
+frontend/dist
+backend/vendor
+backend/var
+
+# Grosse lokale Artefakte / Betrieb
+pi-image
+backups
+*.log
+
+# Backend wird vom Web-Image nicht benoetigt (App-Image baut separat aus ./backend)
+backend/src
+backend/tests
+backend/config
+backend/migrations
+backend/bin

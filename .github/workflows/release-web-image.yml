@@ -1,0 +1,71 @@
+name: Release Web Image
+
+# Baut das Web-Image (SPA + nginx) und pusht es bei v*-Tags nach GHCR (multi-arch amd64+arm64).
+# Auf PRs nur Build-Validierung (single-arch amd64, kein Push) als Fruehwarnung fuer ein
+# kaputtes Dockerfile. Getrennt von ci.yml -> die Required-Checks/Branch-Protection bleiben unberuehrt.
+
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - 'docker/frontend/**'
+      - 'docker/nginx/**'
+      - '.dockerignore'
+      - '.github/workflows/release-web-image.yml'
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  IMAGE: ghcr.io/${{ github.repository_owner }}/spotfamserv-web
+
+concurrency:
+  group: web-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-image:
+    name: Build & Push Web Image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ github.event_name == 'push' }}
+            type=sha,prefix=sha-,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/frontend/Dockerfile
+          platforms: ${{ github.event_name == 'push' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
