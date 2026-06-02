@@ -35,7 +35,11 @@ export const spotifyApi = {
   createPlaylistReference: (
     profileId: string,
     data: { spotify_playlist_id: string; name: string; owner_id?: string | null },
-  ) => api.post(`/profiles/${profileId}/spotify/playlist-references`, data),
+  ) =>
+    api.post<{ id: string; name: string; spotify_playlist_id: string; owner_id: string | null }>(
+      `/profiles/${profileId}/spotify/playlist-references`,
+      data,
+    ),
   startPlayback: (profileId: string, data: { context_uri: string; device_id?: string }) =>
     api.post(`/profiles/${profileId}/spotify/playback/start`, data),
   getAuthorizationUrl: (profileId: string) =>
