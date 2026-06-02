@@ -21,14 +21,24 @@ final readonly class StartPlayback
     ) {
     }
 
-    public function __invoke(string $profileId, string $contextUri, ?string $deviceId = null): void
+    public function __invoke(string $profileId, string $contextUri, ?string $deviceId = null, ?string $deviceName = null): void
     {
         $link = $this->tokenManager->getValidLinkForProfile($profileId);
         $accessToken = $link->getAccessToken();
 
-        // Explicit device id: play directly, no default-device resolution or re-resolution.
+        // Explicit device id (e.g. a reader's mapped room box): play directly. The stored id
+        // can go stale when the box reconnects, so re-resolve by name once on failure. We do
+        // NOT persist here (StartPlayback is owner-agnostic – the caller owns the mapping).
         if ($deviceId !== null && $deviceId !== '') {
-            $this->play($accessToken, $contextUri, $deviceId);
+            try {
+                $this->play($accessToken, $contextUri, $deviceId);
+            } catch (SpotifyNoDeviceException $e) {
+                $newDeviceId = $this->reResolveByName($accessToken, $deviceName, $deviceId);
+                if ($newDeviceId === null) {
+                    throw $e;
+                }
+                $this->play($accessToken, $contextUri, $newDeviceId);
+            }
             return;
         }
 

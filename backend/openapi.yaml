@@ -295,6 +295,37 @@ paths:
       responses:
         default:
           description: ''
+  /api/v1/readers:
+    get:
+      operationId: get_api_readers_list
+      responses:
+        default:
+          description: ''
+  '/api/v1/readers/{readerId}/default-device':
+    put:
+      operationId: put_api_readers_set_default_device
+      parameters:
+        -
+          name: readerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        default:
+          description: ''
+    delete:
+      operationId: delete_api_readers_clear_default_device
+      parameters:
+        -
+          name: readerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        default:
+          description: ''
   '/api/v1/profiles/{profileId}/setup':
     get:
       operationId: get_api_setup_state
