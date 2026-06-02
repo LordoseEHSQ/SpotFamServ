@@ -143,4 +143,30 @@ zugleich den Host-Bind-Mount-Hack für `dist`.
 **Konsequenzen (offen, eigener PR):** Frontend-`Dockerfile` (nginx + dist), CI-Job mit buildx→GHCR,
 `docker-compose.yml` nginx auf Image statt Bind-Mount, `pi-deploy.sh` auf `pull` umstellen,
 Registry-Auth auf dem Pi. **Sofort-Stopgap (erledigt):** dist manuell gebaut + auf Pi kopiert.
-**Status:** Accepted (Umsetzung ausstehend)
+**Status:** Accepted (umgesetzt in `feat/frontend-ci-image`, Detail-Entscheidungen → D-013)
+
+---
+
+### D-013 | 2026-06-02 | Frontend-CI-Image: Detail-Entscheidungen (Bug #20, Umsetzung von D-012)
+
+**Kontext:** D-012 legt „CI-gebautes Image" als Prinzip fest. Für die Umsetzung waren vier Punkte offen.
+**Optionen & Entscheidungen:**
+1. **GHCR-Sichtbarkeit:** public vs. private. → **public.** Das SPA-Bundle ist Browser-öffentlich und
+   enthält keine Secrets (relative `/api/v1`, keine Tokens gebacken); private bringt ≈0 Confidentiality,
+   kostet aber PAT-Login + Token-Rotation auf dem Pi (L-009). Einmalig Package-Visibility=public setzen.
+2. **Tag-Schema:** → **`vX.Y.Z` (immutable) + `latest` + `sha-<short>`.** Reproduzierbarer Deploy über
+   den festen `vX.Y.Z`-Tag; `latest`/`sha` für Komfort/Debug.
+3. **Image-Referenz in compose:** fester Tag vs. `latest`. → **`${WEB_IMAGE_TAG:-latest}`.** `pi-deploy.sh`
+   injiziert den exakten deployten `v*`-Tag → laufendes Web-Image ist an den git-Tag gekoppelt (starke
+   Konsistenz); manuelle Läufe fallen auf `latest` zurück.
+4. **`default.conf`-Handling:** backen + Mount entfernen vs. backen + Mount behalten. → **backen + Bind-Mount
+   behalten** (nur `frontend/dist`-Mount entfernen). Deckt sich mit der verifizierten Topologie, ist
+   risikoärmer, hält die nginx-Config git-getrieben (folgt dem Tag) und lokal ohne Image-Rebuild editierbar;
+   das Image bleibt trotzdem self-contained (Config gebacken, zur Laufzeit vom Mount überschattet).
+**Begründung:** Maximiert Reproduzierbarkeit + Konsistenz bei minimalem Betriebs-/Secret-Aufwand und
+kleinstem Diff gegenüber dem bestehenden Stack.
+**Konsequenzen:** `release-web-image.yml`, `docker/frontend/Dockerfile`, Root-`.dockerignore`,
+`docker-compose.yml` (nginx→Image, dist-Mount raus), `deploy/pi-deploy.sh` (pull+Retry, `WEB_IMAGE_TAG`),
+`frontend/package.json`-Bump. **Rollback:** echter Rollback = neuer höherer Tag vom älteren Commit
+(`pi-deploy.sh` zieht stets den neuesten `v*`); ad-hoc `WEB_IMAGE_TAG=v0.2.1 docker compose up -d nginx`.
+**Status:** Accepted

@@ -51,9 +51,28 @@ Stand: 2026-06-01. Begleitende Stolpersteine: siehe `tasks/lessons.md` (L-001..L
 
 - nginx (Port `8080`) liefert die statische **SPA** unter `/` und routet `/api` an Symfony (php-fpm).
 - Frontend nutzt relative API-Basis `/api/v1` → gleicher Origin, kein CORS.
+- **Das nginx-/Web-Image (SPA + `default.conf`) wird in CI gebaut und aus GHCR gezogen** (D-012/D-013,
+  `ghcr.io/lordoseehsq/spotfamserv-web:<tag>`, public, multi-arch). Der Pi baut das Frontend **nicht**
+  mehr (kein Node/pnpm nötig). `pi-deploy.sh` pinnt `WEB_IMAGE_TAG` auf den deployten `v*`-Tag und macht
+  `docker compose pull nginx`. Der `frontend/dist`-Bind-Mount entfällt; `default.conf` + `backend/public:ro`
+  bleiben gemountet. App-Image (Backend) wird weiterhin lokal auf dem Pi gebaut.
 - Secrets: `backend/.env.local` (Spotify Client-ID/Secret, READER_API_KEY), Root-`.env` (Redirect-URI, FRONTEND_URL, READER_API_KEY).
 
-## Deployment-Runbook (aus WSL)
+## Deployment (maßgeblich: tag-getriggert)
+
+Normalweg ist **Auto-Deploy** (oben): `git tag vX.Y.Z && git push origin vX.Y.Z`. CI baut das
+Web-Image und pusht es nach GHCR; der Pi-Timer zieht den Tag, holt das Image und startet neu.
+Manuell ohne Timer: `ssh lars@192.168.1.91 '/home/lars/SpotFamServ/deploy/pi-deploy.sh'`.
+
+**Wichtig (Reihenfolge):** Das Web-Image entsteht erst parallel zum Tag in CI. `pi-deploy.sh`
+zieht das Image mit Retry (5×30 s); ist es beim ersten Tick noch nicht in GHCR, deployt der
+nächste Timer-Tick (2 Min) erneut. Rollback = neuer höherer Tag vom älteren Commit; ad-hoc auf
+dem Pi: `export WEB_IMAGE_TAG=v0.2.1 && docker compose up -d nginx`.
+
+> **Frontend wird NICHT mehr auf dem Pi (oder per rsync) gebaut.** Der frühere WSL-Schritt
+> `pnpm build` + `rsync dist/` entfällt (war Root Cause von L-011). Web-Image kommt aus CI/GHCR.
+
+### Historisch: manuelle Erstaufsetzung (vor Auto-Deploy/CI-Image)
 
 ```bash
 # 1) Code übertragen (Excludes beachten – siehe L-001)
@@ -63,15 +82,11 @@ rsync -az --delete \
   --exclude 'frontend/node_modules/' --exclude 'frontend/dist/' --exclude '*.log' \
   /home/lars/SpotFamServ/ lars@192.168.1.91:/home/lars/SpotFamServ/
 
-# 2) Frontend in WSL bauen (statisch, arch-unabhängig) und dist/ mitschieben
-cd frontend && pnpm build
-rsync -az --delete frontend/dist/ lars@192.168.1.91:/home/lars/SpotFamServ/frontend/dist/
-
-# 3) Auf dem Pi: bauen + starten (lange Schritte abgekoppelt, siehe L-008)
+# 2) Auf dem Pi: app bauen + starten (lange Schritte abgekoppelt, siehe L-008)
 ssh lars@192.168.1.91 'cd ~/SpotFamServ && docker compose build app'
-ssh lars@192.168.1.91 'cd ~/SpotFamServ && docker compose up -d'   # ggf. erneut, falls DB-Init-Race (L-003)
+ssh lars@192.168.1.91 'cd ~/SpotFamServ && export WEB_IMAGE_TAG=$(git -C ~/SpotFamServ describe --tags --abbrev=0) && docker compose pull nginx && docker compose up -d'
 
-# 4) Dev-Mount: vendor füllen + migrieren (L-006)
+# 3) Dev-Mount: vendor füllen + migrieren (L-006)
 ssh lars@192.168.1.91 'cd ~/SpotFamServ && docker compose exec -T app composer install --no-interaction'
 ssh lars@192.168.1.91 'cd ~/SpotFamServ && docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction'
 ```

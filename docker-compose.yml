@@ -26,13 +26,18 @@ services:
 
   nginx:
     restart: unless-stopped
-    image: nginx:alpine
+    # Web-Image (SPA + default.conf) wird in CI gebaut und aus GHCR gezogen (D-012/D-013).
+    # WEB_IMAGE_TAG injiziert pi-deploy.sh (= deployter v*-Tag); Fallback latest fuer manuelle Laeufe.
+    # Lokaler Frontend-Dev laeuft ueber `pnpm dev` (Vite-Proxy -> :8080), nicht ueber dieses Image.
+    image: ghcr.io/lordoseehsq/spotfamserv-web:${WEB_IMAGE_TAG:-latest}
     ports:
       - "8080:80"
     volumes:
+      # default.conf bleibt gemountet (O-4 bake_keep): git-getrieben, folgt dem Tag, lokal editierbar.
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      # backend/public bleibt: nginx braucht es fuer $realpath_root im fastcgi-Proxy.
       - ./backend/public:/var/www/html/public:ro
-      - ./frontend/dist:/usr/share/nginx/html:ro
+      # frontend/dist ENTFERNT -> kommt aus dem Image.
     depends_on:
       - app
     networks:

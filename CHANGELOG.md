@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+### Deploy – Frontend via CI-gebautes Image (#20, D-012/D-013)
+
+#### Geändert
+- **Frontend wird nicht mehr auf dem Pi gebaut.** Das Web-Image (SPA `frontend/dist` + nginx +
+  `default.conf`) wird in CI gebaut und nach GHCR gepusht (multi-arch amd64+arm64). Behebt L-011
+  (Pi hat kein Node/pnpm → Sprint-Stände erreichten die UI nie).
+  - Neuer Workflow `.github/workflows/release-web-image.yml`: tag-getriggert (`v*`) buildx→GHCR-Push
+    (`ghcr.io/lordoseehsq/spotfamserv-web:<tag>` + `latest` + `sha-<short>`), auf PRs nur Build-Validierung.
+  - Neues `docker/frontend/Dockerfile`: Build-Stage `--platform=$BUILDPLATFORM` (Node/Vite nativ auf
+    amd64, **nie** unter QEMU) + Runtime-Stage `nginx:alpine` ohne `RUN` (arm64 = nur COPY-Layer).
+  - Neues Root-`.dockerignore`: hält Secrets (`.env`, `backend/.env.local`, `secrets.h`) aus dem
+    (öffentlichen) Build-Context/Image-Layer.
+  - `docker-compose.yml`: `nginx` zieht das GHCR-Image (`${WEB_IMAGE_TAG:-latest}`), `frontend/dist`-
+    Bind-Mount entfernt; `default.conf`- und `backend/public:ro`-Mounts bleiben.
+  - `deploy/pi-deploy.sh`: pnpm-Build-Schritt entfernt; zieht das Web-Image (mit Retry gegen die
+    CI-Build-Latenz) und pinnt `WEB_IMAGE_TAG` auf den deployten `v*`-Tag.
+  - GHCR-Package ist **public** (SPA-Bundle ohne Secrets → kein Pi-Login/PAT nötig).
+
 ### Fix – Spotify-App-Config über die Oberfläche (D-011)
 
 #### Behoben
