@@ -159,34 +159,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
                 properties:
-                  items:
-                    type: array
-                    items:
-                      type: object
-                      required: [id, card_uid, label, binding]
-                      properties:
-                        id:
-                          type: string
-                          format: uuid
-                        card_uid:
-                          type: string
-                        label:
-                          type: string
-                          nullable: true
-                        binding:
-                          nullable: true
-                          oneOf:
-                            - type: 'null'
-                            - type: object
-                              required: [id, name]
-                              properties:
-                                id:
-                                  type: string
-                                  format: uuid
-                                name:
-                                  type: string
+                  items: { type: array, items: { required: [id, card_uid, label, binding], properties: { id: { type: string, format: uuid }, card_uid: { type: string }, label: { type: string, nullable: true }, binding: { nullable: true, oneOf: [{ required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } }, type: object }] } }, type: object } }
+                type: object
     post:
       operationId: post_api_rfid_create
       parameters:

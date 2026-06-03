@@ -13,6 +13,7 @@ use App\Module\Rfid\Application\SetCardPlaylistBinding;
 use App\Module\Rfid\Application\UpdateRfidCard;
 use App\Module\Rfid\Domain\RfidCard;
 use App\Module\Spotify\Domain\SpotifyPlaylistReference;
+use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
@@ -32,6 +33,38 @@ final class RfidCardController
     }
 
     #[Route(name: 'list', methods: ['GET'])]
+    #[OA\Response(
+        response: 200,
+        description: 'List of RFID cards for the profile',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(
+                    property: 'items',
+                    type: 'array',
+                    items: new OA\Items(
+                        required: ['id', 'card_uid', 'label', 'binding'],
+                        properties: [
+                            new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                            new OA\Property(property: 'card_uid', type: 'string'),
+                            new OA\Property(property: 'label', type: 'string', nullable: true),
+                            new OA\Property(
+                                property: 'binding',
+                                oneOf: [
+                                    new OA\Schema(type: 'object', required: ['id', 'name'], properties: [
+                                        new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                                        new OA\Property(property: 'name', type: 'string'),
+                                    ]),
+                                ],
+                                nullable: true,
+                            ),
+                        ],
+                        type: 'object',
+                    ),
+                ),
+            ],
+            type: 'object',
+        ),
+    )]
     public function list(string $profileId): JsonResponse
     {
         $items = ($this->listCardsWithBindings)($profileId);
