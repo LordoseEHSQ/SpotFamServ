@@ -287,3 +287,23 @@ für ein Interim. `-rc`-Suffix bleibt verboten (git-Versionsort-Falle).
 **Konsequenzen:** Lookup-Endpoint = additive API (oasdiff non-breaking, keine Migration). Voraussetzung
 vor Merge: CI grün (PHPStan L8, PHPUnit, tsc, oasdiff). Lessons-Eintrag zur git-Versionsort-Falle.
 **Status:** Accepted (User, 2026-06-02)
+
+---
+
+### D-S4 | 2026-06-02 | Sprint-4-Weichen (Card-UX & Playback)
+
+**Kontext:** User-Feedback – Kartenverwaltung UX schlecht (will DataGrid statt Popups, Playlist-Name sichtbar)
++ Bug „beim Scan am Pi spielt kein Song". Fünf Weichen per AskQuestion entschieden (User, 2026-06-02):
+- **D-S4a Gerätewahl beim Scan = Reader→Gerät bevorzugt, Fallback Profil-Default.** Begründung: Multi-Raum-tauglich
+  (Karte = wessen Musik, Reader/Raum = welches Gerät). Erfordert Code in `ProcessScan`/`StartPlayback` (nutzt
+  das in Sprint 3 gebaute, bisher ungenutzte `reader_device`-Mapping).
+- **D-S4b Scope = ein gemeinsamer Sprint 4** (Card-UX + Playback-Fix zusammen).
+- **D-S4c DataGrid = vorhandene shadcn-`Table` + Tailwind** (keine neue Dependency; konsistent mit DevicesPage/ProfilesPage).
+- **D-S4d Bindung vorerst nur Playlists** (keine Track/Song-Bindung; Backend kann nur Playlist). UI benennt „Playlist".
+- **D-S4e Kartenverwaltung bleibt eigene Seite** `/profiles/:id/cards`, neu als DataGrid (nicht in TabRfid integriert).
+**Begründung:** Robusteste Gerätewahl + minimaler Dependency-/Risiko-Footprint; Song-Bindung als separater, größerer Schritt vermieden.
+**Restpunkte entschieden (User, 2026-06-02):**
+- **D-S4-VER = A:** Sprint 3 retroaktiv schließen (Stand `v0.2.5`); Sprint 4 endet mit **`v0.3.0`** (Minor=Sprint).
+- **D-S4-DEV = explizit:** Wenn weder Reader- noch Profil-Gerät gesetzt → klare Meldung „kein Wiedergabegerät konfiguriert" (kein Auto-Wählen).
+- **D-S4-GH = full:** GitHub Milestone „Sprint 4" + WP-Issues anlegen; Planungs-Docs committen/pushen.
+**Status:** Accepted (User, 2026-06-02) – Implementierung im frischen Sprint-4-Chat (Starter: `docs/sprints/sprint-04-starter.md`)

@@ -10,6 +10,12 @@ interface CardPlaylistBindingRepositoryInterface
 {
     public function findByCardId(string $rfidCardId): ?CardPlaylistBinding;
 
+    /**
+     * @param string[] $cardIds
+     * @return array<string, CardPlaylistBinding> indexed by rfid_card_id
+     */
+    public function findByCardIds(array $cardIds): array;
+
     public function save(CardPlaylistBinding $binding): void;
 
     public function remove(CardPlaylistBinding $binding): void;

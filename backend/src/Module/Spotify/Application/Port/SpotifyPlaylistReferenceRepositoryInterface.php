@@ -10,6 +10,12 @@ interface SpotifyPlaylistReferenceRepositoryInterface
 {
     public function findById(string $id): ?SpotifyPlaylistReference;
 
+    /**
+     * @param string[] $ids
+     * @return array<string, SpotifyPlaylistReference> indexed by id
+     */
+    public function findByIds(array $ids): array;
+
     /** @return list<SpotifyPlaylistReference> */
     public function findByProfileId(string $profileId): array;
 

@@ -1,7 +1,9 @@
 # Lokale Geheimnisse/Konfiguration – niemals committen
 secrets.env
 secrets.py
+# secrets.*.env passt auf alle secrets-Varianten außer .example
 secrets.*.env
+!secrets.example.env
 
 # Python venv & Caches
 .venv/

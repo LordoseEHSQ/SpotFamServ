@@ -8,7 +8,7 @@ use App\Module\Rfid\Application\CreateRfidCard;
 use App\Module\Rfid\Application\DeleteRfidCard;
 use App\Module\Rfid\Application\GetCardPlaylistBinding;
 use App\Module\Rfid\Application\GetRfidCard;
-use App\Module\Rfid\Application\ListRfidCardsByProfile;
+use App\Module\Rfid\Application\ListRfidCardsWithBindings;
 use App\Module\Rfid\Application\SetCardPlaylistBinding;
 use App\Module\Rfid\Application\UpdateRfidCard;
 use App\Module\Rfid\Domain\RfidCard;
@@ -21,7 +21,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class RfidCardController
 {
     public function __construct(
-        private readonly ListRfidCardsByProfile $listCards,
+        private readonly ListRfidCardsWithBindings $listCardsWithBindings,
         private readonly GetRfidCard $getCard,
         private readonly CreateRfidCard $createCard,
         private readonly UpdateRfidCard $updateCard,
@@ -34,9 +34,12 @@ final class RfidCardController
     #[Route(name: 'list', methods: ['GET'])]
     public function list(string $profileId): JsonResponse
     {
-        $cards = ($this->listCards)($profileId);
+        $items = ($this->listCardsWithBindings)($profileId);
         return new JsonResponse([
-            'items' => array_map([$this, 'cardToArray'], $cards),
+            'items' => array_map(
+                fn(array $item) => $this->cardToArray($item['card'], $item['binding']),
+                $items,
+            ),
         ]);
     }
 
@@ -97,12 +100,15 @@ final class RfidCardController
         return new JsonResponse(null, 204);
     }
 
-    private function cardToArray(RfidCard $c): array
+    private function cardToArray(RfidCard $c, ?SpotifyPlaylistReference $binding = null): array
     {
         return [
             'id' => $c->getId(),
             'card_uid' => $c->getCardUid(),
             'label' => $c->getLabel(),
+            'binding' => $binding !== null
+                ? ['id' => $binding->getId(), 'name' => $binding->getName()]
+                : null,
         ];
     }
 
