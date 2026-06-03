@@ -7,6 +7,7 @@
 - **OTA:** Minimalvertrag `GET /api/v1/readers/firmware/manifest` (Board/Kanal/SemVer; `204` ohne Artefakt).
 - **Frontend:** „Reader hinzufügen“ mit Claim-Code, Captive-Portal-Payload und Status-Polling bis `claimed`.
 - **Doku:** `docs/esp-reader-provisioning.md` (Runbook); `docs/reader-box-mapping.md` um ESP vs. Pi/Legacy ergänzt.
+- **CI:** Job `Firmware Compile (ESP32)` — reproduzierbarer Baseline-Compile des MFRC522-Sketches (`arduino-cli`, `esp32:esp32@3.3.8`); PN532/Portal/NVS/OTA-Client ausstehend, HW-0 offen.
 
 ### WP2 – Kartenverwaltung als DataGrid (#40)
 

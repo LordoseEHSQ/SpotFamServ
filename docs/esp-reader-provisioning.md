@@ -198,12 +198,15 @@ Ohne HW-0: Software-Merge und CI ≠ produktionsreifer ESP-Reader.
 |---------|--------|
 | Backend Claim + Manifest-Stub | Implementiert, getestet |
 | Frontend Reader hinzufügen | Implementiert |
+| CI Firmware-Compile (Baseline) | Grün — MFRC522-Sketch via `arduino-cli` (`esp32:esp32@3.3.8`); kein PN532/Portal/NVS/OTA |
 | ESP Firmware (Portal, NVS, PN532, OTA-Client) | Ausstehend |
 | OTA-Binärartefakt | Keins → Manifest `204` |
-| HW-0 | Offen |
+| HW-0 | Offen (blockiert Sprint-Done) |
 | Signiertes OTA | Entscheidung offen (`signature: null` im Vertrag) |
 
 **Merge ≠ Sprint-Done:** Grüne CI und gemergter PR schließen den Software-Schnitt, nicht den Sprint — HW-0 und E2E am echten ESP fehlen.
+
+**Verifikation Firmware-Build:** CI-Job `Firmware Compile (ESP32)` kompiliert den bestehenden MFRC522-Sketch reproduzierbar (`secrets.h.example` → `secrets.h`). Das ist eine Build-Baseline, nicht die Ziel-Firmware: ESP-Webinterface, PN532/HW-147, NVS-Provisioning, Captive Portal und OTA-Client sind nicht umgesetzt.
 
 ## Verweise
 

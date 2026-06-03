@@ -1,7 +1,7 @@
 # Plan: ESP32 Consumer-Provisioning, PN532-Reader und OTA
 
 **Erstellt:** 2026-06-03  
-**Status:** Revised Draft - wartet auf User-Bestaetigung
+**Status:** Software-Schnitt teilweise umgesetzt — CI-Firmware-Baseline grün; HW-0 blockiert Sprint-Done
 
 ## Scope
 SpotFamServ soll ESP32-Reader so einbinden, dass sie perspektivisch wie ein Consumer-Produkt funktionieren: einmaliger Hersteller-/Entwickler-Flash per USB, danach Einrichtung per Captive Portal, Kopplung ans Backend per Claim-Flow und Firmware-Updates per OTA. Der ESP-Reader verwendet denselben RFID-Reader-Typ wie der Pi: HW-147/PN532; der bestehende MFRC522/SPI-Firmwarestand ist daher nicht die Zielhardware.
@@ -176,7 +176,7 @@ Der Nutzer muss physisch verifizieren und dokumentieren:
 - ESP-Provisioning am echten Gerät getestet.
 - Scan, Reboot, Reset und OTA am echten Gerät getestet.
 - OTA-Herkunftsentscheidung getroffen: Signatur umgesetzt oder Hash-only bewusst als MVP-Risiko dokumentiert.
-- Firmware-Build reproduzierbar, mindestens Compile-Check in CI.
+- Firmware-Build reproduzierbar, mindestens Compile-Check in CI. *(Software-Teil erledigt: CI-Job `Firmware Compile (ESP32)`; HW-0 bleibt blockierend.)*
 - Nutzer-/Hardware-Doku aktualisiert.
 
 **Nicht-blockierende Risiken:**
@@ -239,7 +239,7 @@ Der Nutzer muss physisch verifizieren und dokumentieren:
 - [ ] Plan vom Nutzer bestaetigt.
 - [ ] Dry-Run/Blind-Spot-Review mit staerkstem verfuegbarem Reasoning-Modell durchgefuehrt und Befunde eingearbeitet.
 - [ ] Bus-/Pinout-Entscheidung mit realem PN532/HW-147 verifiziert und dokumentiert.
-- [ ] Firmware kompiliert reproduzierbar.
+- [x] Firmware kompiliert reproduzierbar (CI-Job `Firmware Compile (ESP32)`; Baseline MFRC522-Sketch, nicht PN532/Provisioning).
 - [ ] Backend-Tests fuer Claim, API-Key-Ausgabe, Ablauf und OTA-Manifest.
 - [ ] Frontend-Flow manuell verifiziert.
 - [ ] ESP-Hardwaretest: Provisioning, Scan, Reboot, OTA, Reset.
@@ -270,7 +270,9 @@ Der Nutzer muss physisch verifizieren und dokumentieren:
 - Verifiziert: Frontend Build | `pnpm build` | Ergebnis: TypeScript/Vite Build gruen; bekannter Chunk-Size-Hinweis | 2026-06-03
 - Verifiziert: Frontend Tests | `pnpm exec vitest run --passWithNoTests` | Ergebnis: gruen, keine Testdateien vorhanden | 2026-06-03
 - Verifiziert: Doku-Modell-Gate | Haiku nicht verfuegbar, Fallback `composer-2.5-fast` fuer reine Doku genutzt | Ergebnis: `docs/esp-reader-provisioning.md`, `docs/reader-box-mapping.md`, `CHANGELOG.md` aktualisiert | 2026-06-03
+- Verifiziert: Firmware-Build reproduzierbar (Software-Teil) | CI-Job `Firmware Compile (ESP32)` in `.github/workflows/ci.yml`: `arduino-cli`, `esp32:esp32@3.3.8`, `ArduinoJson@7.4.3`, `MFRC522@1.4.12`, `secrets.h.example` → `secrets.h`, `arduino-cli compile --fqbn esp32:esp32:esp32 .` in `firmware/spotfam_reader` | Ergebnis: Baseline-Compile des bestehenden MFRC522-Sketches grün (lokal: 1053224 B Program Storage ~80 %, 48496 B RAM ~14 %); kein PN532, kein Captive Portal, kein NVS, kein OTA-Client | 2026-06-03
 - Offen: Hardware-Gate HW-0 | Echter ESP32 + PN532/HW-147 noetig | Ergebnis: blockiert Sprint-Done/Release, aber nicht Software-Merge | 2026-06-03
 
-## Abgeschlossen
-Noch offen.
+## Abgeschlossen (Software-Schnitt, ohne HW-0)
+- Backend-Claim/Manifest, Frontend „Reader hinzufügen“, Doku-Runbook, CI-Firmware-Baseline-Compile (MFRC522).
+- **Nicht abgeschlossen:** HW-0, ESP-Firmware (PN532, Captive Portal, NVS, OTA-Client), E2E am echten ESP.
