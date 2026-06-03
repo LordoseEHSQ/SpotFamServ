@@ -49,6 +49,26 @@ services:
         resource: '../src/Module/Device/Application/'
     App\Module\ActivityLog\Application\:
         resource: '../src/Module/ActivityLog/Application/'
+    App\Module\AudioExtractor\Application\:
+        resource: '../src/Module/AudioExtractor/Application/'
+
+    # Audio-Extractor: Subprozess-Adapter (yt-dlp/ffmpeg) erfüllt Extraktor- und Engine-Port.
+    App\Module\AudioExtractor\Application\Port\MediaExtractorInterface: '@App\Module\AudioExtractor\Infrastructure\Process\YtDlpFfmpegExtractor'
+    App\Module\AudioExtractor\Application\Port\MediaEngineInterface: '@App\Module\AudioExtractor\Infrastructure\Process\YtDlpFfmpegExtractor'
+    App\Module\AudioExtractor\Infrastructure\Process\YtDlpFfmpegExtractor:
+        arguments:
+            $ytDlpBinary: '%audio_extractor.ytdlp_binary%'
+            $timeoutSeconds: '%audio_extractor.timeout_seconds%'
+            $maxDurationSeconds: '%audio_extractor.max_duration_seconds%'
+    # Persistenter Speicher (gemeinsamer Host-Bereich, Dateisystem-Scan, kein Schema).
+    App\Module\AudioExtractor\Application\Port\AudioStorageInterface: '@App\Module\AudioExtractor\Infrastructure\Storage\FilesystemAudioStorage'
+    App\Module\AudioExtractor\Infrastructure\Storage\FilesystemAudioStorage:
+        arguments:
+            $storageDir: '%audio_extractor.storage_dir%'
+    App\Module\AudioExtractor\Infrastructure\Http\AudioExtractorController:
+        arguments:
+            $maxDurationSeconds: '%audio_extractor.max_duration_seconds%'
+            $timeoutSeconds: '%audio_extractor.timeout_seconds%'
 
     # SetupWizard: Strategy-Handler mit DI-Tagging
     App\Module\SetupWizard\Application\StepHandler\ProfileStepHandler:

@@ -1,0 +1,14 @@
+parameters:
+    # Fallback-Defaults, damit der Stack auch ohne gesetzte Env-Variablen bootet
+    # (es gibt kein committetes backend/.env).
+    audio_extractor.timeout_seconds_default: 240
+    audio_extractor.max_duration_seconds_default: 1800
+    audio_extractor.ytdlp_binary_default: '/opt/yt-dlp/yt-dlp'
+    # Persistenter Ablageort der extrahierten Dateien (Host-Verzeichnis, ins Backend gemountet).
+    audio_extractor.storage_dir_default: '%kernel.project_dir%/var/audio'
+
+    # Harte Schutzgrenzen gegen blockierte php-fpm-Worker (Plan R1).
+    audio_extractor.timeout_seconds: '%env(int:default:audio_extractor.timeout_seconds_default:AUDIO_EXTRACTOR_TIMEOUT_SECONDS)%'
+    audio_extractor.max_duration_seconds: '%env(int:default:audio_extractor.max_duration_seconds_default:AUDIO_EXTRACTOR_MAX_DURATION_SECONDS)%'
+    audio_extractor.ytdlp_binary: '%env(default:audio_extractor.ytdlp_binary_default:AUDIO_EXTRACTOR_YTDLP_BINARY)%'
+    audio_extractor.storage_dir: '%env(default:audio_extractor.storage_dir_default:AUDIO_EXTRACTOR_STORAGE_DIR)%'

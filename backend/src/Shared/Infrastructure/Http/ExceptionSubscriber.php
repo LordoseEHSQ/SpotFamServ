@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Shared\Infrastructure\Http;
 
+use App\Module\AudioExtractor\Domain\InvalidMediaRequestException;
+use App\Module\AudioExtractor\Domain\MediaExtractionFailedException;
 use App\Module\SetupWizard\Domain\Exception\StepValidationException;
 use App\Module\Spotify\Domain\Exception\SpotifyApiException;
 use App\Module\Spotify\Domain\Exception\SpotifyNoDeviceException;
@@ -33,6 +35,8 @@ final class ExceptionSubscriber implements EventSubscriberInterface
         SpotifyScopeMissingException::class  => Response::HTTP_FORBIDDEN,
         SpotifyOAuthStateException::class    => Response::HTTP_BAD_REQUEST,
         StepValidationException::class       => Response::HTTP_UNPROCESSABLE_ENTITY,
+        InvalidMediaRequestException::class  => Response::HTTP_UNPROCESSABLE_ENTITY,
+        MediaExtractionFailedException::class => Response::HTTP_BAD_GATEWAY,
     ];
 
     public static function getSubscribedEvents(): array
