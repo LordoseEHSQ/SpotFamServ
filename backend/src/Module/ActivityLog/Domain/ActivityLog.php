@@ -43,6 +43,9 @@ class ActivityLog
     public const TYPE_PLAYBACK_NEXT         = 'playback_next';
     public const TYPE_PLAYBACK_PREVIOUS     = 'playback_previous';
     public const TYPE_SEARCH_EXECUTED       = 'search_executed';
+    public const TYPE_READER_CLAIM_CREATED  = 'reader_claim_created';
+    public const TYPE_READER_CLAIM_REDEEMED = 'reader_claim_redeemed';
+    public const TYPE_READER_CLAIM_FAILED   = 'reader_claim_failed';
 
     #[ORM\Id]
     #[ORM\Column(type: 'uuid')]

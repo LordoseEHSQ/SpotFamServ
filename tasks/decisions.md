@@ -266,6 +266,20 @@ Terminologie „Wobie": nur produktive Doku/Kommentare generisieren, Historie bl
 
 ---
 
+### D-018 | 2026-06-03 | ESP32 Consumer-Provisioning & OTA
+
+**Kontext:** ESP32-Reader sollen nicht nur als Entwicklerhardware funktionieren, sondern perspektivisch als einfache Consumer-Loesung. Der Nutzer bestaetigte fuer ESP-Geraete denselben RFID-Reader-Typ wie am Pi: HW-147/PN532. Der bestehende ESP-Firmwarestand nutzt dagegen MFRC522/SPI und `secrets.h`.
+**Optionen:**
+1. `secrets.h` pro Geraet und USB-Flash bei jeder Aenderung — Vorteile: einfach fuer Entwickler; Nachteile: nicht consumer-tauglich, fehleranfaellig, Secrets im lokalen Build, kein sauberer Field-Update-Pfad.
+2. Serielle Provisionierung nach USB-Erstflash — Vorteile: robuster als `secrets.h`; Nachteile: weiterhin PC/Tooling fuer normale Einrichtung noetig.
+3. Captive Portal + Backend-Claim + NVS + OTA — Vorteile: Nutzer braucht nach Hersteller-Erstflash keinen PC, klare Kopplung ans Backend, Updates drahtlos; Nachteile: mehr Firmware-/Backend-/UI-Aufwand und Sicherheitsdesign noetig.
+**Entscheidung:** Option 3 als Zielbild. USB bleibt nur fuer den initialen Hersteller-/Entwickler-Flash. Danach richtet der Nutzer den Reader ueber ein Captive Portal ein, koppelt ihn per kurzlebigem Backend-Claim und erhaelt Firmware-Updates per OTA.
+**Begruendung:** Das ist der einzige Ansatz, der zur Consumer-Anforderung "wirklich einfach, wenig Fehlerquellen" passt. `secrets.h` und serielle Provisionierung bleiben maximal fuer Entwicklung/Fallback, nicht fuer den Produktfluss.
+**Konsequenzen:** ESP-Firmware muss von MFRC522/SPI auf PN532/HW-147 geplant werden (Bus-Entscheidung I2C vs. SPI separat verifizieren). Backend braucht Claim-/Provisioning-Endpunkte und OTA-Manifest/Artefakt-Strategie. UI braucht einen gefuehrten "Reader hinzufuegen"-Flow. OTA muss gegen falsche Firmware, Downgrade und Teil-Downloads abgesichert werden.
+**Status:** Accepted
+
+---
+
 ### D-S3b | 2026-06-02 | Früher Feature-Deploy + Interim-Tag (revidiert D-S3)
 
 **Kontext:** User will Scan-to-Create real am Pi nutzen → früher Deploy nötig (vor Sprint-Ende).

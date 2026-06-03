@@ -2,6 +2,12 @@
 
 ## [Unreleased] – Sprint 4 → v0.3.0 (ausstehend: CI grün + Pi-E2E)
 
+### ESP32-Reader-Provisioning (Software-Schnitt, HW-0 offen)
+- **Backend:** Kurzlebige Reader-Claims (`POST/GET /api/v1/readers/claims`, `POST …/activate`) mit gehashtem Code, Einmalnutzung, per-Reader-API-Key-Ausstellung und Activity-Log; `GET /readers` liefert `has_api_key`.
+- **OTA:** Minimalvertrag `GET /api/v1/readers/firmware/manifest` (Board/Kanal/SemVer; `204` ohne Artefakt).
+- **Frontend:** „Reader hinzufügen“ mit Claim-Code, Captive-Portal-Payload und Status-Polling bis `claimed`.
+- **Doku:** `docs/esp-reader-provisioning.md` (Runbook); `docs/reader-box-mapping.md` um ESP vs. Pi/Legacy ergänzt.
+
 ### WP2 – Kartenverwaltung als DataGrid (#40)
 
 #### Backend (WP2a)

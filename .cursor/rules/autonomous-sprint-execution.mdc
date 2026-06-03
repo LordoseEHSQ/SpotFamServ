@@ -1,0 +1,28 @@
+---
+description: Nach bestaetigtem Plan autonom umsetzen bis zu echtem Gate oder Blocker.
+alwaysApply: true
+---
+
+# Autonome Sprint-Umsetzung nach Planfreigabe
+
+## Grundsatz
+- Planung ist kein Endzustand. Sobald ein Plan vom Nutzer bestaetigt ist, setzt der Agent den Plan autonom um.
+- Nicht nach jeder Phase erneut um Erlaubnis fragen. Weiterarbeiten, bis ein echtes Gate, ein Blocker oder eine Planabweichung erreicht ist.
+- Plan-vor-Code bleibt gueltig: Ohne bestaetigten Plan keine nicht-trivialen Code-, Schema-, Infra- oder CI-Aenderungen.
+- ABSOLUTER BLOCKER: Nach Planbestaetigung kommt vor der Umsetzung immer ein Dry-Run/Blind-Spot-Review mit dem staerksten verfuegbaren Reasoning-Modell. Erst wenn kritische Befunde eingearbeitet und im Plan dokumentiert sind, beginnt die Umsetzung.
+
+## Stoppen und fragen nur bei
+- Hardware-/User-Gates: physische Verkabelung, Loeten, Flashen, reale Scans, OAuth/Spotify-Consent, Secrets.
+- Destruktiven oder irreversiblen Aktionen: Reset, Force-Push, Datenloeschung, Produktionseingriff.
+- Architekturabweichung: Umsetzung passt nicht mehr zum bestaetigten Plan oder beruehrt unerwartet neue Bereiche.
+- Sicherheitsentscheidung: Secrets, Auth, OTA-Signatur, Token-/Key-Handling, oeffentliche Endpunkte.
+- Fehlgeschlagener Test oder CI-Fehler mit unklarer Ursache.
+
+## Erwartetes Verhalten
+- Den kleinsten plan-konformen Umsetzungsschnitt waehlen und liefern.
+- Tests, Lints, OpenAPI/Docs und Verifikationslog im selben Arbeitsfluss aktualisieren.
+- Bei Hardware-Blockern Software bis zum naechsten verifizierbaren Zustand fertigstellen und klar markieren, was der Nutzer physisch pruefen muss.
+- ABSOLUTER BLOCKER: Umsetzung nach bestandenem Dry-Run nur mit Sonnet oder GPT-5.5 fortsetzen, sofern der Nutzer kein anderes verfuegbares Modell explizit vorgibt.
+- ABSOLUTER BLOCKER: Reine Dokumentation, redaktionelle Ueberarbeitung oder Uebersetzung mit Haiku erledigen, sofern verfuegbar. Wenn Haiku in der aktuellen Modellliste nicht verfuegbar ist, das kleinste geeignete schnelle Modell nutzen und den Fallback benennen.
+- Wenn eines dieser Modell-Gates nicht eingehalten wurde, Arbeit stoppen, Regelverletzung benennen, Plan/Working-Memory korrigieren und erst danach fortfahren.
+- Wenn Kontext knapp wird: Starter-Prompt fuer den naechsten Chat erzeugen, der die autonome Fortsetzung ausdruecklich anweist.

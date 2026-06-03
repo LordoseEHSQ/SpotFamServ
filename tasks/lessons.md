@@ -204,3 +204,23 @@ Release-Checkliste (package.json-Bump vor Tag) ist damit etabliert.
 **Regel:** Für Prozesse die `lgpio`/`pigpio`/GPIO-Bibliotheken mit eigenem Daemon-Protokoll nutzen: kein `PrivateTmp=true`, kein `ProtectSystem=full`. `StartLimitIntervalSec`/`Burst` in `[Unit]`. Beim Schreiben von systemd-Units für Hardware-nahe Python-Dienste erst ohne Hardening testen, dann schrittweise hinzufügen.
 **Vorkommen:** 1
 **Status:** Aktiv
+
+---
+
+### L-018 | 2026-06-03 | ESP/RFID-Hardware
+
+**Fehlermuster:** ESP32-Planung ging implizit vom bestehenden MFRC522/SPI-Firmwarestand aus, obwohl der Nutzer fuer die ESP-Geraete denselben Reader-Typ wie am Pi bestaetigt hat: HW-147/PN532.
+**Root Cause:** Vorhandenen Code (`spotfam_reader.ino`, `config.h`) als Hardware-Wahrheit behandelt statt die aktuelle Produkt-/Hardware-Anforderung gegen den Nutzerfakt zu verifizieren.
+**Regel:** Vor ESP-Pinout, Loeten oder Firmware-Plan immer explizit den realen Reader-Typ als Fakt festhalten. PN532/HW-147 und MFRC522 sind nicht austauschbar: Bibliothek, Bus, Pinout und UID-Verifikation muessen im Plan getrennt bewertet werden.
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
+### L-019 | 2026-06-03 | Prozess/Autonomie
+
+**Fehlermuster:** Nach bestaetigtem Plan wurde erneut auf Nutzerfreigabe fuer den naechsten Schritt gewartet, statt autonom bis zum naechsten echten Gate/Blocker weiterzuarbeiten. Zusaetzlich waren Dry-Run- und Modellwahl-Gates nicht als harte Blocker verankert.
+**Root Cause:** Plan-vor-Code wurde faelschlich als fortlaufende Stop-Erlaubnis interpretiert; es fehlte eine explizite Regel fuer Planbestaetigung -> Dry-Run -> autonome Umsetzung -> Stop nur bei Blocker.
+**Regel:** Nach Planbestaetigung ist Dry-Run/Blind-Spot-Review mit staerkstem verfuegbarem Reasoning-Modell absoluter Blocker vor Code. Danach autonom mit Sonnet oder GPT-5.5 umsetzen, bis echter Hardware-/Security-/Planabweichungs-/Test-Blocker erreicht ist. Reine Doku/Uebersetzung mit Haiku, falls verfuegbar; sonst kleinsten schnellen Fallback benennen.
+**Vorkommen:** 1
+**Status:** Aktiv
