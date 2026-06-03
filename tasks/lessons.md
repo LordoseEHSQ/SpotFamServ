@@ -224,3 +224,52 @@ Release-Checkliste (package.json-Bump vor Tag) ist damit etabliert.
 **Regel:** Nach Planbestaetigung ist Dry-Run/Blind-Spot-Review mit staerkstem verfuegbarem Reasoning-Modell absoluter Blocker vor Code. Danach autonom mit Sonnet oder GPT-5.5 umsetzen, bis echter Hardware-/Security-/Planabweichungs-/Test-Blocker erreicht ist. Reine Doku/Uebersetzung mit Haiku, falls verfuegbar; sonst kleinsten schnellen Fallback benennen.
 **Vorkommen:** 1
 **Status:** Aktiv
+
+---
+
+### L-020 | 2026-06-03 | Symfony/Env-Prozessoren ohne committetes `.env`
+
+**Fehlermuster:** Neue Parameter `%env(bool:AUDIO_EXTRACTOR_ENABLED)%` hätten den Container-Boot zum
+Absturz gebracht, sobald die Env-Variable fehlt – es gibt **kein committetes `backend/.env`** (Projekt
+nutzt `.env.dev`/`.env.test` + reale Docker-Env; CI kopiert `.env.example`→`.env`).
+**Root Cause:** `bool:`/`int:`-Prozessoren verlangen einen Wert; ohne `.env`-Default und ohne gesetzte
+Variable wirft Symfony beim Resolve. Lokale Tests scheitern zudem an Host-PHP 8.3 (Plattform-Pin 8.5.6 →
+`platform_check.php` Fatal) → Tests/PHPStan/Console müssen im `php:8.5.6-*`-Container laufen.
+**Regel:** Neue Env-Parameter IMMER mit Fallback verdrahten:
+`%env(<typ>:default:<fallback_param>:VAR_NAME)%` plus `<fallback_param>` unter `parameters:`. Nie auf ein
+`.env` verlassen. Verifikation neuer DI-Verdrahtung mit `php bin/console lint:container` im 8.5-Container
+(`docker run --rm -v "$PWD":/app -w /app php:8.5.6-cli-alpine ...`), Tests brauchen ein temporäres
+`.env` (gitignored: `cp .env.example .env`, vor Commit wieder entfernen).
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
+### L-021 | 2026-06-03 | yt-dlp `--match-filter` verwirft Quellen mit unbekannter Dauer
+
+**Fehlermuster:** `--match-filter "duration < 1800"` blockierte im E2E **legitime** Direkt-Dateien
+(generic extractor, `duration=NA`) komplett – „does not pass filter, skipping". Der `?`-Suffix
+(`duration<1800?`) und ein einzelnes `duration<1800|!duration` halfen NICHT (`|` ist kein OR
+innerhalb eines Filterausdrucks).
+**Root Cause:** Vergleichsoperatoren in `--match-filter` verwerfen Einträge, deren Feld fehlt.
+ODER-Logik entsteht nur durch **mehrere** `--match-filter`-Flags, nicht durch `|` im selben String.
+**Regel:** Dauer-Limit immer als zwei Flags verdrahten: `--match-filter "duration<N"`
+**plus** `--match-filter "!duration"` (kurz genug ODER Dauer unbekannt). Der Prozess-Timeout
+bleibt der harte Backstop für unbekannt-lange Downloads. Solche Filter NUR per echtem
+E2E gegen eine Quelle mit `duration=NA` verifizieren – Unit-Tests fangen das nicht.
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
+### L-022 | 2026-06-03 | `BinaryFileResponse` → 500 ohne `symfony/mime`
+
+**Fehlermuster:** Download-Endpunkt warf HTTP 500: „You cannot guess the mime type as the Mime
+component is not installed." `BinaryFileResponse::prepare()` ruft `getMimeType()`, sobald kein
+`Content-Type`-Header gesetzt ist – `symfony/mime` ist im Projekt nicht installiert.
+**Root Cause:** Ohne expliziten `Content-Type` rät HttpFoundation den MIME-Typ via `symfony/mime`.
+**Regel:** Bei `BinaryFileResponse` IMMER `Content-Type` explizit setzen (wir kennen das Format
+ohnehin), statt eine neue Dependency aufzunehmen. Download-Pfade per E2E testen, nicht nur per
+Unit-Test (der Mock-Pfade die `prepare()`/`ResponseListener`-Kette nicht durchläuft).
+**Vorkommen:** 1
+**Status:** Aktiv

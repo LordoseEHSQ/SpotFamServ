@@ -2,6 +2,17 @@
 
 ## [Unreleased] – Sprint 4 → v0.3.0 (ausstehend: CI grün + Pi-E2E)
 
+### Audio-Extractor (Feature mit Persistenz + Update-Modus) (D-019/D-020)
+- **Neues Backend-Modul `AudioExtractor`** (Ports & Adapters): URL → `yt-dlp` (Audio) → `ffmpeg` (Transkodierung) → **persistente Ablage im Benutzerbereich**. Normales Feature, **kein Toggle** (D-020 revidiert D-019). Synchron (Plan D-A), Schutzgrenzen `AUDIO_EXTRACTOR_TIMEOUT_SECONDS` (240) + `AUDIO_EXTRACTOR_MAX_DURATION_SECONDS` (1800) gegen blockierte php-fpm-Worker; nginx `fastcgi_read_timeout 300s`.
+- **Endpunkte (additiv, oasdiff non-breaking):** `GET /config` (Formate/Bitraten/Limits/Engine-Version), `POST /extract` (extrahiert + speichert, 201 mit Datei-Metadaten), `GET /files` (Liste + Gesamtgröße), `GET /files/{name}` (Download), `DELETE /files/{name}` (Löschen), `POST /update` (yt-dlp-Self-Update).
+- **Persistenz:** gemeinsamer Host-Bereich `${AUDIO_STORAGE_HOST_DIR:-./data/audio}` → Container `/data/audio`, per Dateisystem erreichbar (CD-Brennen). **Kein DB-Schema** – Liste = Dateisystem-Scan. `.gitignore` für `/data/audio` + `backend/var/audio`.
+- **Update-Modus:** yt-dlp als self-update-fähiges **Release-Binary** (zipapp, D-020 revidiert pip aus D-B), `yt-dlp -U` über `POST /update`, Versionsanzeige im UI-Header.
+- **Formate:** MP3 (128/192/256/320 kbps) + WAV (PCM). Nur **legale Quellen** (eigene/CC/Public-Domain); Spotify-Ripping bewusst **nicht** umgesetzt (DRM-Umgehung, §95a UrhG). UI-Rechtshinweis statt technischer Sperre.
+- **Security:** `symfony/process` mit Argument-Array (keine Command-Injection), nur http(s)-Scheme (SSRF-Abwehr), stderr gekürzt; **Path-Traversal-Abwehr** im Storage (Name ≠ Pfad, realpath-Containment). Domain-Exceptions im `ExceptionSubscriber` gemappt (422/502). Offen: kein hartes Quota (nur Größenanzeige).
+- **Dependency:** `symfony/process ^7.4`. **Docker:** `backend/Dockerfile` um `ffmpeg`, `python3`, `curl` + yt-dlp-Binary (`/opt/yt-dlp`, www-data-beschreibbar) erweitert (arm64/Pi-tauglich); compose-Volume `/data/audio`.
+- **Frontend:** Seite `/tools/audio-extractor` (Extraktions-Formular, Dateiliste mit Download/Delete, Engine-Update-Button + Versionsanzeige), statischer Nav-Eintrag „Werkzeuge → Audio-Extractor".
+- **Tests:** 26 PHPUnit-Tests (Validierungs-Boundary, Storage inkl. 6 Path-Traversal-Fälle, Controller alle Endpunkte), PHPStan Level 8 sauber, `lint:container` ok, `pnpm build` grün.
+
 ### ESP32-Reader-Provisioning (Software-Schnitt, HW-0 offen)
 - **Backend:** Kurzlebige Reader-Claims (`POST/GET /api/v1/readers/claims`, `POST …/activate`) mit gehashtem Code, Einmalnutzung, per-Reader-API-Key-Ausstellung und Activity-Log; `GET /readers` liefert `has_api_key`.
 - **OTA:** Minimalvertrag `GET /api/v1/readers/firmware/manifest` (Board/Kanal/SemVer; `204` ohne Artefakt).
