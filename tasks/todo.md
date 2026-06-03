@@ -43,18 +43,18 @@ Plan: `tasks/plan-sprint-04.md`. Doku: `docs/sprints/sprint-04.md`.
 Blockiert: Connect-Gerät online; systemd-Install am Pi; realer Scan.
 Nächste Schritte: PR erstellen → CI grün → Squash-Merge → v0.3.0-Tag → Pi-Deploy.
 
-## Feature: Audio-Extraktor (legale Quellen) — CODE GEMERGED, PI-DEPLOY OFFEN
-PR #47 squash-gemergt nach `main` (2026-06-03). Kein Issue/Milestone (ad-hoc-Feature).
-Doku: `tasks/plan-audio-extractor.md`, D-019/D-020 (`tasks/decisions.md`), L-020/L-021/L-022.
-Starter für Folge-Chat: `docs/sprints/audio-extractor-deploy-starter.md`.
-- [x] Backend-Modul (yt-dlp/ffmpeg via symfony/process), Persistenz, Self-Update, RFC-7807
-- [x] Frontend `/tools/audio-extractor` (Extraktion + Datei-Mgmt + Update-Button)
-- [x] Lokal x86_64 verifiziert: 26 Unit-Tests, PHPStan L8, E2E grün, **echte YouTube-Extraktion
-      (Big Buck Bunny CC-BY) → MP3 in 25s** (Bot-Schutz-Vorbehalt damit aufgelöst)
-- [ ] **Release-Tag `vX.Y.Z`** (triggert Pi-Deploy) — bewusst aufgeschoben bis nach Test
-- [ ] **Pi/arm64 verifizieren**: Image-Build (yt-dlp zipapp braucht python3), E2E, Self-Update
-- [ ] **R7 Host-Bind-Mount-Rechte** auf Pi: `./data/audio` für uid 82 (www-data) schreibbar
-- [ ] Optional: Worktree `../SpotFamServ-audio-extractor` + Branch `feat/audio-extractor` aufräumen
+## Feature: Audio-Extraktor (legale Quellen) — v0.4.0 LIVE AUF PI, v0.4.1 GEPLANT
+PR #47/#48/#49 gemergt; Tag `v0.4.0` (Commit `8a52e09`) **auf Pi live + verifiziert** (2026-06-03/04).
+Doku: `tasks/plan-audio-extractor.md` + `tasks/plan-audio-extractor-r7.md`, D-019/D-020 (D-021 geplant),
+L-020–L-022 (L-023/L-024 geplant). Starter v0.4.1: `docs/sprints/v0.4.1-r7-starter.md`.
+- [x] Backend-Modul + Frontend + Self-Update; lokal x86_64 verifiziert (26 Tests, PHPStan L8, E2E)
+- [x] **Pi/arm64 v0.4.0 verifiziert**: App-Image baut auf aarch64; echte YouTube-Extraktion
+      (Big Buck Bunny CC-BY) → 15,2 MB MP3 in 63s; download/update/delete grün
+- [x] R7 auf Pi **manuell geheilt** (`data/audio` → www-data/uid 82, persistiert)
+- [ ] **v0.4.1**: R7 robust via Container-Entrypoint (ersetzt schwachen `pi-deploy.sh`-chmod);
+      siehe Plan `tasks/plan-audio-extractor-r7.md` + Starter. Autonom im Folge-Chat.
+- [ ] Out of scope (offen): Quota/Größenlimit für `data/audio`; asynchrone Extraktion (Queue)
+- [ ] Aufräumen: Worktree `../SpotFamServ-audio-extractor` + Branch `feat/audio-extractor` (gemergt)
 
 ## Bugs (GitHub)
 - [x] #18 Spotify-App-Credentials aus UI ignoriert → SpotifyCredentialsProvider. Gefixt v0.2.1.
