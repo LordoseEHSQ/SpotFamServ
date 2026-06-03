@@ -1,6 +1,6 @@
 # Reader→Box-Mapping (Multi-Raum)
 
-Stand: 2026-06-02 · Decision: D-015 · Plan: `tasks/plan-reader-box-mapping.md`
+Stand: 2026-06-03 · Decision: D-015 · Plan: `tasks/plan-reader-box-mapping.md`
 
 ## Zweck
 Standardmäßig bestimmt das **Profil der gescannten Karte** den Lautsprecher
@@ -8,9 +8,13 @@ Standardmäßig bestimmt das **Profil der gescannten Karte** den Lautsprecher
 scanne") kann jeder Leser eine eigene **Box** bekommen. Liegt eine Reader-Box vor, gewinnt sie;
 sonst greift weiterhin der Profil-Default (rückwärtskompatibel).
 
+## Reader-Herkunft
+- **Pi-/Legacy-Leser:** Unbekannte `reader_id` beim ersten Scan → **Auto-Register** (sichtbar im UI, `has_api_key: false`). Globaler `READER_API_KEY` aus `.env` möglich.
+- **ESP32-Reader:** Registrierung nur über Claim-Flow (`docs/esp-reader-provisioning.md`) → `has_api_key: true`, Scan mit per-Reader-Key im Header.
+
 ## Verhalten
 - **Auflösungsreihenfolge beim Scan** (`ProcessScan`):
-  1. Reader auflösen; unbekannter Reader → **automatisch registriert** (sichtbar im UI, kein API-Key).
+  1. Reader auflösen (bereits bekannt oder Auto-Register, siehe oben).
   2. Karte → Profil → Playlist-Binding auflösen (unverändert).
   3. Zielgerät = Reader-Box (`reader_device.default_spotify_device_id`) **falls gesetzt**, sonst `null`
      → `StartPlayback` nutzt den Profil-Default.
@@ -37,11 +41,15 @@ Voraussetzung: jede Ziel-Box ist ein **Spotify-Connect-Gerät** (kein reiner Blu
   "id": "uuid|null",
   "reader_id": "wohnzimmer-1",
   "name": null,
+  "has_api_key": false,
   "default_spotify_device_id": "abc123|null",
   "default_device_name": "Wohnzimmer Box|null"
 }
 ```
-Fehler: unbekannter `readerId` → `404` (Leser registriert sich beim ersten Scan automatisch).
+
+`has_api_key`: `true` nach ESP-Claim (per-Reader-Key); `false` bei Pi-Auto-Register oder Lesern ohne dedizierten Key (globaler `READER_API_KEY`-Fallback möglich).
+
+Fehler: unbekannter `readerId` → `404` (Leser registriert sich beim ersten Scan automatisch — Pi/Legacy; ESP-Reader entstehen über Claim, nicht über ersten Scan).
 `device_id` leer/fehlend bei `PUT` → `400`.
 
 ## Bedienung (UI)
@@ -50,5 +58,4 @@ Fehler: unbekannter `readerId` → `404` (Leser registriert sich beim ersten Sca
 
 ## Offene Punkte
 - Persistenz der re-resolveten Box-ID auf dem Reader (Optimierung, derzeit Re-Resolve bei Bedarf).
-- Herkunft der Reader-Zeilen ist Auto-Register beim Scan (D-R1 Option A); explizite Registrierung folgt
-  mit dem Provisioning-Plan (`tasks/plan-esp-ota-perreader-keys.md`).
+- ESP: Hardware-Gate HW-0 und Firmware-Captive-Portal ausstehend (`docs/esp-reader-provisioning.md`).

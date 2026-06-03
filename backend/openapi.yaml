@@ -154,39 +154,8 @@ paths:
             type: string
             pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
       responses:
-        '200':
-          description: 'List of RFID cards for the profile'
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      type: object
-                      required: [id, card_uid, label, binding]
-                      properties:
-                        id:
-                          type: string
-                          format: uuid
-                        card_uid:
-                          type: string
-                        label:
-                          type: string
-                          nullable: true
-                        binding:
-                          nullable: true
-                          oneOf:
-                            - type: 'null'
-                            - type: object
-                              required: [id, name]
-                              properties:
-                                id:
-                                  type: string
-                                  format: uuid
-                                name:
-                                  type: string
+        default:
+          description: ''
     post:
       operationId: post_api_rfid_create
       parameters:
@@ -308,6 +277,40 @@ paths:
       responses:
         default:
           description: ''
+  /api/v1/readers/claims:
+    post:
+      operationId: post_api_reader_claims_create
+      responses:
+        default:
+          description: ''
+  '/api/v1/readers/claims/{claimCode}':
+    get:
+      operationId: get_api_reader_claims_status
+      parameters:
+        -
+          name: claimCode
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[A-Za-z0-9\- ]+'
+      responses:
+        default:
+          description: ''
+  '/api/v1/readers/claims/{claimCode}/activate':
+    post:
+      operationId: post_api_reader_claims_activate
+      parameters:
+        -
+          name: claimCode
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[A-Za-z0-9\- ]+'
+      responses:
+        default:
+          description: ''
   /api/v1/readers:
     get:
       operationId: get_api_readers_list
@@ -367,6 +370,12 @@ paths:
           schema:
             type: string
             pattern: '[^/]+'
+      responses:
+        default:
+          description: ''
+  /api/v1/readers/firmware/manifest:
+    get:
+      operationId: get_api_reader_firmware_manifest
       responses:
         default:
           description: ''

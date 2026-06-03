@@ -4,6 +4,7 @@ import { readersApi } from '@/api/endpoints/readers';
 export const readerKeys = {
   all: ['readers'] as const,
   list: () => [...readerKeys.all, 'list'] as const,
+  claim: (claimCode: string) => [...readerKeys.all, 'claim', claimCode] as const,
 };
 
 export function useReaders() {
@@ -20,6 +21,22 @@ export function useSetReaderBox() {
     mutationFn: ({ readerId, deviceId, deviceName }: { readerId: string; deviceId: string; deviceName?: string | null }) =>
       readersApi.setDefaultDevice(readerId, deviceId, deviceName),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: readerKeys.list() }),
+  });
+}
+
+export function useCreateReaderClaim() {
+  return useMutation({
+    mutationFn: readersApi.createClaim,
+  });
+}
+
+export function useReaderClaimStatus(claimCode: string | null) {
+  return useQuery({
+    queryKey: readerKeys.claim(claimCode ?? ''),
+    queryFn: () => readersApi.claimStatus(claimCode ?? ''),
+    enabled: claimCode !== null,
+    refetchInterval: (query) => (query.state.data?.status === 'pending' ? 2000 : false),
+    staleTime: 1000,
   });
 }
 

@@ -33,9 +33,11 @@ services:
     App\Module\Spotify\Application\Port\SpotifyPlaylistReferenceRepositoryInterface: '@App\Module\Spotify\Infrastructure\Repository\DoctrineSpotifyPlaylistReferenceRepository'
     App\Module\SetupWizard\Application\Port\ProfileSetupSessionRepositoryInterface: '@App\Module\SetupWizard\Infrastructure\Repository\DoctrineProfileSetupSessionRepository'
     App\Module\Scan\Application\Port\ReaderDeviceRepositoryInterface: '@App\Module\Scan\Infrastructure\Repository\DoctrineReaderDeviceRepository'
+    App\Module\Scan\Application\Port\ReaderClaimRepositoryInterface: '@App\Module\Scan\Infrastructure\Repository\DoctrineReaderClaimRepository'
     App\Module\Scan\Application\Port\ScanEventRepositoryInterface: '@App\Module\Scan\Infrastructure\Repository\DoctrineScanEventRepository'
     App\Module\Scan\Application\Port\ScanCardResolverInterface: '@App\Module\Rfid\Infrastructure\Scan\RfidScanCardResolver'
     App\Module\Scan\Application\Port\PlaybackSessionStoreInterface: '@App\Module\Scan\Infrastructure\Session\CachePlaybackSessionStore'
+    App\Shared\Application\Port\TransactionRunnerInterface: '@App\Shared\Infrastructure\Doctrine\DoctrineTransactionRunner'
     App\Module\Scan\Infrastructure\Session\CachePlaybackSessionStore:
         arguments:
             $cache: '@cache.app'

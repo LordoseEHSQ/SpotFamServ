@@ -27,6 +27,16 @@ Jeder Plan MUSS einen Abschnitt mit diesen vier Lenses enthalten:
 - Nach jeder User-Korrektur/Bug → Eintrag in `tasks/lessons.md`.
 - Test vor Done; Docs als Deliverable.
 
+## Dry-Run & Modell-Gate (ABSOLUTER BLOCKER)
+- Nach Plan-Bestaetigung und vor Umsetzung ist ein Dry-Run Pflicht.
+- Dry-Run-Ziel: blinde Flecken, falsche Annahmen, fehlende Tests, Security-/API-/Deploy-Risiken und Scope-Brueche finden.
+- Dry-Run MUSS mit dem staerksten verfuegbaren Reasoning-Modell/Subagenten ausgefuehrt werden.
+- Umsetzung MUSS danach mit Sonnet oder GPT-5.5 erfolgen, sofern der Nutzer kein anderes verfuegbares Modell explizit vorgibt.
+- Reine Dokumentation, redaktionelle Ueberarbeitung oder Uebersetzung MUSS mit Haiku erledigt werden, sofern verfuegbar; wenn Haiku nicht verfuegbar ist, MUSS das kleinste geeignete schnelle Modell genutzt und der Fallback benannt werden.
+- Befunde werden in der Plan-Datei dokumentiert. Kritische Befunde blockieren Umsetzung, bis der Plan angepasst ist.
+- ABSOLUTER BLOCKER: Keine Umsetzung starten, wenn der Dry-Run fehlt, mit falschem Modell lief, nicht dokumentiert wurde oder ein kritischer Blind Spot ungeklart bleibt.
+- ABSOLUTER BLOCKER: Keine Doku-/Uebersetzungsaufgabe als fertig markieren, wenn die Modellregel nicht eingehalten oder der Fallback nicht benannt wurde.
+
 ## GATE – Chat-Isolation & Schwarm (verbindlich, siehe `chat-isolation-swarm.mdc`)
 - Sprint-Planung gehört in einen eigenen frischen Chat; kein Mega-Chat.
 - Plan in parallelisierbare Subagenten-Tasks zerlegen.
