@@ -321,3 +321,64 @@ vor Merge: CI grün (PHPStan L8, PHPUnit, tsc, oasdiff). Lessons-Eintrag zur git
 - **D-S4-DEV = explizit:** Wenn weder Reader- noch Profil-Gerät gesetzt → klare Meldung „kein Wiedergabegerät konfiguriert" (kein Auto-Wählen).
 - **D-S4-GH = full:** GitHub Milestone „Sprint 4" + WP-Issues anlegen; Planungs-Docs committen/pushen.
 **Status:** Accepted (User, 2026-06-02) – Implementierung im frischen Sprint-4-Chat (Starter: `docs/sprints/sprint-04-starter.md`)
+
+---
+
+### D-019 | 2026-06-03 | Audio-Extractor-Plugin (yt-dlp/ffmpeg) hinter Feature-Toggle
+
+**Kontext:** User-Wunsch, Musik zum CD-Brennen zugänglich zu machen. Zwei Varianten gefordert:
+(1) Spotify-Audio extrahieren, (2) YouTube-/URL-Audio extrahieren. Optionales Plugin via Feature-Toggle.
+**Harte Grenze:** Variante 1 (**Spotify-Ripping**) ist **abgelehnt** – erfordert DRM-Umgehung (§95a UrhG /
+DMCA §1201), die Web API liefert keine Audiodaten. User-Begründung „Premium = mir gehört die Musik" ist
+rechtlich falsch (Streaming-Lizenz ≠ Eigentum; §53-Privatkopie greift nicht bei umgangenem Kopierschutz).
+**Entscheidung (User-Freigabe 2026-06-03):** Nur Variante 2 als Modul `AudioExtractor` (Ports & Adapters),
+`yt-dlp` + `ffmpeg`, gedacht für **legale Quellen** (eigene/CC/Public-Domain). Verantwortung für die URL
+beim Nutzer; UI-Hinweis statt technischer Sperre.
+- **D-A Sync-MVP:** synchron im php-fpm-Request (kein Messenger/Queue). Begründung: Single-User-Heim-Setup,
+  „lightweight". Mitigation gegen Worker-Blockade: Process-Timeout (240s), Dauergrenze (1800s),
+  `set_time_limit`, nginx `fastcgi_read_timeout 300s`. Upgrade auf Async später ohne API-Bruch möglich.
+- **D-B yt-dlp via pip** (`pip install -U yt-dlp` im Image-Build, isolierte venv), **nicht** apk –
+  weil YouTube yt-dlp regelmäßig bricht und das apk-Paket veraltet. Build-Zeit-Pin, kein Laufzeit-Auto-Update.
+- **D-C keine Persistenz:** Temp-Datei → Stream → Löschen (`deleteFileAfterSend`). Kein Schema, kein Storage.
+- **D-D Auth = Default-AUS:** Feature folgt dem aktuell offenen API-Stand; einziger Schutz ist `AUDIO_EXTRACTOR_ENABLED=0`.
+  Bewusst dokumentiert, nicht heimlich. Echte Admin-Auth ist projektweit offen (separates Thema).
+- **D-E Formate:** nur MP3 (128/192/256/320 kbps) + WAV (PCM). Kein Opus/FLAC (lightweight).
+**Security:** `symfony/process` mit Argument-Array (kein Shell-String → keine Command-Injection); URL als
+einziges positionales Argument; nur http(s)-Scheme erlaubt (SSRF/`file://`-Abwehr); stderr gekürzt zurück.
+**Konsequenzen:** Neue Dependency `symfony/process`; `Dockerfile` um ffmpeg/python3/yt-dlp erweitert
+(arm64/Pi-tauglich); nginx-Timeout erhöht; Frontend `postBlob` + Seite `/tools/audio-extractor` + bedingte
+Nav; OpenAPI additiv (2 Endpunkte). **Rollback:** Code-/Dockerfile-Revert; Feature war default AUS → risikolos.
+**Status:** Teilweise superseded by D-020 (Feature-Flag/Persistenz/Engine), 2026-06-03
+
+---
+
+### D-020 | 2026-06-03 | Audio-Extractor: vollwertiges Feature mit Persistenz + Update-Modus (revidiert D-019)
+
+**Kontext:** User-Anweisung, das Plugin zu einem normalen Feature zu machen: Feature-Flag raus,
+„Update Modus" für schnelles Aktualisieren, Dateien im Benutzerbereich speichern und über das
+Web-Interface herunter- bzw. löschbar. Klärungsfragen (Update-Bedeutung, Storage-Ort, -Modell) wurden
+übersprungen → autonome Entscheidung nach Empfehlung (L-019), Annahmen dokumentiert.
+**Entscheidungen (revidieren D-019):**
+- **Feature-Toggle entfernt** (revidiert D-D): immer aktives Feature, keine `AUDIO_EXTRACTOR_ENABLED`,
+  keine bedingte Nav/404. Schutz durch Default-AUS entfällt; API bleibt offen wie der Rest (MVP-Stand).
+- **Update-Modus = yt-dlp-Self-Update über Web** (`POST /audio-extractor/update` → `yt-dlp -U`,
+  Versionsanzeige in `/config`). **Revidiert D-B:** statt pip-venv das offizielle **Release-Binary**
+  (zipapp), weil nur das `yt-dlp -U` in-place unterstützt; architekturunabhängig (python3-zipapp,
+  x86_64 + arm64/Pi), liegt www-data-beschreibbar unter `/opt/yt-dlp`. **Risiko:** bei offener API kann
+  jeder im LAN ein Update (Download + Ausführung offizieller Releases) auslösen → Heim-LAN-akzeptabel.
+- **Persistenz** (revidiert D-C, „keine Persistenz" verworfen): gemeinsamer Benutzerbereich auf einem
+  **Host-Verzeichnis** (`${AUDIO_STORAGE_HOST_DIR:-./data/audio}` → Container `/data/audio`), per
+  Dateisystem erreichbar (CD-Brennen). **Kein DB-Schema** – Liste = Dateisystem-Scan (lightweight).
+- **„Benutzer"-Trennung:** ein **gemeinsamer** Bereich (das System hat keine echte User-Auth; nur
+  FamilyProfiles). Pro-Profil-Trennung bewusst verworfen (mehr Code, kein echter Mehrwert hier).
+- **Datei-Management:** Liste/Download/Delete über `/audio-extractor/files[/{name}]`.
+**Security:** `FilesystemAudioStorage` mit harter Path-Traversal-Abwehr (Name ≠ Pfad; Separatoren/`..`/
+Null-Byte abgewiesen; realpath muss direktes Kind des Storage-Dirs sein). Download/Delete nur über
+validierten Namen. Subprozess weiterhin Argument-Array (keine Injection).
+**Offen/Risiko:** Kein hartes Quota (R6) → nur Anzeige der belegten Gesamtgröße; SD/Platte kann
+volllaufen. Hartes Limit später bei Bedarf.
+**Konsequenzen:** `MediaEngineInterface` + `AudioStorageInterface` neu; Controller-Endpunkte erweitert
+(additive OpenAPI); Dockerfile auf Binary umgestellt (+`curl`, `python3` bleibt, kein pip/venv);
+compose-Volume `/data/audio`; `.gitignore` `/data/audio` + `backend/var/audio`; FE: Dateiliste +
+Download-Link + Delete + Update-Button. 26 Tests grün, PHPStan L8, Lint ok, FE-Build grün.
+**Status:** Accepted (autonom nach übersprungener Rückfrage; User-Korrektur jederzeit möglich)

@@ -16,6 +16,10 @@ frontend/.env.local
 # Docker Volumes
 docker/volumes/
 
+# Audio-Extractor: gespeicherte Mediendateien (Benutzerbereich, nie committen)
+/data/audio/
+backend/var/audio/
+
 # IDE
 .idea/
 .vscode/

@@ -7,7 +7,22 @@ RUN apk add --no-cache \
     libsodium-dev \
     zip \
     unzip \
+    ffmpeg \
+    python3 \
+    curl \
     && docker-php-ext-install -j$(nproc) intl pdo_pgsql sodium
+
+# Audio-Extractor: yt-dlp als self-update-fähiges Binary (zipapp). Plan D-B/Update-Modus:
+# das offizielle Release-Binary unterstützt `yt-dlp -U` (in-place-Self-Update über das
+# Web-Interface), ist architekturunabhängig (reines Python-zipapp → braucht nur python3,
+# läuft auf x86_64 und arm64/Pi) und veraltet nicht wie das apk-Paket. ffmpeg (oben)
+# transkodiert nach MP3/WAV. Verzeichnis gehört www-data, damit der php-fpm-Worker
+# beim Self-Update das Binary ersetzen darf.
+RUN mkdir -p /opt/yt-dlp /data/audio \
+    && curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /opt/yt-dlp/yt-dlp \
+    && chmod 0755 /opt/yt-dlp/yt-dlp \
+    && chown -R www-data:www-data /opt/yt-dlp /data/audio \
+    && /opt/yt-dlp/yt-dlp --version
 
 # Hinweis: Zend OPcache ist im offiziellen php:8.5-Image bereits eingebaut
 # (statisch gelinkt) und darf nicht via docker-php-ext-install installiert werden.

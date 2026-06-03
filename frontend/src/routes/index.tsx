@@ -10,6 +10,7 @@ import { DevicesPage } from '../pages/DevicesPage';
 import { ReadersPage } from '../pages/ReadersPage';
 import { ActivityPage } from '../pages/ActivityPage';
 import { SystemPage } from '../pages/SystemPage';
+import { AudioExtractorPage } from '../pages/AudioExtractorPage';
 
 export function AppRoutes() {
   return (
@@ -26,6 +27,7 @@ export function AppRoutes() {
       <Route path="/activity" element={<ActivityPage />} />
       <Route path="/scan-logs" element={<ScanLogsPage />} />
       <Route path="/system" element={<SystemPage />} />
+      <Route path="/tools/audio-extractor" element={<AudioExtractorPage />} />
       <Route path="/rules" element={<Navigate to="/" replace />} />
       <Route path="/setup" element={<Navigate to="/profiles" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />

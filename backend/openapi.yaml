@@ -14,6 +14,57 @@ paths:
       responses:
         default:
           description: ''
+  /api/v1/audio-extractor/config:
+    get:
+      operationId: get_api_audio_extractor_config
+      responses:
+        default:
+          description: ''
+  /api/v1/audio-extractor/extract:
+    post:
+      operationId: post_api_audio_extractor_extract
+      responses:
+        default:
+          description: ''
+  /api/v1/audio-extractor/files:
+    get:
+      operationId: get_api_audio_extractor_files_list
+      responses:
+        default:
+          description: ''
+  '/api/v1/audio-extractor/files/{name}':
+    get:
+      operationId: get_api_audio_extractor_files_download
+      parameters:
+        -
+          name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[^/]+'
+      responses:
+        default:
+          description: ''
+    delete:
+      operationId: delete_api_audio_extractor_files_delete
+      parameters:
+        -
+          name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[^/]+'
+      responses:
+        default:
+          description: ''
+  /api/v1/audio-extractor/update:
+    post:
+      operationId: post_api_audio_extractor_update
+      responses:
+        default:
+          description: ''
   /api/v1/devices:
     get:
       operationId: get_api_devices_list

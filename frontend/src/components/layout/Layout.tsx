@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Speaker, Activity,
-  Clock, Settings, Wifi, ChevronRight, SlidersHorizontal, Radio,
+  Clock, Settings, Wifi, ChevronRight, SlidersHorizontal, Radio, AudioLines,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -39,6 +39,12 @@ const navigation: NavGroup[] = [
       { label: 'Aktivität & Verlauf', href: '/activity', icon: Activity },
       { label: 'Scan-Protokoll', href: '/scan-logs', icon: Wifi },
       { label: 'Regeln & Hörzeit', href: '/rules', icon: Clock },
+    ],
+  },
+  {
+    heading: 'Werkzeuge',
+    items: [
+      { label: 'Audio-Extractor', href: '/tools/audio-extractor', icon: AudioLines },
     ],
   },
   {
