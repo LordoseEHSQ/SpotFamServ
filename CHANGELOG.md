@@ -8,6 +8,7 @@
 - **Frontend:** „Reader hinzufügen“ mit Claim-Code, Captive-Portal-Payload und Status-Polling bis `claimed`.
 - **Doku:** `docs/esp-reader-provisioning.md` (Runbook); `docs/reader-box-mapping.md` um ESP vs. Pi/Legacy ergänzt.
 - **CI:** Job `Firmware Compile (ESP32)` — reproduzierbarer Baseline-Compile des MFRC522-Sketches (`arduino-cli`, `esp32:esp32@3.3.8`); PN532/Portal/NVS/OTA-Client ausstehend, HW-0 offen.
+- **HW-0-Werkzeug:** Diagnose-Sketch `firmware/spotfam_pn532_probe/` (I2C/SPI umschaltbar, PN532-Erkennung, UID im Pi-Format) + Runbook `docs/hw0-pn532-runbook.md` mit USB-Passthrough- und Evidence-Schritten; CI kompiliert die Probe mit (`Adafruit PN532@1.3.4`/`Adafruit BusIO@1.17.4`). Physische HW-0-Ausführung bleibt offen (aus WSL2 kein serieller Port).
 
 ### WP2 – Kartenverwaltung als DataGrid (#40)
 
