@@ -194,6 +194,9 @@ Der Nutzer muss physisch verifizieren und dokumentieren:
 - Busentscheidung I2C vs. SPI mit realem Modul treffen.
 - UID einer bekannten Karte gegen Pi-PN532 vergleichen.
 - LED-/Button-Pins finalisieren.
+- Werkzeug bereit: `firmware/spotfam_pn532_probe/` (Diagnose-Sketch, I2C/SPI umschaltbar,
+  UID im Pi-Format) + Runbook `docs/hw0-pn532-runbook.md`. Ausfuehrung ist physisch
+  durch den Nutzer; aus WSL2 ist der ESP32 mangels USB-Durchreichung nicht erreichbar.
 
 ### Phase 1 - Firmware-Konfiguration ohne `secrets.h`
 - NVS/Preferences einfuehren.
@@ -271,7 +274,8 @@ Der Nutzer muss physisch verifizieren und dokumentieren:
 - Verifiziert: Frontend Tests | `pnpm exec vitest run --passWithNoTests` | Ergebnis: gruen, keine Testdateien vorhanden | 2026-06-03
 - Verifiziert: Doku-Modell-Gate | Haiku nicht verfuegbar, Fallback `composer-2.5-fast` fuer reine Doku genutzt | Ergebnis: `docs/esp-reader-provisioning.md`, `docs/reader-box-mapping.md`, `CHANGELOG.md` aktualisiert | 2026-06-03
 - Verifiziert: Firmware-Build reproduzierbar (Software-Teil) | CI-Job `Firmware Compile (ESP32)` in `.github/workflows/ci.yml`: `arduino-cli`, `esp32:esp32@3.3.8`, `ArduinoJson@7.4.3`, `MFRC522@1.4.12`, `secrets.h.example` → `secrets.h`, `arduino-cli compile --fqbn esp32:esp32:esp32 .` in `firmware/spotfam_reader` | Ergebnis: Baseline-Compile des bestehenden MFRC522-Sketches grün (lokal: 1053224 B Program Storage ~80 %, 48496 B RAM ~14 %); kein PN532, kein Captive Portal, kein NVS, kein OTA-Client | 2026-06-03
-- Offen: Hardware-Gate HW-0 | Echter ESP32 + PN532/HW-147 noetig | Ergebnis: blockiert Sprint-Done/Release, aber nicht Software-Merge | 2026-06-03
+- Verifiziert: PN532-HW-0-Probe kompiliert reproduzierbar (Software-Teil) | `arduino-cli compile --fqbn esp32:esp32:esp32` fuer `firmware/spotfam_pn532_probe` in beiden Bus-Varianten (I2C: 317864 B/24 %, SPI: 317888 B/24 %); CI-Job `Firmware Compile (ESP32)` um Probe + `Adafruit PN532@1.3.4`/`Adafruit BusIO@1.17.4` erweitert | Ergebnis: HW-0-Pruefwerkzeug steht bereit; reine Hardware-Ausfuehrung bleibt offen | 2026-06-03
+- Offen: Hardware-Gate HW-0 (physische Ausfuehrung) | Echter ESP32 + PN532/HW-147 noetig; aus WSL2 kein serieller Port (kein usbipd-Passthrough), daher kein Live-Flash durch Agent moeglich | Ergebnis: blockiert Sprint-Done/Release, aber nicht Software-Merge; Runbook `docs/hw0-pn532-runbook.md` liefert Schritte + Evidence-Tabelle | 2026-06-03
 
 ## Abgeschlossen (Software-Schnitt, ohne HW-0)
 - Backend-Claim/Manifest, Frontend „Reader hinzufügen“, Doku-Runbook, CI-Firmware-Baseline-Compile (MFRC522).
