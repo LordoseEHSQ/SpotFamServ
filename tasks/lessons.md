@@ -194,3 +194,13 @@ Release-Checkliste (package.json-Bump vor Tag) ist damit etabliert.
 **Status:** Behoben
 
 ---
+
+---
+
+### L-017 | 2026-06-03 | systemd/lgpio
+
+**Fehlermuster:** `spotfam-pi-reader.service` startete, aber `PN532-Init fehlgeschlagen ([Errno 2] No such file or directory: '.lgd-nfy-3')` in Dauerschleife.
+**Root Cause:** `PrivateTmp=true` im systemd-Service isoliert den `/tmp`-Namespace des Prozesses. `lgpio` (I2C-Treiber-Abstraktionsschicht) erstellt Named Pipes (`.lgd-nfy*`) für die Kommunikation mit seinem internen Daemon – die beim direkten Aufruf im Working Directory landen, unter `PrivateTmp` aber in einem privaten tmpfs-Namespace, auf den `lgd` nicht zugreifen kann. Zusätzlich gehört `StartLimitIntervalSec` in `[Unit]`, nicht `[Service]` (systemd ignoriert es dort mit Warning).
+**Regel:** Für Prozesse die `lgpio`/`pigpio`/GPIO-Bibliotheken mit eigenem Daemon-Protokoll nutzen: kein `PrivateTmp=true`, kein `ProtectSystem=full`. `StartLimitIntervalSec`/`Burst` in `[Unit]`. Beim Schreiben von systemd-Units für Hardware-nahe Python-Dienste erst ohne Hardening testen, dann schrittweise hinzufügen.
+**Vorkommen:** 1
+**Status:** Aktiv
