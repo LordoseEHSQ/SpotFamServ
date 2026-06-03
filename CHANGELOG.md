@@ -1,6 +1,13 @@
 # Changelog
 
-## [Unreleased] – Sprint 4 → v0.3.0 (ausstehend: CI grün + Pi-E2E)
+## [Unreleased]
+
+## [0.4.0] – 2026-06-03 — Audio-Extractor + ESP32-Reader-Provisioning
+
+> Erster Tag mit dem Audio-Extractor. Liefert alles seit `v0.3.2` aus: Audio-Extractor,
+> ESP32-Reader-Provisioning (#28/#46) sowie die zuvor unter „Unreleased" geführten Sprint-4-
+> Punkte (WP1/WP2). Lokal x86_64 verifiziert inkl. echter YouTube-Extraktion (CC-BY); Pi/arm64
+> wird durch dieses Deploy erstmals gebaut. R7 (data/audio-Schreibrechte) im Deploy-Skript gelöst.
 
 ### Audio-Extractor (Feature mit Persistenz + Update-Modus) (D-019/D-020)
 - **Neues Backend-Modul `AudioExtractor`** (Ports & Adapters): URL → `yt-dlp` (Audio) → `ffmpeg` (Transkodierung) → **persistente Ablage im Benutzerbereich**. Normales Feature, **kein Toggle** (D-020 revidiert D-019). Synchron (Plan D-A), Schutzgrenzen `AUDIO_EXTRACTOR_TIMEOUT_SECONDS` (240) + `AUDIO_EXTRACTOR_MAX_DURATION_SECONDS` (1800) gegen blockierte php-fpm-Worker; nginx `fastcgi_read_timeout 300s`.
