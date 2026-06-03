@@ -14,6 +14,9 @@ Description=SpotFam Pi-Leser (PN532 RFID -> Backend Scan)
 Documentation=file:///home/lars/SpotFamServ/firmware/pi_reader/README.md
 After=network-online.target
 Wants=network-online.target
+# Bremse bei Dauer-Crash-Schleife (5 Starts in 60s -> Pause).
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -34,20 +37,14 @@ ExecStart=/home/lars/SpotFamServ/firmware/pi_reader/.venv/bin/python /home/lars/
 # Robustheit: bei Absturz/Hardware-Hakeln automatisch neu starten.
 Restart=on-failure
 RestartSec=3
-# Bremse bei Dauer-Crash-Schleife (5 Starts in 60s -> Pause).
-StartLimitIntervalSec=60
-StartLimitBurst=5
-
 # Logging nach journald (journalctl -u spotfam-pi-reader).
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=spotfam-pi-reader
 
-# Defensives Hardening (Hardware-Zugriff via Gruppen bleibt erhalten).
-NoNewPrivileges=true
-ProtectSystem=full
-ProtectHome=read-only
-PrivateTmp=true
+# Hinweis: PrivateTmp, ProtectSystem, NoNewPrivileges wurden bewusst weggelassen –
+# lgpio (I2C-Treiber) benoetigt Zugriff auf globale Sockets/Pipes ausserhalb von
+# PrivateTmp-Namespaces. StartLimitIntervalSec gehoert in [Unit], nicht [Service].
 
 [Install]
 WantedBy=multi-user.target
