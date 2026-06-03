@@ -43,6 +43,19 @@ Plan: `tasks/plan-sprint-04.md`. Doku: `docs/sprints/sprint-04.md`.
 Blockiert: Connect-Gerät online; systemd-Install am Pi; realer Scan.
 Nächste Schritte: PR erstellen → CI grün → Squash-Merge → v0.3.0-Tag → Pi-Deploy.
 
+## Feature: Audio-Extraktor (legale Quellen) — CODE GEMERGED, PI-DEPLOY OFFEN
+PR #47 squash-gemergt nach `main` (2026-06-03). Kein Issue/Milestone (ad-hoc-Feature).
+Doku: `tasks/plan-audio-extractor.md`, D-019/D-020 (`tasks/decisions.md`), L-020/L-021/L-022.
+Starter für Folge-Chat: `docs/sprints/audio-extractor-deploy-starter.md`.
+- [x] Backend-Modul (yt-dlp/ffmpeg via symfony/process), Persistenz, Self-Update, RFC-7807
+- [x] Frontend `/tools/audio-extractor` (Extraktion + Datei-Mgmt + Update-Button)
+- [x] Lokal x86_64 verifiziert: 26 Unit-Tests, PHPStan L8, E2E grün, **echte YouTube-Extraktion
+      (Big Buck Bunny CC-BY) → MP3 in 25s** (Bot-Schutz-Vorbehalt damit aufgelöst)
+- [ ] **Release-Tag `vX.Y.Z`** (triggert Pi-Deploy) — bewusst aufgeschoben bis nach Test
+- [ ] **Pi/arm64 verifizieren**: Image-Build (yt-dlp zipapp braucht python3), E2E, Self-Update
+- [ ] **R7 Host-Bind-Mount-Rechte** auf Pi: `./data/audio` für uid 82 (www-data) schreibbar
+- [ ] Optional: Worktree `../SpotFamServ-audio-extractor` + Branch `feat/audio-extractor` aufräumen
+
 ## Bugs (GitHub)
 - [x] #18 Spotify-App-Credentials aus UI ignoriert → SpotifyCredentialsProvider. Gefixt v0.2.1.
 - [x] #20 Frontend auf Pi nie gebaut → CI-Image GHCR. Gefixt v0.2.2 (D-012/D-013).
