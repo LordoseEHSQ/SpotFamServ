@@ -1,0 +1,10 @@
+# oasdiff err-ignore (Go-Regexp pro Zeile).
+# Bewusst eng begrenzte Ausnahmen fuer Breaking-Change-Befunde, die fachlich
+# KEIN echter Vertragsbruch sind. Jede Zeile MUSS begruendet sein.
+#
+# v0.5.4: UUID-Requirement an den Provisioning-Job-Routen ({jobId}) eingefuehrt,
+# um die Routing-Kollision GET /provisioning/jobs/next <-> /jobs/{jobId} zu
+# beheben. oasdiff wertet das hinzugefuegte 'pattern' als breaking. Der Parameter
+# war jedoch immer eine UUID; Nicht-UUID-Werte liefen vorher in HTTP 500. Kein
+# realer Consumer-Bruch (Konsumenten: Flash-Agent + Admin-UI).
+added the pattern .* to the .path. request parameter .jobId.

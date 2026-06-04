@@ -205,6 +205,9 @@ jobs:
           base: base-openapi.yaml
           revision: backend/openapi.yaml
           fail-on: ERR
+          # Eng begrenzte, dokumentierte Ausnahmen (siehe Datei). Aktuell nur die
+          # UUID-pattern-Verschaerfung an {jobId} (kein realer Vertragsbruch).
+          err-ignore: backend/.oasdiff-err-ignore
 
   security:
     name: Security Scan (Trivy)
