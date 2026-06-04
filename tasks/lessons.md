@@ -318,3 +318,29 @@ WSL2 für lokale Agent-Entwicklung `sudo apt install python3-venv python3-full` 
 venv außerhalb des System-Pythons. Nicht blind `--break-system-packages` in CI/Prod-Skripten.
 **Vorkommen:** 1
 **Status:** Aktiv
+
+---
+
+### L-026 | 2026-06-04 | Admin-Auth / Ist-Stand vor Implementierung
+
+**Fehlermuster:** Admin-Auth sollte „neu gebaut“ werden, obwohl `AdminUser`-Entity, `app_admin_provider`
+und Security-Scaffolding bereits im Repo lagen — nur nicht aktiviert; die Migration `admin_user` fehlte.
+**Root Cause:** Vor Feature-Start kein gezielter Abgleich von `security.yaml`, Auth-Modul/Admin und
+bestehenden Migrations.
+**Regel:** Vor „neu bauen“ immer Ist-Stand prüfen (`security.yaml`, relevante Module, Entities,
+Migrations, offene Decisions). Aktivieren/Erweitern statt Duplikat.
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
+### L-027 | 2026-06-04 | Tests / Firewall vs. HTTP-Auth
+
+**Fehlermuster:** Annahme, dass bestehende `*ControllerTest`-Klassen HTTP/Firewall-Verhalten abdecken.
+**Root Cause:** Die Tests sind Unit-Tests ohne HTTP-Kernel — Firewall-Aktivierung bricht sie nicht;
+echtes Session-/CSRF-/401-Verhalten bleibt ungetestet (nur Subscriber-Unit-Tests).
+**Regel:** Bei Security-Änderungen explizit klären: Unit-Controller-Tests ≠ Integration/HTTP-Auth.
+Für Login/CSRF/Protected-Routes gezielt Kernel- oder API-Integrationstests planen, wenn Verhalten
+verbindlich abgesichert werden soll.
+**Vorkommen:** 1
+**Status:** Aktiv

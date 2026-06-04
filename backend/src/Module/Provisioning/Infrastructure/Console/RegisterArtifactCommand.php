@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Module\Provisioning\Infrastructure\Console;
 
-use App\Module\Provisioning\Application\Port\FlashArtifactRepositoryInterface;
-use App\Module\Provisioning\Domain\FlashArtifact;
+use App\Module\Provisioning\Application\ProvisioningException;
+use App\Module\Provisioning\Application\RegisterArtifact;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -34,7 +34,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 final class RegisterArtifactCommand extends Command
 {
     public function __construct(
-        private readonly FlashArtifactRepositoryInterface $artifacts,
+        private readonly RegisterArtifact $registerArtifact,
         private readonly string $firmwareDir,
     ) {
         parent::__construct();
@@ -78,37 +78,17 @@ final class RegisterArtifactCommand extends Command
             return Command::FAILURE;
         }
 
-        $sha256    = hash_file('sha256', $absolutePath);
-        $sizeBytes = filesize($absolutePath);
-
-        if ($sha256 === false) {
-            $io->error('SHA-256-Berechnung fehlgeschlagen.');
+        try {
+            $artifact = ($this->registerArtifact)($board, $channel, $version, $filename, $expectedChip, $absolutePath);
+        } catch (ProvisioningException $e) {
+            $io->error($e->getMessage());
             return Command::FAILURE;
         }
-
-        if ($sizeBytes === false) {
-            $io->error('Dateigröße konnte nicht ermittelt werden.');
-            return Command::FAILURE;
-        }
-
-        $existing = $this->artifacts->findByBoardChannelVersion($board, $channel, $version);
-
-        if ($existing !== null) {
-            $existing->updateContent($filename, $sha256, $sizeBytes);
-            $this->artifacts->save($existing);
-            $io->success(sprintf(
-                'Artefakt aktualisiert: %s/%s/%s → %s (SHA-256: %s, %d Bytes)',
-                $board, $channel, $version, $filename, $sha256, $sizeBytes,
-            ));
-            return Command::SUCCESS;
-        }
-
-        $artifact = new FlashArtifact($board, $channel, $version, $filename, $sha256, $expectedChip, $sizeBytes);
-        $this->artifacts->save($artifact);
 
         $io->success(sprintf(
-            'Artefakt registriert: %s/%s/%s → %s (SHA-256: %s, %d Bytes, ID: %s)',
-            $board, $channel, $version, $filename, $sha256, $sizeBytes, $artifact->getId(),
+            'Artefakt registriert/aktualisiert: %s/%s/%s → %s (SHA-256: %s, %d Bytes, ID: %s)',
+            $board, $channel, $version, $artifact->getFilename(),
+            $artifact->getSha256(), $artifact->getSizeBytes(), $artifact->getId(),
         ));
 
         return Command::SUCCESS;

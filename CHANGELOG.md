@@ -3,6 +3,14 @@
 ## [Unreleased]
 
 ### Added
+- **Admin-Authentifizierung:** Session-Login (HttpOnly-Cookie, kein localStorage) für den gesamten
+  Web-/Admin-Bereich; Login-Seite, Logout, Route-Schutz, 401-Handling.
+- **CSRF-Schutz:** Double-Submit-Token (`XSRF-TOKEN`-Cookie + `X-XSRF-TOKEN`-Header); Maschinen-Endpunkte
+  (ESP-Reader, Flash-Agent) bleiben per `X-API-Key` ausgenommen.
+- **Auth-API + Admin-Command:** Endpunkte `/api/v1/auth/login|logout|me|csrf`; Console-Command
+  `app:admin:upsert` (Admin-Account aus Env).
+- **Authentifizierter Firmware-Upload (Web-UI):** `POST /api/v1/provisioning/artifacts` (nur eingeloggt;
+  Server berechnet sha256/Größe, Agent prüft weiter Chip+Hash).
 - **Flash-/Provisioning-Station (Reader-Station):** ESP32 per USB am Pi erkennen, registrierte
   sha256-geprüfte Firmware flashen, Status live per Polling verfolgen.
 - **Backend – Modul `Provisioning`:** Entities `DetectedDevice` / `FlashArtifact` / `FlashJob`;

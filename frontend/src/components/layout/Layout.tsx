@@ -1,11 +1,13 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Speaker, Activity,
-  Clock, Settings, Wifi, ChevronRight, SlidersHorizontal, Radio, AudioLines, Cpu,
+  Clock, Settings, Wifi, ChevronRight, SlidersHorizontal, Radio, AudioLines, Cpu, LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
 
 interface NavItem {
   label: string;
@@ -86,6 +88,13 @@ function SidebarNavItem({ item }: { item: NavItem }) {
 }
 
 function Sidebar() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    void logout().then(() => navigate('/login', { replace: true }));
+  };
+
   return (
     <aside className="flex h-screen w-56 flex-col bg-sidebar border-r border-sidebar-border shrink-0">
       {/* Logo / App Header */}
@@ -117,9 +126,28 @@ function Sidebar() {
         </nav>
       </ScrollArea>
 
-      {/* Footer */}
-      <div className="border-t border-sidebar-border px-4 py-3">
-        <p className="text-xs text-sidebar-muted">v{__APP_VERSION__}</p>
+      {/* Footer: User + Logout */}
+      <div className="border-t border-sidebar-border px-3 py-3 space-y-2">
+        {user && (
+          <div className="flex items-center justify-between gap-2 px-1">
+            <span
+              className="truncate text-xs text-sidebar-foreground font-medium"
+              title={user.username}
+            >
+              {user.username}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0 text-sidebar-muted hover:text-sidebar-foreground"
+              onClick={handleLogout}
+              title="Abmelden"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+        <p className="px-1 text-xs text-sidebar-muted">v{__APP_VERSION__}</p>
       </div>
     </aside>
   );

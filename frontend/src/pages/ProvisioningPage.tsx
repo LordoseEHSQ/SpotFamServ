@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useRef, type ChangeEvent } from 'react';
 import {
   Cpu, RefreshCw, Zap, CheckCircle2, XCircle, Loader2, AlertTriangle, Usb, ChevronDown, ChevronUp,
+  Upload,
 } from 'lucide-react';
 import {
   useDetectedDevices,
   useArtifacts,
   useCreateFlashJob,
   useFlashJob,
+  useUploadArtifact,
 } from '@/hooks/useProvisioning';
 import type { DetectedDevice, FlashArtifact } from '@/api/endpoints/provisioning';
 import { Button } from '@/components/ui/button';
@@ -20,6 +22,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 // ─── Hilfsfunktionen ──────────────────────────────────────────────────────────
@@ -86,6 +89,192 @@ function JobProgress({ jobId }: { jobId: string }) {
         </p>
       )}
     </div>
+  );
+}
+
+// ─── Upload-Dialog ────────────────────────────────────────────────────────────
+
+const CHIP_OPTIONS = ['ESP32', 'ESP32-S2', 'ESP32-S3', 'ESP32-C3', 'ESP8266'];
+const CHANNEL_OPTIONS = ['stable', 'beta', 'dev'];
+
+function UploadArtifactDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const upload = useUploadArtifact();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [board, setBoard] = useState('spotfam_reader');
+  const [channel, setChannel] = useState('stable');
+  const [version, setVersion] = useState('');
+  const [expectedChip, setExpectedChip] = useState('ESP32');
+
+  const reset = () => {
+    setFile(null);
+    setBoard('spotfam_reader');
+    setChannel('stable');
+    setVersion('');
+    setExpectedChip('ESP32');
+    upload.reset();
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setFile(e.target.files?.[0] ?? null);
+  };
+
+  const handleUpload = () => {
+    if (!file || !version.trim()) return;
+    upload.mutate(
+      { file, board: board.trim(), channel, version: version.trim(), expectedChip },
+      {
+        onSuccess: () => {
+          handleClose();
+        },
+      },
+    );
+  };
+
+  const is400 =
+    upload.isError && (upload.error as Error & { status?: number }).status === 400;
+  const errorDetail = upload.isError
+    ? ((upload.error as Error & { body?: { detail?: string } }).body?.detail ??
+      (upload.error as Error).message)
+    : null;
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Upload className="h-4 w-4 text-primary" />
+            Firmware hochladen
+          </DialogTitle>
+          <DialogDescription>
+            Lade eine .bin-Datei hoch und registriere sie als Firmware-Artefakt.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Datei */}
+          <div className="space-y-1.5">
+            <Label htmlFor="fw-file">Firmware-Datei (.bin)</Label>
+            <Input
+              ref={fileRef}
+              id="fw-file"
+              type="file"
+              accept=".bin"
+              onChange={handleFileChange}
+              disabled={upload.isPending}
+            />
+            {file && (
+              <p className="text-xs text-muted-foreground">
+                Ausgewählt: <span className="font-mono">{file.name}</span> ({formatBytes(file.size)})
+              </p>
+            )}
+          </div>
+
+          {/* Board */}
+          <div className="space-y-1.5">
+            <Label htmlFor="fw-board">Board</Label>
+            <Input
+              id="fw-board"
+              value={board}
+              onChange={(e) => setBoard(e.target.value)}
+              placeholder="z.B. spotfam_reader"
+              disabled={upload.isPending}
+            />
+          </div>
+
+          {/* Channel */}
+          <div className="space-y-1.5">
+            <Label>Kanal</Label>
+            <Select value={channel} onValueChange={setChannel} disabled={upload.isPending}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CHANNEL_OPTIONS.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Version */}
+          <div className="space-y-1.5">
+            <Label htmlFor="fw-version">Version</Label>
+            <Input
+              id="fw-version"
+              value={version}
+              onChange={(e) => setVersion(e.target.value)}
+              placeholder="z.B. 1.2.3"
+              disabled={upload.isPending}
+            />
+          </div>
+
+          {/* Erwarteter Chip */}
+          <div className="space-y-1.5">
+            <Label>Erwarteter Chip</Label>
+            <Select value={expectedChip} onValueChange={setExpectedChip} disabled={upload.isPending}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CHIP_OPTIONS.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Fehleranzeige */}
+          {upload.isError && (
+            <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                {is400 ? 'Ungültige Eingabe: ' : 'Upload fehlgeschlagen: '}
+                {errorDetail}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose} disabled={upload.isPending}>
+            Abbrechen
+          </Button>
+          <Button
+            onClick={handleUpload}
+            disabled={!file || !version.trim() || !board.trim() || upload.isPending}
+          >
+            {upload.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Hochladen…
+              </>
+            ) : (
+              <>
+                <Upload className="h-4 w-4" />
+                Hochladen
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -310,6 +499,7 @@ function DeviceStatusBadge({ device }: { device: DetectedDevice }) {
 export function ProvisioningPage() {
   const { data, isLoading, error, refetch, isFetching } = useDetectedDevices();
   const [flashTarget, setFlashTarget] = useState<DetectedDevice | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const devices = data?.items ?? [];
 
@@ -325,14 +515,24 @@ export function ProvisioningPage() {
               : `${devices.length} Gerät${devices.length !== 1 ? 'e' : ''} erkannt`}
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void refetch()}
-          disabled={isFetching}
-        >
-          <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setUploadOpen(true)}
+          >
+            <Upload className="h-4 w-4" />
+            Firmware hochladen
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
+          </Button>
+        </div>
       </div>
 
       {/* Hinweisband */}
@@ -448,6 +648,7 @@ export function ProvisioningPage() {
       </div>
 
       <FlashDialog device={flashTarget} onClose={() => setFlashTarget(null)} />
+      <UploadArtifactDialog open={uploadOpen} onClose={() => setUploadOpen(false)} />
     </div>
   );
 }

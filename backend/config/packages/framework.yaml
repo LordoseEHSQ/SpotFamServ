@@ -8,7 +8,14 @@ framework:
         log: true
     session:
         handler_id: null
+        # Gehärtetes Session-Cookie (D-026 / Enterprise-Security):
+        # HttpOnly verhindert JS-Zugriff (XSS-Token-Diebstahl), SameSite=Lax blockt Cross-Site-POST,
+        # Secure=auto setzt das Secure-Flag automatisch unter HTTPS.
+        name: '%app.session_cookie_name%'
+        cookie_httponly: true
         cookie_secure: auto
         cookie_samesite: lax
+        # Session-Fixation-Schutz: ID nach Login migrieren (Symfony-Default, explizit dokumentiert).
+        cookie_path: /
     serializer:
         enabled: true
