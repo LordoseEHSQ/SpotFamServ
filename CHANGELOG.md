@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.5.3] – 2026-06-04 — Fix: esptool-v5.3-Chip-Erkennung
+
+### Fixed
+- **Flash-Agent erkennt ESP32 real:** Der Chip-Bezeichnungs-Parser erwartete das Format
+  `Chip is …`, esptool **v5.3.0** gibt jedoch `Chip type: …` aus. Folge: Chip-Erkennung
+  schlug bei jeder Runde fehl (`Chip-Bezeichnung nicht in esptool-Ausgabe gefunden`), der
+  Agent meldete nie ein Gerät → Reader-Station blieb leer. Parser unterstützt jetzt beide
+  Formate; Test-Fixtures auf die **reale** esptool-v5.3.0-Ausgabe (auf dem Pi erfasst)
+  umgestellt, inkl. Absicherung gegen die `Detecting chip type…`-Zeile. (Code war ohne
+  echte Hardware entwickelt – jetzt gegen ESP32-D0WD-V3 verifiziert.)
+
 ## [0.5.2] – 2026-06-04 — Fix: Provisioning-Doctrine-Mapping
 
 ### Fixed
