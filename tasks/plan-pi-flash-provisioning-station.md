@@ -1,8 +1,10 @@
 # Plan: Pi-Flash- & Provisioning-Station (ESP am Pi, sichtbar/steuerbar im Server)
 
 **Erstellt:** 2026-06-04
-**Status:** BESTAETIGT (User, 2026-06-04: Host-Agent ja, Gate 0 auf Pi, Live via WebSocket/SSE).
-Implementierung erst nach Gate 0 (nativer Flash bewiesen) UND Dry-Run/Modell-Gate. Decision: D-021.
+**Status:** IN UMSETZUNG (User, 2026-06-04). Host-Agent ja; HW-0/Gate-0-PN532-Test per User-Override
+uebersprungen (D-022, nur Flash-Pfad+Chip-Detection bewiesen); Dry-Run/Modell-Gate erfuellt
+(GO-mit-Auflagen). Live-Status = **Polling** (revidiert, D-023), nicht WebSocket. Decisions: D-021,
+D-022, D-023 (Polling), D-024 (Agent-Auth), D-025 (Artefakt/Concurrency/Strom).
 
 ## Ziel (in einem Satz)
 Ein ESP wird per USB an den Raspberry Pi gesteckt, der SpotFamServ-Server **erkennt
@@ -79,8 +81,10 @@ gegenueber verschiedenen ESP-Varianten und zukunftssicher zur bestehenden OTA-/C
 ### Datenfluss „Flashen" (MVP)
 1. Agent erkennt Geraet, liest Chip-ID/MAC/Flash → meldet `detected` ans Backend.
 2. Web zeigt Geraet; Admin waehlt Firmware-Version/Channel und klickt „Flashen".
-3. Backend erstellt `FlashJob` (pending) mit Artefakt-Referenz + sha256 (+ erwartetem Chip).
-4. Agent holt Job (Poll), laedt Artefakt, **verifiziert sha256 und Chip-Match**.
+3. Backend erstellt `FlashJob` (pending) mit **registrierter Artefakt-ID** + sha256 (+ erwartetem Chip).
+   Lehnt ab (409), wenn fuer das Geraet bereits ein Job `pending|running` ist (Concurrency, D-025).
+4. Agent holt Job (Poll), loest die Artefakt-ID gegen sein lokales `FIRMWARE_DIR` auf (kein freier
+   Pfad/URL), **verifiziert sha256 und Chip-Match** vor dem Flash (D-025).
 5. Agent flasht (esptool), meldet Progress (z. B. Prozent/Schritte) und Endergebnis.
 6. Backend persistiert Job-Status + ActivityLog; Web zeigt Erfolg/Fehler verstaendlich.
 7. Optional (spaeter): Agent injiziert NVS-Erstkonfig oder Geraet geht in Captive Portal;
@@ -99,11 +103,12 @@ gegenueber verschiedenen ESP-Varianten und zukunftssicher zur bestehenden OTA-/C
 
 ### Lens 2 — Frameworks & Abhaengigkeiten
 - Neue Host-Deps: `esptool`, `pyserial` (Agent). Begruendung: Standard fuer ESP-Flash/Detect.
-- Backend moeglichst Bordmittel (Doctrine-Entities). **Live-Status via WebSocket/SSE** (D-021).
-  Ehrliche Kosten: das bringt zusaetzliche Infra in den Stack — Symfony-idiomatisch ein
-  **Mercure-SSE-Hub** (eigener Container, auch auf dem Pi/arm64) oder ein dedizierter WS-Dienst.
-  Trade-off bewusst akzeptiert (geringere Latenz statt Polling-Einfachheit).
-- Artefakt-Speicher: lokales, versioniertes Verzeichnis auf dem Pi + DB-Registry; CI liefert Artefakte.
+- Backend moeglichst Bordmittel (Doctrine-Entities). **Live-Status via HTTP-Polling** (revidiert D-023;
+  WebSocket/Mercure verworfen): kein zusaetzlicher Container/Dienst; konsistent mit bestehendem
+  Polling (`useReaderClaimStatus`). Upgrade auf SSE spaeter ohne API-Bruch moeglich.
+- Artefakt-Speicher: gemeinsames Host-Verzeichnis `${FIRMWARE_DIR}` (Backend-Volume + Agent liest
+  lokal) + DB-Registry (board/chip/version/sha256/Dateiname); CI liefert Artefakte (D-025). Kein
+  HTTP-Binary-Download im MVP.
 
 ### Lens 3 — Build, CI/CD & Tooling
 - CI erweitert: Firmware-Artefakte pro Board/Channel bauen, sha256 erzeugen (knuepft an
@@ -143,10 +148,18 @@ gegenueber verschiedenen ESP-Varianten und zukunftssicher zur bestehenden OTA-/C
 - **Gate C — Sicherheit:** Admin-Auth, kein freier Upload, Hash-/Chip-Verifikation, Audit, Rate-Limit.
 - **Gate D — Variantenmatrix:** Unterstuetzte Chips/Boards-Whitelist; Unbekanntes wird verweigert.
 
-## Dry-Run & Modell-Gate (ABSOLUTER BLOCKER, vor Implementierung)
-- Vor Code: Dry-Run/Blind-Spot-Review mit dem staerksten verfuegbaren Reasoning-Modell,
-  Befunde hier einarbeiten. Umsetzung mit Sonnet/GPT-5.5; reine Doku/Uebersetzung mit Haiku
-  (oder benanntem Fallback). (Gemaess `planning-discipline.mdc`.)
+## Dry-Run & Modell-Gate (ERFUELLT, 2026-06-04)
+- Dry-Run/Blind-Spot-Review mit staerkstem Reasoning-Modell durchgefuehrt. **Urteil: GO-mit-Auflagen.**
+- Architektur-Urteil: Host-Agent + Backend-ohne-USB ist die korrekte Wahl; WebSocket = Over-Engineering.
+- **Eingearbeitete Auflagen:**
+  - Blocker 1 (Live-Status) → **Polling** statt WebSocket (D-023).
+  - Blocker 2 (Agent-Auth) → dedizierter `FLASH_AGENT_API_KEY`, scope-limitiert (D-024).
+  - Hoch 1 (Artefakt-Transfer) → gemeinsames Host-`FIRMWARE_DIR` + Registry + sha256, kein freier
+    Upload/URL (D-025).
+  - Hoch 2 (Concurrency) → 1 aktiver Job/Geraet, Backend-409 bei Konflikt, Agent seriell (D-025).
+  - Hoch 3 (Strom/Bricking) → Verify-Flash + Runbook (D-025).
+- Modell-Gate: Umsetzung mit Sonnet/GPT-5.5; reine Doku/Uebersetzung mit Haiku (Fallback
+  `composer-2.5-fast`). (Gemaess `planning-discipline.mdc`.)
 
 ---
 
@@ -189,8 +202,8 @@ gegenueber verschiedenen ESP-Varianten und zukunftssicher zur bestehenden OTA-/C
 ## Risiken / offene Fragen
 - **Gate 0 ungeklaert:** Nativer Pi-Flash noch nicht bewiesen (nur usbip widerlegt). Falls Pi-Flash
   auch zickt → erst Hardware/Toolchain klaeren, bevor Station gebaut wird.
-- **Live-Updates (entschieden D-021: WebSocket/SSE):** bringt zusaetzliche Infra (Mercure-Hub/WS-Dienst)
-  auf den Pi. Risiko: ein weiterer Container/Dienst, der laufen/abgesichert/deployt werden muss.
+- **Live-Updates:** im MVP **Polling** (D-023 revidiert D-021). Kein Mercure/WS-Dienst → keine
+  Extra-Infra. Falls spaeter mehrere parallele Stationen/sichtbare Latenz: SSE additiv nachruesten.
 - **Variantenbreite:** ESP32/S2/S3/C3 haben unterschiedliche Offsets/Reset-Eigenheiten; Whitelist
   startet klein (ESP32-WROOM-32) und waechst kontrolliert.
 - **Strom/USB am Pi:** Mehrere ESP/instabile Ports → ggf. powered Hub; Concurrency 1 Job/Port.
