@@ -37,7 +37,9 @@
 // I2C-Standard ESP32-WROOM-32 DevKit: SDA=21, SCL=22.
 #define PN532_I2C_SDA   21
 #define PN532_I2C_SCL   22
-#define PN532_IRQ       4    // optional; -1 wenn nicht verdrahtet
+// IRQ=-1 => Bibliothek pollt PN532-Status rein ueber I2C (robust ohne IRQ-Draht).
+// Nur setzen, wenn IRQ tatsaechlich verdrahtet ist.
+#define PN532_IRQ       -1   // optional; -1 = I2C-Polling, keine IRQ-Leitung noetig
 #define PN532_RESET     -1   // optional; -1 wenn nicht verdrahtet
 
 // SPI (VSPI): SCK=18, MISO=19, MOSI=23, SS frei waehlbar.

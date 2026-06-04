@@ -382,3 +382,40 @@ volllaufen. Hartes Limit später bei Bedarf.
 compose-Volume `/data/audio`; `.gitignore` `/data/audio` + `backend/var/audio`; FE: Dateiliste +
 Download-Link + Delete + Update-Button. 26 Tests grün, PHPStan L8, Lint ok, FE-Build grün.
 **Status:** Accepted (autonom nach übersprungener Rückfrage; User-Korrektur jederzeit möglich)
+
+---
+
+### D-021 | 2026-06-04 | Flash-/Provisioning-Station (ESP am Pi, im Server sichtbar)
+
+**Kontext:** ESP soll an Pi-USB gesteckt, im SpotFamServ-Server erkannt, geflasht und
+provisioniert werden (idiotensicher, geloggt, mehrere ESP-Varianten). Plan:
+`tasks/plan-pi-flash-provisioning-station.md`.
+**Optionen:** A) USB/`esptool` direkt im Docker-`app`-Container · B) unprivilegierter
+Host-Agent (Python systemd) auf dem Pi, Backend ohne USB; Web steuert, Agent fuehrt aus.
+**Entscheidung (User, 2026-06-04):** **B** — Host-Agent + Backend ohne USB (Erweiterung von D-P2 A).
+**Begruendung:** Least Privilege/Sicherheit (kein web-facing Container mit Roh-USB + Flash-Tooling),
+konsistent mit bestehendem Pi-Reader-Muster, robuster als Docker-USB-Hotplug.
+**Weitere bestaetigte Weichen (User, 2026-06-04):**
+- **Gate 0 zuerst auf dem Pi:** nativer Flash + UID-Lesen real beweisen, bevor die Station gebaut wird.
+- **Live-Status via WebSocket/SSE** (nicht Polling). Konsequenz/Kosten: zusaetzliche Infra noetig
+  (Symfony-idiomatisch: Mercure-SSE-Hub als Container, oder dedizierter WS-Dienst) — bewusst akzeptiert.
+- Kein freier Firmware-Upload ueber Web; nur registrierte, sha256-gepruefte Artefakte; Agent prueft
+  Hash UND Ziel-Chip; unbekannte Chips werden verweigert.
+**Status:** Accepted (Plan bestaetigt) — Implementierung erst nach Gate 0 + Dry-Run/Modell-Gate.
+
+---
+
+### D-022 | 2026-06-04 | HW-0 PN532-Test bewusst uebersprungen (User-Override)
+
+**Kontext:** Flash-Station-Umsetzung (D-021). Nativer Pi-Flash + Chip-Detection sind real
+bewiesen (Plan-Log `plan-esp-consumer-provisioning-ota.md`: ESP32-D0WD-V3, 4 MB, MAC
+78:EE:4C:01:6B:04). Der PN532 ist noch nicht an den ESP geloetet.
+**Entscheidung (User, 2026-06-04):** HW-0-Teil „PN532-Erkennung + UID-Gleichheit" wird
+**uebersprungen**; gruenes Licht fuer Umsetzung der Flash-Station.
+**Begruendung/Abgrenzung:** Die Flash-Station benoetigt nur den (bewiesenen) Flash-Pfad +
+Chip-Detection + ein Artefakt (Probe-`.bin`). Sie wird gegen diese realen Faktoren gebaut/getestet.
+**Bewusst akzeptiertes Risiko:** Der funktionale Reader-Pfad (Karte -> korrekte UID, Scan->Play)
+bleibt UNVERIFIZIERT, bis geloetet wird. End-to-End „geflashter Reader liest Karten" ist offen.
+**Modell-Gate bleibt (ABSOLUTER BLOCKER, NICHT uebersprungen):** Dry-Run mit staerkstem Modell vor
+Code; Umsetzung mit Sonnet/GPT-5.5; Doku mit Haiku bzw. Fallback `composer-2.5-fast`.
+**Status:** Accepted (User, 2026-06-04)
