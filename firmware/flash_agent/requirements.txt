@@ -1,0 +1,19 @@
+# SpotFam Flash-Agent – Python-Abhaengigkeiten (Raspberry Pi, aarch64).
+# Installation in einem venv: python3 -m venv .venv && pip install -r requirements.txt
+#
+# esptool >=5,<6 wegen v5-Subcommands (Bindestrich-Syntax: chip-id, write-flash).
+# Versionen als Minimum gepinnt (>=); fuer reproduzierbare Deployments
+# nach erstem Lauf: pip freeze > requirements.lock.txt
+
+# HTTP-Client fuer Backend-Kommunikation.
+requests>=2.32.0
+
+# Serielle Port-Discovery (list_ports.comports()).
+pyserial>=3.5
+
+# ESP32-Flash-Werkzeug (v5-Subcommands mit Bindestrich).
+# ACHTUNG: v5 bricht Rueckwaertskompatibilitaet zu v4 (chip_id → chip-id etc.).
+esptool>=5.0.0,<6.0.0
+
+# Test-Framework (nur Entwicklung).
+pytest>=8.0.0

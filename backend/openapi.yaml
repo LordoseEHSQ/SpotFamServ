@@ -193,6 +193,69 @@ paths:
       responses:
         default:
           description: ''
+  /api/v1/provisioning/devices:
+    get:
+      summary: "GET /api/v1/provisioning/devices\nListe aller erkannten Geräte inkl. letztem Job."
+      operationId: get_api_provisioning_admin_list_devices
+      responses:
+        default:
+          description: ''
+  /api/v1/provisioning/artifacts:
+    get:
+      summary: "GET /api/v1/provisioning/artifacts\nListe aller registrierten Firmware-Artefakte."
+      operationId: get_api_provisioning_admin_list_artifacts
+      responses:
+        default:
+          description: ''
+  /api/v1/provisioning/jobs:
+    post:
+      summary: "POST /api/v1/provisioning/jobs\nLegt einen neuen Flash-Job an. 404 wenn Gerät/Artefakt fehlt, 409 bei aktivem Job."
+      operationId: post_api_provisioning_admin_create_job
+      responses:
+        default:
+          description: ''
+  '/api/v1/provisioning/jobs/{jobId}':
+    get:
+      summary: "GET /api/v1/provisioning/jobs/{jobId}\nGibt den aktuellen Status eines Jobs zurück."
+      operationId: get_api_provisioning_admin_get_job
+      parameters:
+        -
+          name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        default:
+          description: ''
+  /api/v1/provisioning/devices/detect:
+    post:
+      summary: "POST /api/v1/provisioning/devices/detect\nUpsert eines erkannten ESP32-Geräts; ActivityLog nur bei Neuanlage."
+      operationId: post_api_provisioning_agent_detect_device
+      responses:
+        default:
+          description: ''
+  /api/v1/provisioning/jobs/next:
+    get:
+      summary: "GET /api/v1/provisioning/jobs/next?deviceId={id}\nLiefert den ältesten pending-Job oder 204 wenn keiner vorhanden."
+      operationId: get_api_provisioning_agent_get_next_job
+      responses:
+        default:
+          description: ''
+  '/api/v1/provisioning/jobs/{jobId}/status':
+    post:
+      summary: "POST /api/v1/provisioning/jobs/{jobId}/status\nMeldet Statusänderung eines Jobs (running|success|failed)."
+      operationId: post_api_provisioning_agent_update_job_status
+      parameters:
+        -
+          name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        default:
+          description: ''
   '/api/v1/profiles/{profileId}/rfid-cards':
     get:
       operationId: get_api_rfid_list

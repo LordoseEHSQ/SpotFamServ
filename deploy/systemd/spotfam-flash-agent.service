@@ -1,0 +1,48 @@
+# systemd-Unit fuer den SpotFam Flash-Agent.
+#
+# Installation (System-Dienst, startet beim Boot ohne Login):
+#   sudo cp spotfam-flash-agent.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now spotfam-flash-agent.service
+#
+# Pfade unten ggf. an die reale Installation anpassen (User, Verzeichnis, venv).
+# Laeuft UNPRIVILEGIERT als User `lars` mit Zusatzgruppe `dialout` fuer
+# seriellen Port-Zugriff (kein root). Siehe README.md.
+
+[Unit]
+Description=SpotFam Flash-Agent (ESP32-Provisioning via esptool)
+Documentation=file:///home/lars/SpotFamServ/firmware/flash_agent/README.md
+After=network-online.target
+Wants=network-online.target
+# Bremse bei Dauer-Crash-Schleife (5 Starts in 60s → Pause).
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+
+# Unprivilegiert: dedizierter User + dialout fuer /dev/ttyUSB*.
+User=lars
+Group=lars
+SupplementaryGroups=dialout
+
+WorkingDirectory=/home/lars/SpotFamServ/firmware/flash_agent
+
+# Geheimnisse/Konfiguration NICHT im Unit-File, sondern aus secrets.env.
+EnvironmentFile=/home/lars/SpotFamServ/firmware/flash_agent/secrets.env
+
+# venv-Python (python3 -m venv .venv).
+ExecStart=/home/lars/SpotFamServ/firmware/flash_agent/.venv/bin/python \
+    -m flash_agent run
+
+# Robustheit: bei Absturz automatisch neu starten.
+Restart=on-failure
+RestartSec=5
+
+# Logging nach journald (journalctl -u spotfam-flash-agent).
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=spotfam-flash-agent
+
+[Install]
+WantedBy=multi-user.target

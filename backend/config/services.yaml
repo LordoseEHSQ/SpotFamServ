@@ -1,6 +1,10 @@
 parameters:
     uuid_regex: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
     reader_api_key: ''
+    # Default leer = im Dev offen (analog reader_api_key). In Produktion FLASH_AGENT_API_KEY setzen.
+    flash_agent_api_key: ''
+    # Firmware-Verzeichnis für das Provisioning-Modul. Kann per FIRMWARE_DIR überschrieben werden.
+    provisioning.firmware_dir: '%kernel.project_dir%/var/firmware'
 
 services:
     _defaults:
@@ -89,6 +93,26 @@ services:
     App\Module\Scan\Infrastructure\Http\ScanController:
         arguments:
             $readerApiKey: '%env(default:reader_api_key:READER_API_KEY)%'
+
+    # ── Provisioning-Modul ────────────────────────────────────────────────────
+    App\Module\Provisioning\Application\:
+        resource: '../src/Module/Provisioning/Application/'
+
+    # Ports → Doctrine-Implementierungen
+    App\Module\Provisioning\Application\Port\DetectedDeviceRepositoryInterface: '@App\Module\Provisioning\Infrastructure\Repository\DoctrineDetectedDeviceRepository'
+    App\Module\Provisioning\Application\Port\FlashArtifactRepositoryInterface: '@App\Module\Provisioning\Infrastructure\Repository\DoctrineFlashArtifactRepository'
+    App\Module\Provisioning\Application\Port\FlashJobRepositoryInterface: '@App\Module\Provisioning\Infrastructure\Repository\DoctrineFlashJobRepository'
+
+    # Agent-Controller: FLASH_AGENT_API_KEY (leer = Dev-offen, analog READER_API_KEY-Muster)
+    App\Module\Provisioning\Infrastructure\Http\ProvisioningAgentController:
+        arguments:
+            $flashAgentApiKey: '%env(default:flash_agent_api_key:FLASH_AGENT_API_KEY)%'
+
+    # Console-Command: FIRMWARE_DIR (Default: %kernel.project_dir%/var/firmware)
+    App\Module\Provisioning\Infrastructure\Console\RegisterArtifactCommand:
+        arguments:
+            $firmwareDir: '%env(default:provisioning.firmware_dir:FIRMWARE_DIR)%'
+    # ─────────────────────────────────────────────────────────────────────────
 
     App\Module\Spotify\Application\Port\TokenEncryptionInterface: '@App\Module\Spotify\Infrastructure\Security\TokenEncryptionService'
     App\Module\Spotify\Infrastructure\Security\TokenEncryptionService:

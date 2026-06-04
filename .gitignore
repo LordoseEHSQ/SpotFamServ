@@ -37,3 +37,8 @@ pi-image/
 
 # Pi-Deploy DB-Backups
 backups/
+
+# Flash-Agent – venv und Secrets (niemals committen)
+firmware/flash_agent/.venv/
+firmware/flash_agent/secrets.env
+firmware/flash_agent/artifacts/

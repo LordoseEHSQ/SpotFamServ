@@ -47,6 +47,13 @@ class ActivityLog
     public const TYPE_READER_CLAIM_REDEEMED = 'reader_claim_redeemed';
     public const TYPE_READER_CLAIM_FAILED   = 'reader_claim_failed';
 
+    // Provisioning-Modul (Flash-Station)
+    public const TYPE_PROVISIONING_DEVICE_DETECTED = 'provisioning_device_detected';
+    public const TYPE_FLASH_JOB_CREATED            = 'flash_job_created';
+    public const TYPE_FLASH_JOB_STARTED            = 'flash_job_started';
+    public const TYPE_FLASH_JOB_SUCCEEDED          = 'flash_job_succeeded';
+    public const TYPE_FLASH_JOB_FAILED             = 'flash_job_failed';
+
     #[ORM\Id]
     #[ORM\Column(type: 'uuid')]
     private Uuid $id;
