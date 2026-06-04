@@ -19,7 +19,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Routing\Requirement\Requirement;
 
 /**
  * Admin/Web-Endpunkte für die Provisioning-Verwaltung (ROLE_ADMIN via Catch-all).
@@ -135,7 +134,7 @@ final class ProvisioningAdminController
      * GET /api/v1/provisioning/jobs/{jobId}
      * Gibt den aktuellen Status eines Jobs zurück.
      */
-    #[Route(path: '/jobs/{jobId}', name: 'get_job', methods: ['GET'], requirements: ['jobId' => Requirement::UUID])]
+    #[Route(path: '/jobs/{jobId}', name: 'get_job', methods: ['GET'])]
     public function getJob(string $jobId): JsonResponse
     {
         try {

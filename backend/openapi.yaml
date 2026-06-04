@@ -8,6 +8,13 @@ servers:
     url: /api/v1
     description: 'API v1'
 paths:
+  /api/v1/provisioning/jobs/next:
+    get:
+      summary: "GET /api/v1/provisioning/jobs/next?deviceId={id}\nLiefert den ältesten pending-Job oder 204 wenn keiner vorhanden."
+      operationId: get_api_provisioning_agent_get_next_job
+      responses:
+        default:
+          description: ''
   /api/v1/activity-log:
     get:
       operationId: get_api_activity_log_list
@@ -332,7 +339,6 @@ paths:
           required: true
           schema:
             type: string
-            pattern: '[0-9a-f]{8}-[0-9a-f]{4}-[13-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'
       responses:
         default:
           description: ''
@@ -340,13 +346,6 @@ paths:
     post:
       summary: "POST /api/v1/provisioning/devices/detect\nUpsert eines erkannten ESP32-Geräts; ActivityLog nur bei Neuanlage."
       operationId: post_api_provisioning_agent_detect_device
-      responses:
-        default:
-          description: ''
-  /api/v1/provisioning/jobs/next:
-    get:
-      summary: "GET /api/v1/provisioning/jobs/next?deviceId={id}\nLiefert den ältesten pending-Job oder 204 wenn keiner vorhanden."
-      operationId: get_api_provisioning_agent_get_next_job
       responses:
         default:
           description: ''
@@ -361,7 +360,6 @@ paths:
           required: true
           schema:
             type: string
-            pattern: '[0-9a-f]{8}-[0-9a-f]{4}-[13-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'
       responses:
         default:
           description: ''
