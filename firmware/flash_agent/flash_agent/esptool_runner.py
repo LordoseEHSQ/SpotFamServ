@@ -81,11 +81,20 @@ def _run_esptool(args: list[str], timeout: int = 30) -> str:
 def _parse_chip_description(output: str) -> str:
     """Extrahiert die Chip-Bezeichnung aus ``chip-id``-Ausgabe.
 
-    Sucht nach Zeilen wie ``Chip is ESP32-D0WD-V3 (revision v3.1)``
-    oder ``Chip is ESP32-D0WD-V3``.
+    Unterstuetzt beide esptool-Formate:
+    - esptool v5.3.x: ``Chip type:          ESP32-D0WD-V3 (revision v3.1)``
+    - esptool <=v5.2 / legacy: ``Chip is ESP32-D0WD-V3 (revision v3.1)``
+
+    Das Revision-Suffix in Klammern wird abgeschnitten. Die Zeile
+    ``Detecting chip type... ESP32`` matcht bewusst NICHT (kein Doppelpunkt
+    direkt nach ``type``), damit nicht die unvollstaendige Familienbezeichnung
+    statt der vollen Chip-Bezeichnung gewonnen wird.
     """
-    # Revision-Suffix in Klammern wird abgeschnitten.
-    m = re.search(r"(?i)chip is\s+([^\(]+?)(?:\s*\(|\s*$)", output, re.MULTILINE)
+    m = re.search(
+        r"(?i)chip (?:type:\s*|is\s+)([^\(\n]+?)(?:\s*\(|\s*$)",
+        output,
+        re.MULTILINE,
+    )
     if m:
         return m.group(1).strip()
     raise EsptoolError(
