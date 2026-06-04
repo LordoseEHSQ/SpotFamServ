@@ -66,7 +66,9 @@ final class ProvisioningAgentController
      * GET /api/v1/provisioning/jobs/next?deviceId={id}
      * Liefert den ältesten pending-Job oder 204 wenn keiner vorhanden.
      */
-    #[Route(path: '/jobs/next', name: 'get_next_job', methods: ['GET'])]
+    // priority > Standard, damit '/jobs/next' VOR der Admin-Route '/jobs/{jobId}'
+    // matcht (sonst wuerde 'next' als jobId interpretiert -> 500 UUID-Cast).
+    #[Route(path: '/jobs/next', name: 'get_next_job', methods: ['GET'], priority: 10)]
     public function getNextJob(Request $request): JsonResponse
     {
         if (!$this->validateAgentAuth($request)) {
