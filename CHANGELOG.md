@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.5.2] – 2026-06-04 — Fix: Provisioning-Doctrine-Mapping
+
+### Fixed
+- **Reader-Station funktionsfähig:** Das Doctrine-ORM-Mapping für das `Provisioning`-Modul
+  (`DetectedDevice` / `FlashArtifact` / `FlashJob`) fehlte in `doctrine.yaml`. Folge: alle
+  DB-gestützten Provisioning-Endpunkte (`/provisioning/devices`, `/devices/detect`, Jobs)
+  warfen zur Laufzeit `500` (`classNotFoundInNamespaces`). In den Unit-Tests (ohne DB/HTTP)
+  unentdeckt geblieben. Mapping-Eintrag ergänzt.
+
 ## [0.5.1] – 2026-06-04 — Fix: Deploy-Healthcheck
 
 ### Fixed
