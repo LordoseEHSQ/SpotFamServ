@@ -56,6 +56,14 @@ L-020–L-022 (L-023/L-024 geplant). Starter v0.4.1: `docs/sprints/v0.4.1-r7-sta
 - [ ] Out of scope (offen): Quota/Größenlimit für `data/audio`; asynchrone Extraktion (Queue)
 - [ ] Aufräumen: Worktree `../SpotFamServ-audio-extractor` + Branch `feat/audio-extractor` (gemergt)
 
+## Feature: Admin-Auth + Upload — Branch `feat/admin-auth`
+Worktree: `../SpotFamServ-admin-auth` · Plan: `tasks/plan-admin-auth.md` · Doku: `docs/admin-auth-runbook.md` ·
+D-026/D-027.
+- [x] Backend (Session-Auth, CSRF, Upload) + Frontend (Login, Route-Schutz, Upload-UI) — erledigt auf `feat/admin-auth`
+- [ ] PR/Merge
+- [ ] Deploy auf Pi (Migration `admin_user` + `app:admin:upsert` + Secrets + Flash-Agent-Service)
+- [ ] Optional: HTTPS, Multi-User, Passwort-Reset
+
 ## Feature: Flash-Station (Reader-Station) — Branch `feat/flash-station`
 Worktree: `../SpotFamServ-flash-station` · Plan: `tasks/plan-pi-flash-provisioning-station.md` ·
 Doku: `docs/flash-station-runbook.md` · D-021–D-025.
