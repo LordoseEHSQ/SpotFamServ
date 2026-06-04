@@ -14,6 +14,69 @@ paths:
       responses:
         default:
           description: ''
+  /api/v1/auth/csrf:
+    get:
+      tags:
+        - Auth
+      summary: 'Setzt das CSRF-Double-Submit-Cookie (XSRF-TOKEN)'
+      description: "Setzt ein NICHT-HttpOnly Double-Submit-CSRF-Cookie (XSRF-TOKEN) und antwortet 204.\nDas Frontend liest dieses Cookie und spiegelt es bei mutierenden Requests als\nHeader X-XSRF-TOKEN. Public (vor Login erreichbar)."
+      operationId: get_api_auth_csrf
+      responses:
+        '204':
+          description: 'CSRF-Cookie gesetzt'
+  /api/v1/auth/me:
+    get:
+      tags:
+        - Auth
+      summary: 'Gibt den eingeloggten Admin zurück'
+      description: "Liefert Username und Rollen des eingeloggten Admins.\nCatch-all-Regel → 401, wenn keine gültige Session vorhanden."
+      operationId: get_api_auth_me
+      responses:
+        '200':
+          description: 'Eingeloggter Admin'
+          content:
+            application/json:
+              schema:
+                properties:
+                  username: { type: string }
+                  roles: { type: array, items: { type: string } }
+                type: object
+        '401':
+          description: 'Nicht eingeloggt'
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: 'Login (json_login; wird von der Firewall abgefangen)'
+      description: "Route muss existieren, damit der Router kein 404 wirft.\nDie Firewall (json_login) fängt diese Route ab – dieser Body wird nie erreicht."
+      operationId: post_api_auth_login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                  format: password
+              type: object
+      responses:
+        '204':
+          description: 'Login erfolgreich (Set-Cookie)'
+        '401':
+          description: 'Ungültige Credentials'
+  /api/v1/auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: 'Logout (Session invalidieren)'
+      description: "Route muss existieren; der Firewall-Logout-Listener fängt sie ab.\nResponse wird durch AuthLogoutSubscriber auf 204 gesetzt."
+      operationId: post_api_auth_logout
+      responses:
+        '204':
+          description: 'Logout erfolgreich'
   /api/v1/audio-extractor/config:
     get:
       operationId: get_api_audio_extractor_config
@@ -207,6 +270,41 @@ paths:
       responses:
         default:
           description: ''
+    post:
+      tags:
+        - Provisioning
+      summary: 'Firmware-Artefakt hochladen und registrieren'
+      description: "Authentifizierter Firmware-Upload (multipart/form-data).\nFelder: file (binary), board, channel, version, expectedChip.\nGeschützt durch ROLE_ADMIN-Catch-all (D-027)."
+      operationId: post_api_provisioning_admin_upload_artifact
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              properties:
+                file:
+                  type: string
+                  format: binary
+                board:
+                  type: string
+                  example: esp32-wroom-32
+                channel:
+                  type: string
+                  example: stable
+                version:
+                  type: string
+                  example: 1.2.3
+                expectedChip:
+                  type: string
+                  example: ESP32-D0WD-V3
+              type: object
+      responses:
+        '201':
+          description: 'Artefakt registriert'
+        '400':
+          description: Validierungsfehler
+        '401':
+          description: 'Nicht eingeloggt'
   /api/v1/provisioning/jobs:
     post:
       summary: "POST /api/v1/provisioning/jobs\nLegt einen neuen Flash-Job an. 404 wenn Gerät/Artefakt fehlt, 409 bei aktivem Job."
@@ -865,4 +963,11 @@ paths:
       responses:
         default:
           description: ''
+tags:
+  -
+    name: Auth
+    description: Auth
+  -
+    name: Provisioning
+    description: Provisioning
 

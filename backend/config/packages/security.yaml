@@ -2,21 +2,53 @@ security:
     password_hashers:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
         App\Module\Admin\Domain\AdminUser: 'auto'
+
     providers:
         app_admin_provider:
             entity:
                 class: App\Module\Admin\Domain\AdminUser
                 property: username
+
     firewalls:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
+
         api:
             pattern: ^/api/v1
-            stateless: true
-            # lazy: true
-            # json_login or custom authenticator – enable when Auth module is implemented
-            # provider: app_admin_provider
+            stateless: false
+            lazy: true
+            provider: app_admin_provider
+            entry_point: App\Module\Admin\Infrastructure\Security\AuthEntryPoint
+            json_login:
+                check_path: /api/v1/auth/login
+                username_path: username
+                password_path: password
+                success_handler: App\Module\Admin\Infrastructure\Security\AuthLoginSuccessHandler
+                failure_handler: App\Module\Admin\Infrastructure\Security\AuthLoginFailureHandler
+            logout:
+                path: /api/v1/auth/logout
+                # CSRF deaktiviert (API; SameSite=Lax als Mitigation, D-026)
+
     access_control:
-        - { path: ^/api/v1, roles: PUBLIC_ACCESS }
-        # - { path: ^/api/v1, roles: ROLE_ADMIN }  # enable when auth is on
+        # ── Maschinen-Endpunkte: public (eigene X-API-Key / OAuth-Logik) ──────
+        # json_login check_path
+        - { path: ^/api/v1/auth/login$, roles: PUBLIC_ACCESS }
+        # CSRF-Token-Ausgabe (setzt XSRF-TOKEN-Cookie; muss vor dem Login erreichbar sein)
+        - { path: ^/api/v1/auth/csrf$, roles: PUBLIC_ACCESS }
+        # Spotify OAuth-Callback (Redirect nach Consent)
+        - { path: ^/api/v1/spotify/callback$, roles: PUBLIC_ACCESS }
+        # ESP-Reader: Scan-Events (X-API-Key inline im Controller)
+        - { path: ^/api/v1/readers/scan$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1/readers/next$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1/readers/previous$, roles: PUBLIC_ACCESS }
+        # ESP-Erstbindung (Claim-Activate durch den ESP selbst)
+        - { path: ^/api/v1/readers/claims/[^/]+/activate$, roles: PUBLIC_ACCESS }
+        # ESP-OTA: Firmware-Manifest
+        - { path: ^/api/v1/readers/firmware/manifest$, roles: PUBLIC_ACCESS }
+        # Flash-Agent (D-024, X-API-Key FLASH_AGENT_API_KEY inline im AgentController)
+        - { path: ^/api/v1/provisioning/devices/detect$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1/provisioning/jobs/next$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1/provisioning/jobs/[^/]+/status$, roles: PUBLIC_ACCESS }
+        # ── Catch-all: alles weitere erfordert eingeloggten Admin ────────────
+        - { path: ^/api/v1, roles: ROLE_ADMIN }

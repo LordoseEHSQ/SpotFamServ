@@ -57,4 +57,9 @@ final class ProvisioningException extends \RuntimeException
     {
         return new self('invalid_request', $detail, Response::HTTP_BAD_REQUEST);
     }
+
+    public static function internalError(string $detail): self
+    {
+        return new self('internal_error', $detail, Response::HTTP_INTERNAL_SERVER_ERROR);
+    }
 }

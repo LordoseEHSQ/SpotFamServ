@@ -56,6 +56,14 @@ export interface ArtifactListResponse {
   items: FlashArtifact[];
 }
 
+export interface UploadArtifactRequest {
+  file: File;
+  board: string;
+  channel: string;
+  version: string;
+  expectedChip: string;
+}
+
 // ─── API-Client-Funktionen ────────────────────────────────────────────────────
 
 export const provisioningApi = {
@@ -70,4 +78,18 @@ export const provisioningApi = {
 
   getJob: (jobId: string) =>
     api.get<FlashJob>(`/provisioning/jobs/${encodeURIComponent(jobId)}`),
+
+  /**
+   * Lädt eine Firmware-Datei hoch. Nutzt multipart/form-data; Content-Type wird
+   * vom Browser gesetzt (mit boundary). api.upload setzt kein JSON-Content-Type.
+   */
+  uploadArtifact: ({ file, board, channel, version, expectedChip }: UploadArtifactRequest) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('board', board);
+    fd.append('channel', channel);
+    fd.append('version', version);
+    fd.append('expectedChip', expectedChip);
+    return api.upload<FlashArtifact>('/provisioning/artifacts', fd);
+  },
 };

@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { LoginPage } from '../pages/LoginPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { ProfilesPage } from '../pages/ProfilesPage';
@@ -16,23 +17,28 @@ import { ProvisioningPage } from '../pages/ProvisioningPage';
 export function AppRoutes() {
   return (
     <Routes>
+      {/* Öffentliche Route */}
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/" element={<DashboardPage />} />
-      <Route path="/profiles" element={<ProfilesPage />} />
-      <Route path="/profiles/:profileId" element={<ProfileDetailPage />} />
-      <Route path="/profiles/:profileId/setup" element={<SetupWizardPage />} />
-      <Route path="/profiles/:profileId/cards" element={<CardsPage />} />
-      <Route path="/devices" element={<DevicesPage />} />
-      <Route path="/readers" element={<ReadersPage />} />
-      <Route path="/provisioning" element={<ProvisioningPage />} />
-      <Route path="/cards" element={<Navigate to="/profiles" replace />} />
-      <Route path="/activity" element={<ActivityPage />} />
-      <Route path="/scan-logs" element={<ScanLogsPage />} />
-      <Route path="/system" element={<SystemPage />} />
-      <Route path="/tools/audio-extractor" element={<AudioExtractorPage />} />
-      <Route path="/rules" element={<Navigate to="/" replace />} />
-      <Route path="/setup" element={<Navigate to="/profiles" replace />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+
+      {/* Alle geschützten Routen – erfordern eingeloggten User */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/profiles" element={<ProfilesPage />} />
+        <Route path="/profiles/:profileId" element={<ProfileDetailPage />} />
+        <Route path="/profiles/:profileId/setup" element={<SetupWizardPage />} />
+        <Route path="/profiles/:profileId/cards" element={<CardsPage />} />
+        <Route path="/devices" element={<DevicesPage />} />
+        <Route path="/readers" element={<ReadersPage />} />
+        <Route path="/provisioning" element={<ProvisioningPage />} />
+        <Route path="/cards" element={<Navigate to="/profiles" replace />} />
+        <Route path="/activity" element={<ActivityPage />} />
+        <Route path="/scan-logs" element={<ScanLogsPage />} />
+        <Route path="/system" element={<SystemPage />} />
+        <Route path="/tools/audio-extractor" element={<AudioExtractorPage />} />
+        <Route path="/rules" element={<Navigate to="/" replace />} />
+        <Route path="/setup" element={<Navigate to="/profiles" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
     </Routes>
   );
 }

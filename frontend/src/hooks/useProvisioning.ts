@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { provisioningApi, type CreateFlashJobRequest } from '@/api/endpoints/provisioning';
+import { provisioningApi, type CreateFlashJobRequest, type UploadArtifactRequest } from '@/api/endpoints/provisioning';
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 
@@ -38,6 +38,17 @@ export function useCreateFlashJob() {
     mutationFn: (body: CreateFlashJobRequest) => provisioningApi.createJob(body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: provisioningKeys.devices() });
+    },
+  });
+}
+
+/** Lädt ein Firmware-Artefakt hoch; invalidiert anschließend die Artefakt-Liste. */
+export function useUploadArtifact() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (req: UploadArtifactRequest) => provisioningApi.uploadArtifact(req),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: provisioningKeys.artifacts() });
     },
   });
 }

@@ -5,6 +5,13 @@ parameters:
     flash_agent_api_key: ''
     # Firmware-Verzeichnis für das Provisioning-Modul. Kann per FIRMWARE_DIR überschrieben werden.
     provisioning.firmware_dir: '%kernel.project_dir%/var/firmware'
+    # Admin-Auth: Fallback-Parameter für Env ADMIN_USERNAME / ADMIN_PASSWORD (leer = kein Default)
+    admin_username: ''
+    admin_password: ''
+    # Cookie-Namen (Session + CSRF Double-Submit). Zentral, damit framework.yaml und CSRF-Subscriber synchron bleiben.
+    app.session_cookie_name: 'SPOTFAM_SESSID'
+    app.csrf_cookie_name: 'XSRF-TOKEN'
+    app.csrf_header_name: 'X-XSRF-TOKEN'
 
 services:
     _defaults:
@@ -112,6 +119,30 @@ services:
     App\Module\Provisioning\Infrastructure\Console\RegisterArtifactCommand:
         arguments:
             $firmwareDir: '%env(default:provisioning.firmware_dir:FIRMWARE_DIR)%'
+
+    # Admin-Upload-Endpunkt: FIRMWARE_DIR (gleicher Wert wie Command)
+    App\Module\Provisioning\Infrastructure\Http\ProvisioningAdminController:
+        arguments:
+            $firmwareDir: '%env(default:provisioning.firmware_dir:FIRMWARE_DIR)%'
+    # ─────────────────────────────────────────────────────────────────────────
+
+    # ── Admin-Auth-Modul ──────────────────────────────────────────────────────
+    App\Module\Admin\Application\Port\AdminUserRepositoryInterface: '@App\Module\Admin\Infrastructure\Repository\DoctrineAdminUserRepository'
+
+    App\Module\Admin\Infrastructure\Console\UpsertAdminCommand:
+        arguments:
+            $defaultUsername: '%env(default:admin_username:ADMIN_USERNAME)%'
+            $defaultPassword: '%env(default:admin_password:ADMIN_PASSWORD)%'
+
+    App\Module\Admin\Infrastructure\Security\CsrfSubscriber:
+        arguments:
+            $sessionCookieName: '%app.session_cookie_name%'
+            $csrfCookieName: '%app.csrf_cookie_name%'
+            $csrfHeaderName: '%app.csrf_header_name%'
+
+    App\Module\Admin\Infrastructure\Http\AuthController:
+        arguments:
+            $csrfCookieName: '%app.csrf_cookie_name%'
     # ─────────────────────────────────────────────────────────────────────────
 
     App\Module\Spotify\Application\Port\TokenEncryptionInterface: '@App\Module\Spotify\Infrastructure\Security\TokenEncryptionService'

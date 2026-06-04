@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Module\Admin\Infrastructure\Repository;
 
+use App\Module\Admin\Application\Port\AdminUserRepositoryInterface;
 use App\Module\Admin\Domain\AdminUser;
 use Doctrine\ORM\EntityManagerInterface;
 
-final class DoctrineAdminUserRepository
+final class DoctrineAdminUserRepository implements AdminUserRepositoryInterface
 {
     public function __construct(
         private readonly EntityManagerInterface $em,
