@@ -11,6 +11,7 @@ import { ReadersPage } from '../pages/ReadersPage';
 import { ActivityPage } from '../pages/ActivityPage';
 import { SystemPage } from '../pages/SystemPage';
 import { AudioExtractorPage } from '../pages/AudioExtractorPage';
+import { ProvisioningPage } from '../pages/ProvisioningPage';
 
 export function AppRoutes() {
   return (
@@ -23,6 +24,7 @@ export function AppRoutes() {
       <Route path="/profiles/:profileId/cards" element={<CardsPage />} />
       <Route path="/devices" element={<DevicesPage />} />
       <Route path="/readers" element={<ReadersPage />} />
+      <Route path="/provisioning" element={<ProvisioningPage />} />
       <Route path="/cards" element={<Navigate to="/profiles" replace />} />
       <Route path="/activity" element={<ActivityPage />} />
       <Route path="/scan-logs" element={<ScanLogsPage />} />

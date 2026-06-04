@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Speaker, Activity,
-  Clock, Settings, Wifi, ChevronRight, SlidersHorizontal, Radio, AudioLines,
+  Clock, Settings, Wifi, ChevronRight, SlidersHorizontal, Radio, AudioLines, Cpu,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,6 +31,7 @@ const navigation: NavGroup[] = [
       { label: 'Teilnehmer', href: '/profiles', icon: Users },
       { label: 'Lautsprecher & Geräte', href: '/devices', icon: Speaker },
       { label: 'RFID-Leser', href: '/readers', icon: Radio },
+      { label: 'Reader-Station', href: '/provisioning', icon: Cpu },
     ],
   },
   {
