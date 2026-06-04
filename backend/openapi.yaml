@@ -256,6 +256,15 @@ paths:
       responses:
         default:
           description: ''
+  /api/v1/health:
+    get:
+      summary: 'Liveness/Readiness (DB-Ping); public.'
+      operationId: get_api_health
+      responses:
+        '200':
+          description: 'OK – App + DB erreichbar'
+        '503':
+          description: 'DB nicht erreichbar'
   /api/v1/provisioning/devices:
     get:
       summary: "GET /api/v1/provisioning/devices\nListe aller erkannten Geräte inkl. letztem Job."

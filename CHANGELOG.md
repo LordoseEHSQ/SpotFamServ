@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.5.1] – 2026-06-04 — Fix: Deploy-Healthcheck
+
+### Fixed
+- **Auto-Deploy-Healthcheck repariert:** Neuer öffentlicher `GET /api/v1/health` (DB-Ping, kein Auth).
+  Nach Aktivierung der projektweiten Admin-Auth (v0.5.0) pollte `pi-deploy.sh` das jetzt geschützte
+  `/api/v1/profiles` → `401` und markierte jeden Deploy fälschlich als „FEHLER". `pi-deploy.sh`
+  (Default-`HEALTH_URL`) und die systemd-Unit (`Environment=HEALTH_URL`) zeigen nun auf `/health`.
+
 ## [0.5.0] – 2026-06-04 — Reader-Station + Admin-Auth
 
 > Zwei Features: die Flash-/Provisioning-Station („Reader-Station") und projektweite Admin-Auth

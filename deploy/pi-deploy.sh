@@ -7,7 +7,7 @@
 set -euo pipefail
 
 REPO_DIR="${REPO_DIR:-/home/lars/SpotFamServ}"
-HEALTH_URL="${HEALTH_URL:-http://localhost:8080/api/v1/profiles}"
+HEALTH_URL="${HEALTH_URL:-http://localhost:8080/api/v1/health}"
 cd "$REPO_DIR"
 
 log() { echo "[$(date -Is)] [deploy] $*"; }
