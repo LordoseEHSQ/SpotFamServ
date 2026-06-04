@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Requirement\Requirement;
 
 /**
  * Agent-Endpunkte für die Flash-Station (D-024).
@@ -108,7 +109,7 @@ final class ProvisioningAgentController
      * POST /api/v1/provisioning/jobs/{jobId}/status
      * Meldet Statusänderung eines Jobs (running|success|failed).
      */
-    #[Route(path: '/jobs/{jobId}/status', name: 'update_job_status', methods: ['POST'])]
+    #[Route(path: '/jobs/{jobId}/status', name: 'update_job_status', methods: ['POST'], requirements: ['jobId' => Requirement::UUID])]
     public function updateJobStatus(string $jobId, Request $request): JsonResponse
     {
         if (!$this->validateAgentAuth($request)) {

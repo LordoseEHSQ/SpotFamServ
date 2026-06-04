@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.5.4] – 2026-06-04 — Fix: Provisioning Jobs-Routing-Kollision
+
+### Fixed
+- **`GET /provisioning/jobs/next` warf 500** (`Could not convert database value "next" to uuid`):
+  Die Admin-Route `GET /provisioning/jobs/{jobId}` fing den Agent-Pfad `/jobs/next` ab und
+  versuchte `"next"` als UUID zu laden. UUID-`requirements` an `{jobId}`-Routen (get_job +
+  update_job_status) ergänzt; via `router:match` verifiziert (`/jobs/next` → `get_next_job`,
+  `/jobs/<uuid>` → `get_job`). Damit funktioniert die Job-Abfrage des Flash-Agents.
+
 ## [0.5.3] – 2026-06-04 — Fix: esptool-v5.3-Chip-Erkennung
 
 ### Fixed
