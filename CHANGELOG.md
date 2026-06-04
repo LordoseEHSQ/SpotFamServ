@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [0.5.6] – 2026-06-04 — Fix: PHP-Upload-Limits für Firmware
+
+### Fixed
+- **Firmware-Upload scheiterte mit HTTP 500** (`Datei konnte nicht gespeichert werden`):
+  PHP-Default `upload_max_filesize=2M` (und `post_max_size=8M`) ist kleiner als ein
+  Firmware-Artefakt (4–8 MB) → die hochgeladene Datei kam ungültig an (UPLOAD_ERR_INI_SIZE),
+  `UploadedFile::move()` warf. App-Image setzt jetzt `upload_max_filesize=16M` /
+  `post_max_size=16M`; das App-Limit (8 MB) bleibt die harte Grenze. Zusammen mit dem
+  nginx-Fix (v0.5.5) ist der Upload damit funktionsfähig.
+
 ## [0.5.5] – 2026-06-04 — Fix: nginx-Body-Limit für Firmware-Upload
 
 ### Fixed
