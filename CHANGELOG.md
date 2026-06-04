@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.5.0] – 2026-06-04 — Reader-Station + Admin-Auth
+
+> Zwei Features: die Flash-/Provisioning-Station („Reader-Station") und projektweite Admin-Auth
+> (Session-Login mit HttpOnly-Cookie + CSRF, kein localStorage, kein OIDC). Maschinen-Endpunkte
+> (ESP-Reader, Flash-Agent) bleiben per `X-API-Key` erreichbar. HW-0 (PN532 löten + funktionaler
+> RFID-Scan) bleibt bewusst offen (D-022): bewiesen sind Flash-Pfad + Chip-Detection, nicht der Scan.
+
 ### Added
 - **Admin-Authentifizierung:** Session-Login (HttpOnly-Cookie, kein localStorage) für den gesamten
   Web-/Admin-Bereich; Login-Seite, Logout, Route-Schutz, 401-Handling.
