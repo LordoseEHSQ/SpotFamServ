@@ -27,6 +27,14 @@ RUN mkdir -p /opt/yt-dlp /data/audio \
 # Hinweis: Zend OPcache ist im offiziellen php:8.5-Image bereits eingebaut
 # (statisch gelinkt) und darf nicht via docker-php-ext-install installiert werden.
 
+# Firmware-Upload (Provisioning): Default upload_max_filesize=2M / post_max_size=8M
+# sind zu klein fuer Firmware-Artefakte (bis 8 MB). 16M gibt multipart-Overhead Luft;
+# das App-Limit (FIRMWARE_UPLOAD_MAX_BYTES = 8 MB) bleibt die harte Grenze.
+RUN { \
+        echo 'upload_max_filesize=16M'; \
+        echo 'post_max_size=16M'; \
+    } > /usr/local/etc/php/conf.d/zz-spotfam-uploads.ini
+
 ENV COMPOSER_ALLOW_SUPERUSER=1
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
