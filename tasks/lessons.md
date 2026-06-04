@@ -273,3 +273,48 @@ ohnehin), statt eine neue Dependency aufzunehmen. Download-Pfade per E2E testen,
 Unit-Test (der Mock-Pfade die `prepare()`/`ResponseListener`-Kette nicht durchläuft).
 **Vorkommen:** 1
 **Status:** Aktiv
+
+---
+
+### L-023 | 2026-06-04 | Git/Worktrees – Decision-IDs & Stash nach Branch-Abzweig
+
+**Fehlermuster:** Zwei parallele Chats vergaben dieselben Decision-IDs (D-019/D-020); nach
+`git stash pop` beim Abzweigen eines Feature-Branches von aktuellem `origin/main` entstanden
+Merge-Konflikte in `tasks/decisions.md` und Doku.
+**Root Cause:** Working-Memory (`tasks/decisions.md`) wird in mehreren Worktrees bearbeitet, ohne
+vor neuen IDs den Stand auf `origin/main` abzugleichen; Stash-Inhalt war gegen einen veralteten
+Basis-Stand gepoppt.
+**Regel:** Vor neuen Decision-IDs immer `git fetch origin` und `tasks/decisions.md` auf
+`origin/main` prüfen (höchste D-Nummer). Parallele Features: eigener Worktree + Branch; bei Stash
+nach Branch-Wechsel zuerst auf aktuelles `origin/main` rebasen/mergen, dann pop — Konflikte in
+Decisions/Doku dort lösen, nicht in `main`.
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
+### L-024 | 2026-06-04 | Commit-Noise durch generierte Dateien
+
+**Fehlermuster:** Unerwünschte Diff-Zeilen in Commits: `backend/config/reference.php` (nach
+`composer install`) und `frontend/tsconfig.tsbuildinfo` (nach `tsc`).
+**Root Cause:** Tooling schreibt generierte Dateien ins Repo-Arbeitsverzeichnis; `git add -A` oder
+breites Staging nimmt sie mit.
+**Regel:** Vor Commit gezielt `git checkout --` / aus dem Stage entfernen für bekannte
+Generator-Artefakte; nur beabsichtigte Pfade stagen. Bei wiederholtem Auftreten: `.gitignore`/
+Pre-Commit-Hook prüfen (separates WP).
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
+### L-025 | 2026-06-04 | WSL-Host – Python-venv ohne ensurepip (PEP 668)
+
+**Fehlermuster:** `python3 -m venv .venv` scheitert (`ensurepip is not available` / kein
+`python3-venv`); `pip install --user` verlangt `--break-system-packages` (PEP 668).
+**Root Cause:** Minimal-WSL-Images ohne `python3-venv`/`python3-full`; System-Python als
+„externally managed“ markiert.
+**Regel:** Agent-Tests/venv auf dem Pi oder in einem vollständigen Python-Image ausführen; unter
+WSL2 für lokale Agent-Entwicklung `sudo apt install python3-venv python3-full` oder dediziertes
+venv außerhalb des System-Pythons. Nicht blind `--break-system-packages` in CI/Prod-Skripten.
+**Vorkommen:** 1
+**Status:** Aktiv

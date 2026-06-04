@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Added
+- **Flash-/Provisioning-Station (Reader-Station):** ESP32 per USB am Pi erkennen, registrierte
+  sha256-geprüfte Firmware flashen, Status live per Polling verfolgen.
+- **Backend – Modul `Provisioning`:** Entities `DetectedDevice` / `FlashArtifact` / `FlashJob`;
+  sieben additive Endpunkte unter `/api/v1/provisioning/*` (Agent via `FLASH_AGENT_API_KEY`,
+  Web/Admin offen); ActivityLog-Audit; Console-Command `app:provisioning:register-artifact`.
+- **Flash-Agent (`firmware/flash_agent/`):** unprivilegierter Python-Host-Dienst (systemd) für
+  Geräte-Discovery, Chip-Detection und Flash via esptool; Chip-Whitelist, sha256-Verify,
+  Port-Lock; CLI `detect` / `flash --dry-run` / `run`.
+- **Frontend:** Seite „Reader-Station" mit Live-Geräteliste (Polling), Flash-Dialog mit
+  Chip-Mismatch-Sperre und Job-Fortschritt.
+- **CI:** Job „Flash-Agent (Python)" (`py_compile` + `pytest`).
+
 ## [0.4.0] – 2026-06-03 — Audio-Extractor + ESP32-Reader-Provisioning
 
 > Erster Tag mit dem Audio-Extractor. Liefert alles seit `v0.3.2` aus: Audio-Extractor,

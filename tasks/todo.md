@@ -56,6 +56,16 @@ L-020–L-022 (L-023/L-024 geplant). Starter v0.4.1: `docs/sprints/v0.4.1-r7-sta
 - [ ] Out of scope (offen): Quota/Größenlimit für `data/audio`; asynchrone Extraktion (Queue)
 - [ ] Aufräumen: Worktree `../SpotFamServ-audio-extractor` + Branch `feat/audio-extractor` (gemergt)
 
+## Feature: Flash-Station (Reader-Station) — Branch `feat/flash-station`
+Worktree: `../SpotFamServ-flash-station` · Plan: `tasks/plan-pi-flash-provisioning-station.md` ·
+Doku: `docs/flash-station-runbook.md` · D-021–D-025.
+- [x] Phasen 1–3 + CI (Flash-Agent Python-Job) — committed auf `feat/flash-station`
+- [ ] HW-0: PN532 löten + funktionaler Reader-Test (**D-022**, aus WSL2/Pi ohne Lötung blockiert)
+- [ ] Artefakt-Upload-UI (Registrierung heute nur `app:provisioning:register-artifact`)
+- [ ] Optional: SSE-Aufrüstung statt Polling (**D-023** revidiert MVP → Polling)
+- [ ] Plan-Phasen 4–6: Artefakt-Registry/CI-Artefakte, serielles Hersteller-Provisioning, Härtung
+- [ ] PR → Squash-Merge → Release-Tag (nach User-Freigabe)
+
 ## Bugs (GitHub)
 - [x] #18 Spotify-App-Credentials aus UI ignoriert → SpotifyCredentialsProvider. Gefixt v0.2.1.
 - [x] #20 Frontend auf Pi nie gebaut → CI-Image GHCR. Gefixt v0.2.2 (D-012/D-013).

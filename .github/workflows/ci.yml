@@ -134,6 +134,29 @@ jobs:
         working-directory: firmware/spotfam_pn532_probe
         run: arduino-cli compile --fqbn esp32:esp32:esp32 .
 
+  flash-agent:
+    name: Flash-Agent (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firmware/flash_agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: py_compile
+        run: python -m py_compile flash_agent/*.py tests/*.py
+
+      - name: pytest
+        run: python -m pytest tests -q
+
   api-drift:
     name: API-Drift (oasdiff)
     if: github.event_name == 'pull_request'
