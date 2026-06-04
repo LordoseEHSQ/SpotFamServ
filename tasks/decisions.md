@@ -476,3 +476,35 @@ Strom/Bricking.
   ESP32-ROM-Bootloader ist per normalem Flash nicht hart brickbar (Re-Flash moeglich) → im Runbook
   dokumentiert.
 **Status:** Accepted (autonom nach Dry-Run; User-Korrektur moeglich)
+
+---
+
+### D-026 | 2026-06-04 | Admin-Auth = Session-Login fuer gesamten Admin-Bereich
+
+**Kontext:** Web-/Admin-Endpunkte (inkl. Reader-Station) waren offen wie der restliche Admin-Bereich
+(projektweit offenes Auth-Thema). User-Entscheidung per AskQuestion (2026-06-04).
+**Entscheidungen (User):**
+- **Umfang:** gesamter Admin-Bereich geschuetzt (nicht nur Station).
+- **Mechanismus:** Symfony **Session-Login** (json_login) mit bestehendem `AdminUser`-Entity +
+  `app_admin_provider`; **ein Admin-Account**, Passwort aus Env beim Deploy gesetzt (`app:admin:upsert`).
+  Frontend bekommt Login-Seite + ProtectedRoute + 401-Handling (`credentials:'include'`).
+- **Maschinen-Endpunkte bleiben public** (eigene `X-API-Key`/OAuth-Logik): readers scan/next/previous,
+  claims/{code}/activate, firmware/manifest, provisioning-agent (detect, jobs/next, jobs/{id}/status),
+  spotify/callback, auth/login. Alles uebrige `^/api/v1` = `ROLE_ADMIN`.
+**Bewusst:** kein CSRF-Token (SameSite=Lax als Mitigation, Heim-LAN-Single-User); Single-Admin;
+kein Passwort-Reset-Flow. Nutzt vorhandene Security-Infra, keine neuen Dependencies.
+**Status:** Accepted (User, 2026-06-04)
+
+---
+
+### D-027 | 2026-06-04 | Authentifizierter Firmware-Upload ueber Web (revidiert D-025-Upload-Verbot)
+
+**Kontext:** D-025/Gate C verbot freien Firmware-Upload ueber Web (Backdoor-Risiko). User will
+Upload-Komfort. Aufloesung: Upload nur **authentifiziert** (setzt D-026 voraus).
+**Entscheidung (User):** `POST /api/v1/provisioning/artifacts` (multipart), **ROLE_ADMIN only**.
+Server validiert/sanitisiert Dateiname, Groessenlimit, legt in `FIRMWARE_DIR` ab, berechnet
+sha256+Groesse, registriert `FlashArtifact`. Logik mit `RegisterArtifactCommand` geteilt (UseCase).
+**Begruendung/Abgrenzung:** Kein „beliebiges Flashen" — der Agent prueft weiterhin Chip-Match + sha256
+vor dem Flash (D-025 fuer den Agent unveraendert). Damit ist die Backdoor geschlossen (nur eingeloggte
+Admins, serverseitige Validierung, Agent-seitige Gegenpruefung).
+**Status:** Accepted (User, 2026-06-04) — revidiert das Web-Upload-Verbot aus D-025.
