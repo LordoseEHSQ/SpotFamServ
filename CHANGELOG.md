@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.5.5] – 2026-06-04 — Fix: nginx-Body-Limit für Firmware-Upload
+
+### Fixed
+- **Firmware-Upload scheiterte mit HTTP 413:** nginx hatte kein `client_max_body_size`
+  (Default 1 MB), Firmware-Artefakte sind aber bis 8 MB groß. Upload (Web-UI **und** API)
+  war dadurch faktisch unmöglich. `client_max_body_size 16m` ergänzt; das App-Limit
+  (`FIRMWARE_UPLOAD_MAX_BYTES` = 8 MB) bleibt die harte Grenze.
+
 ## [0.5.4] – 2026-06-04 — Fix: Provisioning Jobs-Routing-Kollision
 
 ### Fixed
