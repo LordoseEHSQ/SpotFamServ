@@ -92,10 +92,16 @@ fi
 
 # 10) Migrationen (idempotent: nur ausstehende)
 log "Migrationen"
-docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction
+docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction </dev/null
+
+# 10b) Messenger-Transport-Tabelle deterministisch anlegen (D-032; idempotent). Sonst legt
+#      sie der Worker erst beim ersten Konsum lazy an. Vor dem Worker-Konsum ausfuehren.
+log "Messenger setup-transports"
+docker compose exec -T app php bin/console messenger:setup-transports --no-interaction </dev/null || \
+  log "WARN – messenger:setup-transports fehlgeschlagen (Worker legt Tabelle ggf. lazy an)."
 
 # 11) Cache leeren
-docker compose exec -T app php bin/console cache:clear >/dev/null 2>&1 || true
+docker compose exec -T app php bin/console cache:clear >/dev/null 2>&1 </dev/null || true
 
 # 12) Healthcheck
 CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$HEALTH_URL" || echo 000)"

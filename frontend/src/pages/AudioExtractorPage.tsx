@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  Download, AudioLines, AlertTriangle, Loader2, Trash2, RefreshCw, FileAudio,
+  Download, AudioLines, AlertTriangle, Loader2, Trash2, RefreshCw, FileAudio, X, CheckCircle2, Clock,
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useAudioExtractorConfig, useAudioFiles, useExtractAudio,
-  useDeleteAudioFile, useUpdateEngine,
+  useDeleteAudioFile, useUpdateEngine, useAudioJobs, useCancelAudioJob,
+  audioExtractorKeys,
 } from '@/hooks/useAudioExtractor';
-import type { StoredAudioFileDto } from '@/api/endpoints/audioExtractor';
+import type { StoredAudioFileDto, AudioJobDto, AudioJobStatus } from '@/api/endpoints/audioExtractor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,17 +31,43 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+const JOB_STATUS: Record<AudioJobStatus, { label: string; variant: 'muted' | 'info' | 'success' | 'destructive' }> = {
+  pending: { label: 'In Warteschlange', variant: 'muted' },
+  running: { label: 'Läuft', variant: 'info' },
+  done: { label: 'Fertig', variant: 'success' },
+  failed: { label: 'Fehlgeschlagen', variant: 'destructive' },
+  canceled: { label: 'Abgebrochen', variant: 'muted' },
+};
+
 export function AudioExtractorPage() {
   const { data: config } = useAudioExtractorConfig();
   const { data: filesData, isLoading: filesLoading } = useAudioFiles();
+  const { data: jobsData } = useAudioJobs();
   const extract = useExtractAudio();
   const deleteFile = useDeleteAudioFile();
   const updateEngine = useUpdateEngine();
+  const cancelJob = useCancelAudioJob();
+  const queryClient = useQueryClient();
 
   const [url, setUrl] = useState('');
   const [format, setFormat] = useState('mp3');
   const [bitrate, setBitrate] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<StoredAudioFileDto | null>(null);
+
+  const jobs = jobsData?.items ?? [];
+
+  // When a job finishes, the stored-files list has a new entry – refresh it once. We track the
+  // set of done job ids to only invalidate on an actual pending/running → done transition.
+  const seenDone = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const freshlyDone = jobs.some((j) => j.status === 'done' && !seenDone.current.has(j.id));
+    jobs.forEach((j) => {
+      if (j.status === 'done') seenDone.current.add(j.id);
+    });
+    if (freshlyDone) {
+      queryClient.invalidateQueries({ queryKey: audioExtractorKeys.files() });
+    }
+  }, [jobs, queryClient]);
 
   const selectedFormat = config?.formats.find((f) => f.value === format);
   const showBitrate = selectedFormat?.supports_bitrate ?? false;
@@ -172,12 +200,12 @@ export function AudioExtractorPage() {
                   {extract.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Extrahiere… (kann bis zu einigen Minuten dauern)
+                      Wird eingereiht…
                     </>
                   ) : (
                     <>
                       <Download className="h-4 w-4" />
-                      Extrahieren & speichern
+                      In Warteschlange stellen
                     </>
                   )}
                 </Button>
@@ -191,6 +219,27 @@ export function AudioExtractorPage() {
               </form>
             </CardContent>
           </Card>
+
+          {jobs.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Warteschlange</CardTitle>
+                <CardDescription>
+                  Extraktionen laufen im Hintergrund. Der Status aktualisiert sich automatisch.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {jobs.map((job) => (
+                  <JobRow
+                    key={job.id}
+                    job={job}
+                    onCancel={() => cancelJob.mutate(job.id)}
+                    cancelDisabled={cancelJob.isPending}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="pb-3">
@@ -285,6 +334,67 @@ export function AudioExtractorPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function JobRow({
+  job,
+  onCancel,
+  cancelDisabled,
+}: {
+  job: AudioJobDto;
+  onCancel: () => void;
+  cancelDisabled: boolean;
+}) {
+  const status = JOB_STATUS[job.status];
+  const isActive = job.status === 'pending' || job.status === 'running';
+
+  return (
+    <div className="rounded-md border px-3 py-2.5 text-sm">
+      <div className="flex items-center gap-2">
+        {job.status === 'running' && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
+        {job.status === 'pending' && <Clock className="h-4 w-4 text-muted-foreground shrink-0" />}
+        {job.status === 'done' && <CheckCircle2 className="h-4 w-4 text-success shrink-0" />}
+        {(job.status === 'failed' || job.status === 'canceled') && (
+          <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
+        )}
+        <span className="font-mono text-xs uppercase text-muted-foreground shrink-0">{job.format}</span>
+        <span className="truncate flex-1 text-muted-foreground" title={job.url}>{job.url}</span>
+        <Badge variant={status.variant} className="shrink-0">{status.label}</Badge>
+        {job.status === 'pending' && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 shrink-0"
+            title="Abbrechen"
+            onClick={onCancel}
+            disabled={cancelDisabled}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        {job.status === 'done' && job.download_url && (
+          <a href={job.download_url} download className="shrink-0">
+            <Button variant="ghost" size="sm" className="h-7" title="Herunterladen">
+              <Download className="h-3.5 w-3.5" />
+            </Button>
+          </a>
+        )}
+      </div>
+
+      {isActive && (
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${job.status === 'pending' ? 0 : Math.max(5, job.progress)}%` }}
+          />
+        </div>
+      )}
+
+      {job.status === 'failed' && job.error && (
+        <p className="mt-1.5 text-xs text-destructive break-words">{job.error}</p>
+      )}
     </div>
   );
 }

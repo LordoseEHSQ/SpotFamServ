@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Module\AudioExtractor\Application;
 
 use App\Module\AudioExtractor\Application\ExtractAudio;
+use App\Module\AudioExtractor\Application\MediaRequestValidator;
 use App\Module\AudioExtractor\Application\Port\AudioStorageInterface;
 use App\Module\AudioExtractor\Application\Port\MediaExtractorInterface;
 use App\Module\AudioExtractor\Domain\AudioFormat;
@@ -31,7 +32,13 @@ class ExtractAudioTest extends TestCase
         int $maxTotalBytes = PHP_INT_MAX,
         ?LockFactory $locks = null,
     ): ExtractAudio {
-        return new ExtractAudio($extractor, $storage, $locks ?? new LockFactory(new InMemoryStore()), $maxTotalBytes);
+        return new ExtractAudio(
+            new MediaRequestValidator(),
+            $extractor,
+            $storage,
+            $locks ?? new LockFactory(new InMemoryStore()),
+            $maxTotalBytes,
+        );
     }
 
     private function storedFile(): StoredAudioFile

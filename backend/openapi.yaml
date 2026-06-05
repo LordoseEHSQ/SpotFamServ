@@ -92,7 +92,39 @@ paths:
           description: ''
   /api/v1/audio-extractor/extract:
     post:
+      summary: "Enqueue an extraction. The work runs in the background worker, so this returns\nimmediately with 202 + job_id (changed from the old synchronous 201, D-032). The\nclient polls GET /jobs/{id} for progress and the result file."
       operationId: post_api_audio_extractor_extract
+      responses:
+        default:
+          description: ''
+  /api/v1/audio-extractor/jobs:
+    get:
+      operationId: get_api_audio_extractor_jobs_list
+      responses:
+        default:
+          description: ''
+  '/api/v1/audio-extractor/jobs/{id}':
+    get:
+      operationId: get_api_audio_extractor_jobs_get
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        default:
+          description: ''
+    delete:
+      operationId: delete_api_audio_extractor_jobs_cancel
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         default:
           description: ''

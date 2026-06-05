@@ -4,25 +4,35 @@ declare(strict_types=1);
 
 namespace App\Tests\Module\AudioExtractor\Infrastructure\Http;
 
-use App\Module\AudioExtractor\Application\ExtractAudio;
+use App\Module\AudioExtractor\Application\CancelAudioJob;
+use App\Module\AudioExtractor\Application\CreateAudioJob;
+use App\Module\AudioExtractor\Application\MediaRequestValidator;
 use App\Module\AudioExtractor\Application\Port\AudioStorageInterface;
 use App\Module\AudioExtractor\Application\Port\MediaEngineInterface;
-use App\Module\AudioExtractor\Application\Port\MediaExtractorInterface;
 use App\Module\AudioExtractor\Application\UpdateEngine;
-use App\Module\AudioExtractor\Domain\ExtractedAudio;
 use App\Module\AudioExtractor\Domain\StoredAudioFile;
 use App\Module\AudioExtractor\Infrastructure\Http\AudioExtractorController;
 use App\Shared\Application\Exception\NotFoundException;
+use App\Tests\Module\AudioExtractor\Support\InMemoryAudioJobRepository;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\Store\InMemoryStore;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 class AudioExtractorControllerTest extends TestCase
 {
     /** @var list<string> */
     private array $tmpFiles = [];
+
+    private InMemoryAudioJobRepository $jobs;
+
+    protected function setUp(): void
+    {
+        $this->jobs = new InMemoryAudioJobRepository();
+    }
 
     protected function tearDown(): void
     {
@@ -35,19 +45,26 @@ class AudioExtractorControllerTest extends TestCase
     }
 
     private function controller(
-        MediaExtractorInterface $extractor,
         AudioStorageInterface $storage,
         MediaEngineInterface $engine,
     ): AudioExtractorController {
         $locks = new LockFactory(new InMemoryStore());
 
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->method('dispatch')->willReturnCallback(
+            static fn (object $message): Envelope => new Envelope($message),
+        );
+
+        $validator = new MediaRequestValidator();
+
         return new AudioExtractorController(
-            new ExtractAudio($extractor, $storage, $locks, PHP_INT_MAX),
+            new CreateAudioJob($validator, $this->jobs, $bus),
+            new CancelAudioJob($this->jobs),
+            $this->jobs,
             $storage,
             $engine,
             new UpdateEngine($engine, $locks),
             1800,
-            240,
         );
     }
 
@@ -67,7 +84,6 @@ class AudioExtractorControllerTest extends TestCase
     public function test_config_reports_formats_and_engine_version(): void
     {
         $controller = $this->controller(
-            $this->createMock(MediaExtractorInterface::class),
             $this->createMock(AudioStorageInterface::class),
             $this->engine('2026.06.01'),
         );
@@ -78,15 +94,13 @@ class AudioExtractorControllerTest extends TestCase
         $this->assertSame('2026.06.01', $data['engine_version']);
     }
 
-    public function test_extract_returns_201_with_stored_file(): void
+    public function test_extract_enqueues_job_and_returns_202(): void
     {
-        $extractor = $this->createMock(MediaExtractorInterface::class);
-        $extractor->method('extract')->willReturn(new ExtractedAudio('/tmp/job.mp3', 'song.mp3', 'audio/mpeg'));
-
+        // Storage is irrelevant here: extraction is async, so the controller must never touch it.
         $storage = $this->createMock(AudioStorageInterface::class);
-        $storage->expects($this->once())->method('store')->willReturn($this->storedFile('song.mp3'));
+        $storage->expects($this->never())->method('store');
 
-        $controller = $this->controller($extractor, $storage, $this->engine());
+        $controller = $this->controller($storage, $this->engine());
 
         $request = Request::create(
             '/api/v1/audio-extractor/extract',
@@ -96,10 +110,42 @@ class AudioExtractorControllerTest extends TestCase
         );
         $response = $controller->extract($request);
 
-        $this->assertSame(201, $response->getStatusCode());
+        $this->assertSame(202, $response->getStatusCode());
         $data = json_decode((string) $response->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        $this->assertSame('song.mp3', $data['name']);
-        $this->assertStringContainsString('/audio-extractor/files/song.mp3', $data['download_url']);
+        $this->assertNotEmpty($data['id']);
+        $this->assertSame('pending', $data['status']);
+        $this->assertSame('mp3', $data['format']);
+        $this->assertSame(256, $data['bitrate_kbps']);
+        $this->assertNull($data['result_file']);
+        // The job is now retrievable via the status API.
+        $this->assertNotNull($this->jobs->findById($data['id']));
+    }
+
+    public function test_extract_with_invalid_url_is_422_and_creates_no_job(): void
+    {
+        $controller = $this->controller($this->createMock(AudioStorageInterface::class), $this->engine());
+
+        $request = Request::create(
+            '/api/v1/audio-extractor/extract',
+            'POST',
+            [], [], [], [],
+            (string) json_encode(['url' => 'ftp://example.com/v', 'format' => 'mp3']),
+        );
+
+        try {
+            $controller->extract($request);
+            $this->fail('Expected an InvalidMediaRequestException.');
+        } catch (\App\Module\AudioExtractor\Domain\InvalidMediaRequestException) {
+            $this->assertSame([], $this->jobs->recent());
+        }
+    }
+
+    public function test_get_unknown_job_is_404(): void
+    {
+        $controller = $this->controller($this->createMock(AudioStorageInterface::class), $this->engine());
+
+        $this->expectException(NotFoundException::class);
+        $controller->getJob('00000000-0000-0000-0000-000000000000');
     }
 
     public function test_list_files_returns_items_and_total(): void
@@ -108,11 +154,7 @@ class AudioExtractorControllerTest extends TestCase
         $storage->method('list')->willReturn([$this->storedFile('a.mp3'), $this->storedFile('b.wav')]);
         $storage->method('totalSizeBytes')->willReturn(246);
 
-        $controller = $this->controller(
-            $this->createMock(MediaExtractorInterface::class),
-            $storage,
-            $this->engine(),
-        );
+        $controller = $this->controller($storage, $this->engine());
 
         $data = json_decode((string) $controller->listFiles()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         $this->assertCount(2, $data['items']);
@@ -129,11 +171,7 @@ class AudioExtractorControllerTest extends TestCase
         $storage = $this->createMock(AudioStorageInterface::class);
         $storage->method('absolutePath')->with('song.mp3')->willReturn($tmp);
 
-        $controller = $this->controller(
-            $this->createMock(MediaExtractorInterface::class),
-            $storage,
-            $this->engine(),
-        );
+        $controller = $this->controller($storage, $this->engine());
 
         $response = $controller->downloadFile('song.mp3');
         $this->assertInstanceOf(BinaryFileResponse::class, $response);
@@ -145,11 +183,7 @@ class AudioExtractorControllerTest extends TestCase
         $storage = $this->createMock(AudioStorageInterface::class);
         $storage->method('absolutePath')->willReturn(null);
 
-        $controller = $this->controller(
-            $this->createMock(MediaExtractorInterface::class),
-            $storage,
-            $this->engine(),
-        );
+        $controller = $this->controller($storage, $this->engine());
 
         $this->expectException(NotFoundException::class);
         $controller->downloadFile('ghost.mp3');
@@ -160,11 +194,7 @@ class AudioExtractorControllerTest extends TestCase
         $storage = $this->createMock(AudioStorageInterface::class);
         $storage->method('delete')->with('song.mp3')->willReturn(true);
 
-        $controller = $this->controller(
-            $this->createMock(MediaExtractorInterface::class),
-            $storage,
-            $this->engine(),
-        );
+        $controller = $this->controller($storage, $this->engine());
 
         $this->assertSame(204, $controller->deleteFile('song.mp3')->getStatusCode());
     }
@@ -174,11 +204,7 @@ class AudioExtractorControllerTest extends TestCase
         $storage = $this->createMock(AudioStorageInterface::class);
         $storage->method('delete')->willReturn(false);
 
-        $controller = $this->controller(
-            $this->createMock(MediaExtractorInterface::class),
-            $storage,
-            $this->engine(),
-        );
+        $controller = $this->controller($storage, $this->engine());
 
         $this->expectException(NotFoundException::class);
         $controller->deleteFile('ghost.mp3');
@@ -189,11 +215,7 @@ class AudioExtractorControllerTest extends TestCase
         $engine = $this->createMock(MediaEngineInterface::class);
         $engine->expects($this->once())->method('update')->willReturn('2026.06.03');
 
-        $controller = $this->controller(
-            $this->createMock(MediaExtractorInterface::class),
-            $this->createMock(AudioStorageInterface::class),
-            $engine,
-        );
+        $controller = $this->controller($this->createMock(AudioStorageInterface::class), $engine);
 
         $data = json_decode((string) $controller->update()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame('2026.06.03', $data['engine_version']);

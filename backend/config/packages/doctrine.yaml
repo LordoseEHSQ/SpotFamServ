@@ -53,6 +53,10 @@ doctrine:
                 type: attribute
                 dir: '%kernel.project_dir%/src/Module/System/Domain'
                 prefix: 'App\Module\System\Domain'
+            AudioExtractor:
+                type: attribute
+                dir: '%kernel.project_dir%/src/Module/AudioExtractor/Domain'
+                prefix: 'App\Module\AudioExtractor\Domain'
 
 when@test:
     doctrine:
