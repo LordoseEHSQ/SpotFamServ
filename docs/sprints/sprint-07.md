@@ -1,6 +1,6 @@
 # Sprint 7 – Audio-Extraktor: Refactor, Warteschlange, Quellen/Formate
 
-**Milestone:** Sprint 07 – Audio-Extraktor (Refactor, Queue, Quellen/Formate) (#8) · **Status:** Code complete (CI/PR + Pi-Deploy ausstehend)
+**Milestone:** Sprint 07 – Audio-Extraktor (Refactor, Queue, Quellen/Formate) (#8) · **Status:** PR #73 offen, **CI grün** (Squash-Merge + Pi-Deploy + Tag v0.7.0 ausstehend)
 **Ziel-Release:** `v0.7.0`
 **Branch:** `feat/sprint-07-audio-refactor` · **Worktree:** `../SpotFamServ-sprint-07`
 **Zeitraum:** 2026-06-05
@@ -45,7 +45,7 @@ kein Spotify-/DRM-Ripping.
 | Backend grün (PHPStan L8/lint:container/PHPUnit) | ✅ | volle Suite **183** Tests, PHPStan L8 0 Fehler, Container lint OK |
 | Frontend grün (tsc/vitest/build) | ✅ | – |
 | OpenAPI additiv (3 neue Pfade, 0 entfernt) | ✅ | lokal regeneriert; 201→202 unkritisch (Spec hatte nur `default`-Responses) |
-| CI grün | ⏳ | erst mit PR (GitHub Actions: Backend, Frontend, oasdiff, Trivy, ESP32-Compile) |
+| CI grün | ✅ | PR #73: Backend 8.4/8.5, Frontend, **oasdiff (additiv)**, Trivy, ESP32-Compile, Flash-Agent, Web-Image |
 | Migrationen gegen echte DB | ⏳ | `audio_job` + `messenger_messages` nur statisch geprüft; Laufzeit erst beim Pi-Deploy |
 | v0.6.0-Migration (`system_configuration`) auf Pi verifiziert | ⏳ | offen aus Sprint 06; Closeout-Schritt |
 | Tag v0.7.0 | ⏳ | nach CI grün + Squash-Merge |
