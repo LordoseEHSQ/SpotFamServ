@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Shared\Infrastructure\Http;
 
+use App\Module\AudioExtractor\Domain\ExtractorBusyException;
 use App\Module\AudioExtractor\Domain\InvalidMediaRequestException;
 use App\Module\AudioExtractor\Domain\MediaExtractionFailedException;
+use App\Module\AudioExtractor\Domain\StorageQuotaExceededException;
 use App\Module\SetupWizard\Domain\Exception\StepValidationException;
 use App\Module\Spotify\Domain\Exception\SpotifyApiException;
 use App\Module\Spotify\Domain\Exception\SpotifyNoDeviceException;
@@ -37,6 +39,8 @@ final class ExceptionSubscriber implements EventSubscriberInterface
         StepValidationException::class       => Response::HTTP_UNPROCESSABLE_ENTITY,
         InvalidMediaRequestException::class  => Response::HTTP_UNPROCESSABLE_ENTITY,
         MediaExtractionFailedException::class => Response::HTTP_BAD_GATEWAY,
+        ExtractorBusyException::class        => Response::HTTP_CONFLICT,
+        StorageQuotaExceededException::class => Response::HTTP_INSUFFICIENT_STORAGE,
     ];
 
     public static function getSubscribedEvents(): array

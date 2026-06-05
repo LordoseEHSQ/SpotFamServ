@@ -7,6 +7,7 @@ namespace App\Module\AudioExtractor\Infrastructure\Http;
 use App\Module\AudioExtractor\Application\ExtractAudio;
 use App\Module\AudioExtractor\Application\Port\AudioStorageInterface;
 use App\Module\AudioExtractor\Application\Port\MediaEngineInterface;
+use App\Module\AudioExtractor\Application\UpdateEngine;
 use App\Module\AudioExtractor\Domain\AudioFormat;
 use App\Module\AudioExtractor\Domain\StoredAudioFile;
 use App\Shared\Application\Exception\NotFoundException;
@@ -35,6 +36,7 @@ final class AudioExtractorController
         private readonly ExtractAudio $extractAudio,
         private readonly AudioStorageInterface $storage,
         private readonly MediaEngineInterface $engine,
+        private readonly UpdateEngine $updateEngine,
         private readonly int $maxDurationSeconds = 1800,
         private readonly int $timeoutSeconds = 240,
     ) {
@@ -126,7 +128,7 @@ final class AudioExtractorController
     public function update(): JsonResponse
     {
         set_time_limit(180);
-        $version = $this->engine->update();
+        $version = ($this->updateEngine)();
 
         return new JsonResponse(['engine_version' => $version]);
     }

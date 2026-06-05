@@ -8,6 +8,7 @@ use App\Module\AudioExtractor\Application\ExtractAudio;
 use App\Module\AudioExtractor\Application\Port\AudioStorageInterface;
 use App\Module\AudioExtractor\Application\Port\MediaEngineInterface;
 use App\Module\AudioExtractor\Application\Port\MediaExtractorInterface;
+use App\Module\AudioExtractor\Application\UpdateEngine;
 use App\Module\AudioExtractor\Domain\ExtractedAudio;
 use App\Module\AudioExtractor\Domain\StoredAudioFile;
 use App\Module\AudioExtractor\Infrastructure\Http\AudioExtractorController;
@@ -15,6 +16,8 @@ use App\Shared\Application\Exception\NotFoundException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 
 class AudioExtractorControllerTest extends TestCase
 {
@@ -36,10 +39,13 @@ class AudioExtractorControllerTest extends TestCase
         AudioStorageInterface $storage,
         MediaEngineInterface $engine,
     ): AudioExtractorController {
+        $locks = new LockFactory(new InMemoryStore());
+
         return new AudioExtractorController(
-            new ExtractAudio($extractor, $storage),
+            new ExtractAudio($extractor, $storage, $locks, PHP_INT_MAX),
             $storage,
             $engine,
+            new UpdateEngine($engine, $locks),
             1800,
             240,
         );

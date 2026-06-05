@@ -150,6 +150,11 @@ final class YtDlpFfmpegExtractor implements MediaExtractorInterface, MediaEngine
             return null;
         }
 
+        // Deterministic pick: the unique job-id prefix already scopes the match to this
+        // job, but a source may yield more than one file. Return the most recently
+        // written one (newest mtime) instead of glob()'s arbitrary first entry.
+        usort($matches, static fn (string $a, string $b): int => (filemtime($b) ?: 0) <=> (filemtime($a) ?: 0));
+
         return $matches[0];
     }
 

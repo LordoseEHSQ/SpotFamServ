@@ -76,6 +76,15 @@ services:
     App\Module\AudioExtractor\Infrastructure\Storage\FilesystemAudioStorage:
         arguments:
             $storageDir: '%audio_extractor.storage_dir%'
+    # Extraktion + Engine-Update teilen denselben Lock (Concurrency=1 + yt-dlp-U-Race, D-033)
+    # und das harte Storage-Quota (D-034). LockFactory wird via framework.lock autowired.
+    App\Module\AudioExtractor\Application\ExtractAudio:
+        arguments:
+            $maxTotalBytes: '%audio_extractor.max_total_bytes%'
+            $lockTtlSeconds: '%audio_extractor.lock_ttl_seconds%'
+    App\Module\AudioExtractor\Application\UpdateEngine:
+        arguments:
+            $lockTtlSeconds: '%audio_extractor.lock_ttl_seconds%'
     App\Module\AudioExtractor\Infrastructure\Http\AudioExtractorController:
         arguments:
             $maxDurationSeconds: '%audio_extractor.max_duration_seconds%'

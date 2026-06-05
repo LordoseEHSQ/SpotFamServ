@@ -6,9 +6,16 @@ parameters:
     audio_extractor.ytdlp_binary_default: '/opt/yt-dlp/yt-dlp'
     # Persistenter Ablageort der extrahierten Dateien (Host-Verzeichnis, ins Backend gemountet).
     audio_extractor.storage_dir_default: '%kernel.project_dir%/var/audio'
+    # Hartes Storage-Quota (Sprint 07 / D-034): Gesamtgroesse des gemeinsamen Audio-Bereichs.
+    # Default 2 GiB; im Worker/UseCase durchgesetzt (Pre- und Post-Check), nicht am Request.
+    audio_extractor.max_total_bytes_default: 2147483648
+    # Lock-Lebensdauer (flock ignoriert TTL; relevant nur fuer store-agnostische Korrektheit).
+    audio_extractor.lock_ttl_seconds_default: 3600
 
     # Harte Schutzgrenzen gegen blockierte php-fpm-Worker (Plan R1).
     audio_extractor.timeout_seconds: '%env(int:default:audio_extractor.timeout_seconds_default:AUDIO_EXTRACTOR_TIMEOUT_SECONDS)%'
     audio_extractor.max_duration_seconds: '%env(int:default:audio_extractor.max_duration_seconds_default:AUDIO_EXTRACTOR_MAX_DURATION_SECONDS)%'
     audio_extractor.ytdlp_binary: '%env(default:audio_extractor.ytdlp_binary_default:AUDIO_EXTRACTOR_YTDLP_BINARY)%'
     audio_extractor.storage_dir: '%env(default:audio_extractor.storage_dir_default:AUDIO_EXTRACTOR_STORAGE_DIR)%'
+    audio_extractor.max_total_bytes: '%env(int:default:audio_extractor.max_total_bytes_default:AUDIO_EXTRACTOR_MAX_TOTAL_BYTES)%'
+    audio_extractor.lock_ttl_seconds: '%env(int:default:audio_extractor.lock_ttl_seconds_default:AUDIO_EXTRACTOR_LOCK_TTL_SECONDS)%'
