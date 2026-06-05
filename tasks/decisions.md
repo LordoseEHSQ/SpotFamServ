@@ -567,7 +567,10 @@ Env/`secrets.h` bleiben in B/C funktionale Fallbacks (kein Bruch). **Status:** A
 
 ---
 
-### D-032 | 2026-06-05 | Phase C: vendored NVS-Generator, Injektions-Gate, NVS-Key-Vertrag
+### D-036 | 2026-06-05 | Phase C: vendored NVS-Generator, Injektions-Gate, NVS-Key-Vertrag
+
+> Hinweis: ursprünglich als D-032 vergeben, umnummeriert auf D-036, weil der Sprint-07-Plan
+> D-032…D-035 bereits reserviert (Messenger-Queue etc.). Vermeidet Nummern-Kollision beim Merge.
 
 **Kontext:** Phase C (Flash-Zeit-NVS-Injektion). User-Entscheidungen 2026-06-05:
 vendored NVS-Generator (kein Pip-Dep auf dem Pi), C jetzt bauen, Verifikation per Read-back.

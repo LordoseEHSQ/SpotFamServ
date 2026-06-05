@@ -91,9 +91,9 @@ D-029 = **eine** typisierte `SystemConfiguration`-Entity; D-030 Maschinen-Keys *
 - [x] C: Flash-Zeit-NVS-Injektion. C1: `GET /api/v1/provisioning/reader-config` (Agent-Auth, env-kanonischer
       Reader-Key). C2: **vendored NVS-Generator** (`flash_agent/nvs.py`) – byte-genau == esp-idf-Tool verifiziert
       (0 Diff), + Parser. C2b: Agent holt Config, generiert NVS, flasht @0x9000, **Read-back-Verify**;
-      gated über Config-Vollständigkeit + `INJECT_READER_CONFIG`. C3 (per-Job-UI-Flag) zurückgestellt (D-032).
+      gated über Config-Vollständigkeit + `INJECT_READER_CONFIG`. C3 (per-Job-UI-Flag) zurückgestellt (D-036).
       Verifiziert: PHPStan L8 ✓, lint:container ✓, PHPUnit 37 ✓, pytest 69 ✓, OpenAPI additiv ✓.
-      Offen/HW: echtes Geräte-Read erst mit Phase-D-Firmware (D-031/D-032).
+      Offen/HW: echtes Geräte-Read erst mit Phase-D-Firmware (D-031/D-036).
 - [ ] D: Reader-Firmware NVS-first → WLAN-Join + self-claim (Empfehlung: zurückstellen bis PN532)
 - [ ] E: realer RFID-E2E (HW-0/D-022-blockiert)
 

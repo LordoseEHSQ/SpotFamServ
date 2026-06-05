@@ -1,6 +1,46 @@
 # Changelog
 
-## [Unreleased]
+## [Unreleased] — Sprint 06: Reader-Station UX + System-Config-DB + Flash-Zeit-NVS (Ziel-Tag `v0.6.0`)
+
+> Scope = Phase **A + B + C**. Phase D (NVS-first-Firmware) + E (realer RFID-E2E) sind bewusst
+> zurückgestellt bis zur PN532-Firmware-Migration (D-031), um den Config-Layer nur einmal zu schreiben.
+
+### Added
+- **Systemweite Konfiguration in der DB** (`system_configuration`-Singleton, D-029): WLAN-SSID/-Passwort
+  (verschlüsselt), Backend-URL, OTA-Kanal, Frontend-URL. Endpunkte `GET/PUT /api/v1/system/configuration`
+  (ROLE_ADMIN, GET ohne Secrets). Provider liest **DB-then-env je Feld** (kein Bruch bestehender Deploys).
+  Frontend: „Reader-Netzwerk & System"-Card in der System-Seite mit Passwort-Maskierung + Env-Quell-Banner.
+- **Flash-Zeit-NVS-Injektion** (Phase C): `GET /api/v1/provisioning/reader-config` (Flash-Agent-Auth) liefert
+  WLAN/Backend-URL/OTA-Kanal/Reader-Key. Flash-Agent generiert nach erfolgreichem Firmware-Flash eine
+  NVS-Partition und flasht sie @`0x9000`, inkl. **Read-back-Verify** (esptool read-flash → Re-Parse).
+- **Vendored NVS-Generator** (`firmware/flash_agent/flash_agent/nvs.py`): getreue String-/Namespace-Teilmenge
+  von esp-idf `nvs_partition_gen.py`, **byte-genau == offizielles Tool** (0 Diff-Bytes, gegen-getestet), kein
+  Pip-Dependency auf dem Pi. NVS-Key-Vertrag (Namespace `spotfam`): `wifi_ssid`/`wifi_pass`/`backend_url`/
+  `ota_channel`/`reader_key` (D-036).
+
+### Changed
+- `SpotifyOAuthController` bezieht die Frontend-URL nun aus dem `SystemConfigurationProvider` (DB-then-env)
+  statt aus einem fixen Service-Argument.
+- `ReaderFirmwareController` ermittelt den OTA-Default-Kanal dynamisch aus der System-Config statt hartem `stable`.
+
+### Fixed
+- **Provisioning-UI Chip-Match**: familienbasierter Abgleich (`chipMatch.ts`) statt strikter String-Vergleich →
+  keine False-Positive-Blocks mehr (z. B. „ESP32-D0WD-V3" vs. „esp32"); volle `chipDescription` in Warnungen.
+- **`flashSize`-Typ**: Frontend behandelte `flashSize` als `number`, Backend liefert `string` (z. B. „4MB").
+- **Flash-Dialog-Overflow**: breiterer Dialog, strukturierte Geräte-Identität (Key-Value-Grid), Truncation/Tooltips.
+- Neues **„aktuell erkanntes Gerät"-Panel** über der Geräte-Tabelle.
+
+### Decisions
+- D-028 (NVS-Injektion als primärer Config-Pfad), D-029 (Single `SystemConfiguration`-Entity),
+  D-030 (Maschinen-Keys bleiben env-kanonisch), D-031 (Phase D/E zurückgestellt),
+  D-036 (vendored NVS-Generator + Injektions-Gate statt per-Job-UI-Flag + NVS-Key-Vertrag).
+
+### Bekannte Grenzen / offen
+- **Migration nicht gegen echte DB ausgeführt** (nur statisch via PHPStan/lint geprüft) — Laufzeit erst bei Deploy.
+- **Read-back-Verify ist struktur-/CRC-konsistent, nicht geräte-autoritativ**: dass der ESP das NVS tatsächlich
+  *liest*, ist erst mit der NVS-fähigen Reader-Firmware (Phase D / PN532) prüfbar.
+- Per-Job-UI-Checkbox „Config mitflashen" zurückgestellt (vermeidet 2. `provisioning_flash_job`-Migration);
+  Steuerung über System-Config-Vollständigkeit + Agent-Flag `INJECT_READER_CONFIG`.
 
 ## [0.5.8] – 2026-06-05 — Fix: UI-Versionsanzeige (Footer hing auf 0.4.0)
 

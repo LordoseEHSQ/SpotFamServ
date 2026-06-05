@@ -384,3 +384,20 @@ End-to-End-Pfad auf der Ziel-Plattform** einmal real durchlief (hier: Upload →
 Definition of Done, nicht in einen späteren „Betrieb"-Schritt.
 **Vorkommen:** 1
 **Status:** Aktiv
+
+---
+
+### L-030 | 2026-06-05 | Tests – volle Suite beim Closeout, nicht nur geänderte Module
+
+**Fehlermuster:** Beim Sprint-06-Abschluss brach die **volle** Backend-Suite mit 3 Fehlern
+(`ReaderFirmwareControllerTest`: `ArgumentCountError` – Controller hatte einen neuen Konstruktor
+bekommen, der Test instanziierte ihn noch ohne Argumente). Während der Implementierung wurden nur
+die **Teilmengen** `tests/Module/System` + `tests/Module/Provisioning` ausgeführt → grün, der
+Regressionstest blieb unentdeckt; wäre erst in der GitHub-CI rot geworden.
+**Root Cause:** Signatur-Änderungen (Konstruktor/Methoden) an bestehenden Services brechen Tests
+**außerhalb** des geänderten Moduls. Eine modul-gescopte Testausführung sieht das nicht.
+**Regel:** Vor „Done"/PR **immer die komplette** Test-Suite laufen lassen (`phpunit` ohne Pfad-Filter),
+besonders nach Konstruktor-/Signatur-Änderungen an Klassen mit mehreren Konsumenten. Modul-Scope nur
+für schnelle Iteration, nie als Abschlussgate.
+**Vorkommen:** 1
+**Status:** Aktiv
