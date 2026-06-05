@@ -190,8 +190,13 @@ Ziel-Tag setzen (ohne führendes „v"), committen, DANN taggen. Footer ist sons
 Deploy-Indikator – stattdessen Bundle-Hash / sichtbare UI-Features prüfen.
 **Behebung:** Mit Release `v0.2.5` `frontend/package.json` auf `0.2.5` gebumpt → Footer stimmt wieder.
 Release-Checkliste (package.json-Bump vor Tag) ist damit etabliert.
-**Vorkommen:** 1
-**Status:** Behoben
+**Wiederholung (2026-06-05):** Der manuelle Bump wurde über v0.5.0–v0.5.7 vergessen → Footer hing auf
+`0.4.0`. Daraus **strukturell behoben (v0.5.8):** `__APP_VERSION__` wird zur Build-Zeit aus dem
+Release-Tag abgeleitet (`release-web-image.yml --build-arg APP_VERSION=<tag>` → Dockerfile `ENV` →
+`vite.config.ts` bevorzugt `APP_VERSION` vor `package.json`). Manueller Bump ist damit kein
+Release-Blocker mehr; `package.json` bleibt nur lokaler Fallback.
+**Vorkommen:** 2
+**Status:** Behoben (strukturell, v0.5.8)
 
 ---
 
