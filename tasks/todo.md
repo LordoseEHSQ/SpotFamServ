@@ -97,14 +97,20 @@ D-029 = **eine** typisierte `SystemConfiguration`-Entity; D-030 Maschinen-Keys *
 - [ ] D: Reader-Firmware NVS-first → WLAN-Join + self-claim (Empfehlung: zurückstellen bis PN532)
 - [ ] E: realer RFID-E2E (HW-0/D-022-blockiert)
 
-## Sprint 07 (GEPLANT) – Audio-Extraktor: Refactor, Warteschlange, Quellen/Formate
+## Sprint 07 (IN ARBEIT) – Audio-Extraktor: Refactor, Warteschlange, Quellen/Formate
 Plan: `tasks/plan-sprint-07-audio-extractor-refactor.md` · Starter: `docs/sprints/sprint-07-starter.md`.
-Eigener frischer Chat (GATE). Entscheidungen D-032…D-035 zu bestätigen.
+Branch: `feat/sprint-07-audio-refactor` · Worktree: `../SpotFamServ-sprint-07`. Eigener frischer Chat (GATE).
+Entscheidungen **D-032…D-035 bestätigt** (User, 2026-06-05) inkl. Review-Deltas (oasdiff additiv statt
+ignore, Retry=0, Quota im Worker, Lock als Update-Race-Guard, SSRF dokumentiert akzeptiert).
+Release-Strategie: **ein v0.7.0** (alle Phasen) — vorher v0.6.0-`system_configuration`-Migration auf Pi verifizieren.
 Harte Grenze: kein Spotify-/DRM-Ripping (nur legale/DRM-freie Quellen).
-- [ ] A: Stabilität (R7-Entrypoint, Quota, Concurrency, Output-Handling)
-- [ ] B: Async-Queue (Messenger+Doctrine, AudioJob, 202+job_id, Worker-Service, Polling-UI)
-- [ ] C: Formate (opus/flac/m4a/aac) + geführte legale Quelltypen
-- [ ] D: Observability + Doku
+- [x] A (#69): Stabilität (R7-Entrypoint=D-021, Quota im Worker, Lock=Update-Race-Guard, findOutputFile deterministisch)
+- [x] B (#70): Async-Queue (Messenger+Doctrine-Transport, AudioJob+Migration, 202+job_id, /jobs-API, Worker-Service, Polling-UI)
+- [x] C (#71): Formate (opus/flac/m4a/aac) + geführte legale Quelltypen
+- [x] D (#72): Observability (Job-Lifecycle-Logs + Fehlercodes) + Doku (CHANGELOG/sprint-07/decisions/lessons/PROJECT_MAP/Runbook)
+- [ ] Closeout: volle Suite lokal grün (**183**, PHPStan L8, lint:container) → CI/PR `Closes #69-72`, oasdiff additiv, v0.6.0-`system_configuration`-Migration auf Pi verifizieren, v0.7.0-Tag → Pi-Deploy
+- [ ] BLOCKIEREND (User): PR-CI grün abwarten; Pi-Deploy (neuer messenger-worker-Service + messenger:setup-transports + gestapelte Migrationen)
+- [ ] RISIKO: drei gestapelte Migrationen (v0.6.0 system_configuration noch nie real auf Pi + audio_job + messenger_messages); Deploy-Reihenfolge `up -d` vor `migrate` (L-015) → 500-/Crash-Fenster einplanen
 
 ## Bugs (GitHub)
 - [x] #18 Spotify-App-Credentials aus UI ignoriert → SpotifyCredentialsProvider. Gefixt v0.2.1.

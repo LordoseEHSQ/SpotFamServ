@@ -1,0 +1,7 @@
+parameters:
+    # Single-Host (Pi): file-based flock reicht (kein Redis). Default-Param, damit der
+    # Stack ohne gesetztes LOCK_DSN bootet (es gibt kein committetes backend/.env – L-020).
+    app.lock_dsn_default: 'flock'
+
+framework:
+    lock: '%env(default:app.lock_dsn_default:LOCK_DSN)%'

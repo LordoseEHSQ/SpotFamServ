@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace App\Module\AudioExtractor\Infrastructure\Http;
 
+use App\Module\AudioExtractor\Application\CancelAudioJob;
+use App\Module\AudioExtractor\Application\CreateAudioJob;
 use App\Module\AudioExtractor\Application\ExtractAudio;
+use App\Module\AudioExtractor\Application\Port\AudioJobRepositoryInterface;
 use App\Module\AudioExtractor\Application\Port\AudioStorageInterface;
 use App\Module\AudioExtractor\Application\Port\MediaEngineInterface;
+use App\Module\AudioExtractor\Application\UpdateEngine;
 use App\Module\AudioExtractor\Domain\AudioFormat;
+use App\Module\AudioExtractor\Domain\AudioJob;
 use App\Module\AudioExtractor\Domain\StoredAudioFile;
 use App\Shared\Application\Exception\NotFoundException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -20,7 +25,10 @@ use Symfony\Component\Routing\Attribute\Route;
 /**
  * Audio-Extractor endpoints (normal feature, always on):
  *  - GET    /config              formats, bitrates, limits, current engine version.
- *  - POST   /extract             extract a URL → persist into the user area (JSON).
+ *  - POST   /extract             enqueue an extraction job (async) → 202 + job_id.
+ *  - GET    /jobs                list recent jobs.
+ *  - GET    /jobs/{id}           single job status/result/error.
+ *  - DELETE /jobs/{id}           cancel a still-pending job.
  *  - GET    /files               list stored files + total size.
  *  - GET    /files/{name}        download a stored file.
  *  - DELETE /files/{name}        delete a stored file.
@@ -32,11 +40,13 @@ use Symfony\Component\Routing\Attribute\Route;
 final class AudioExtractorController
 {
     public function __construct(
-        private readonly ExtractAudio $extractAudio,
+        private readonly CreateAudioJob $createAudioJob,
+        private readonly CancelAudioJob $cancelAudioJob,
+        private readonly AudioJobRepositoryInterface $jobs,
         private readonly AudioStorageInterface $storage,
         private readonly MediaEngineInterface $engine,
+        private readonly UpdateEngine $updateEngine,
         private readonly int $maxDurationSeconds = 1800,
-        private readonly int $timeoutSeconds = 240,
     ) {
     }
 
@@ -55,12 +65,14 @@ final class AudioExtractorController
         ]);
     }
 
+    /**
+     * Enqueue an extraction. The work runs in the background worker, so this returns
+     * immediately with 202 + job_id (changed from the old synchronous 201, D-032). The
+     * client polls GET /jobs/{id} for progress and the result file.
+     */
     #[Route(path: '/extract', name: 'extract', methods: ['POST'])]
     public function extract(Request $request): JsonResponse
     {
-        // The extraction runs synchronously; give PHP headroom over the subprocess timeout.
-        set_time_limit($this->timeoutSeconds + 60);
-
         /** @var array<string, mixed> $body */
         $body = $request->getContent() === '' ? [] : $request->toArray();
 
@@ -70,9 +82,34 @@ final class AudioExtractorController
             ? (int) $body['bitrate_kbps']
             : null;
 
-        $stored = ($this->extractAudio)($url, $format, $bitrate);
+        $job = ($this->createAudioJob)($url, $format, $bitrate);
 
-        return new JsonResponse($this->fileToArray($stored), Response::HTTP_CREATED);
+        return new JsonResponse($this->jobToArray($job), Response::HTTP_ACCEPTED);
+    }
+
+    #[Route(path: '/jobs', name: 'jobs_list', methods: ['GET'])]
+    public function listJobs(): JsonResponse
+    {
+        return new JsonResponse([
+            'items' => array_map($this->jobToArray(...), $this->jobs->recent()),
+        ]);
+    }
+
+    #[Route(path: '/jobs/{id}', name: 'jobs_get', methods: ['GET'])]
+    public function getJob(string $id): JsonResponse
+    {
+        $job = $this->jobs->findById($id);
+        if ($job === null) {
+            throw new NotFoundException('Job not found.');
+        }
+
+        return new JsonResponse($this->jobToArray($job));
+    }
+
+    #[Route(path: '/jobs/{id}', name: 'jobs_cancel', methods: ['DELETE'])]
+    public function cancelJob(string $id): JsonResponse
+    {
+        return new JsonResponse($this->jobToArray(($this->cancelAudioJob)($id)));
     }
 
     #[Route(path: '/files', name: 'files_list', methods: ['GET'])]
@@ -98,11 +135,7 @@ final class AudioExtractorController
         // Set Content-Type explicitly: BinaryFileResponse otherwise tries to guess via the
         // symfony/mime component, which is not installed (would throw a 500 on prepare()).
         $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-        $response->headers->set('Content-Type', match ($extension) {
-            'mp3' => 'audio/mpeg',
-            'wav' => 'audio/wav',
-            default => 'application/octet-stream',
-        });
+        $response->headers->set('Content-Type', AudioFormat::tryFrom($extension)?->mimeType() ?? 'application/octet-stream');
         $response->setContentDisposition(
             ResponseHeaderBag::DISPOSITION_ATTACHMENT,
             basename($path),
@@ -126,9 +159,33 @@ final class AudioExtractorController
     public function update(): JsonResponse
     {
         set_time_limit(180);
-        $version = $this->engine->update();
+        $version = ($this->updateEngine)();
 
         return new JsonResponse(['engine_version' => $version]);
+    }
+
+    /**
+     * @return array{id: string, url: string, format: string, bitrate_kbps: int|null, status: string, progress: int, error: string|null, result_file: string|null, download_url: string|null, created_at: string, updated_at: string}
+     */
+    private function jobToArray(AudioJob $job): array
+    {
+        $resultFile = $job->getResultFile();
+
+        return [
+            'id' => $job->getId(),
+            'url' => $job->getUrl(),
+            'format' => $job->getFormat(),
+            'bitrate_kbps' => $job->getBitrateKbps(),
+            'status' => $job->getStatus(),
+            'progress' => $job->getProgress(),
+            'error' => $job->getError(),
+            'result_file' => $resultFile,
+            'download_url' => $resultFile !== null
+                ? '/api/v1/audio-extractor/files/' . rawurlencode($resultFile)
+                : null,
+            'created_at' => $job->getCreatedAt()->format(\DateTimeInterface::ATOM),
+            'updated_at' => $job->getUpdatedAt()->format(\DateTimeInterface::ATOM),
+        ];
     }
 
     /**

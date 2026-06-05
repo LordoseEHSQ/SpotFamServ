@@ -2,6 +2,44 @@
 
 ## [Unreleased]
 
+### Sprint 07 – Audio-Extraktor: Refactor, Warteschlange, Quellen/Formate (Code complete, Ziel `v0.7.0`)
+
+#### Added
+- **Asynchrone Extraktions-Warteschlange** (D-032): `POST /api/v1/audio-extractor/extract` reiht jetzt
+  einen `AudioJob` ein und antwortet **202 + `job_id`** statt php-fpm bis zu ~5 min zu blockieren.
+  Verarbeitung via **Symfony Messenger** (Doctrine-Transport). Job-Status-API: `GET /jobs`,
+  `GET /jobs/{id}`, `DELETE /jobs/{id}` (best-effort Cancel nur für `pending`).
+- **Dedizierter Worker-Service** (`messenger-worker`, D-033): genau **ein** Konsument
+  (`messenger:consume async`) → serielle Extraktion; `--time-limit`/`--memory-limit` gegen Leaks,
+  `restart: unless-stopped`. `max_retries: 0` (deterministische Fehler landen als `status=failed`).
+- **Polling-UI**: Warteschlangen-Card mit Live-Status/Progress/Abbrechen/Download (2s-Polling,
+  stoppt automatisch, sobald alle Jobs terminal sind); Datei-Liste aktualisiert sich bei `done`.
+- **Storage-Quota** (D-034): zweistufig im Worker erzwungen (vor Download + nach Speichern mit
+  Rollback) → **507** bei Überschreitung.
+- **Concurrency/Update-Race-Lock** (D-033): `symfony/lock` (flock) – eine Extraktion **oder** ein
+  `yt-dlp -U` zur Zeit; zweiter Zugriff → **409**.
+- **R7-Entrypoint** (D-034): `docker-entrypoint.sh` chownt `/data/audio` self-healing auf `www-data`
+  (uid 82) beim Container-Start (idempotent, fail-safe).
+- **Neue Formate** (D-035): `opus`, `flac`, `m4a`, `aac` (zusätzlich zu mp3/wav). Bitrate nur für
+  verlustbehaftete Codecs (mp3/opus/m4a/aac); wav/flac verwerfen sie.
+- **Geführte legale Quelltypen** (UI-Guidance): YouTube-CC, Direktdateien, Podcast-RSS,
+  Internet Archive, Public Domain. Backend erzwingt Legalität **nicht** (SSRF-Allow-List bewusst
+  abgelehnt, Single-Tenant) – Verantwortung beim Nutzer.
+- **Observability**: Job-Lifecycle-Logs (start/done/failed inkl. Dauer; Host statt voller URL),
+  Fehlercodes 409/507/422/502/404 zentral gemappt.
+
+#### Changed
+- **API-Vertrag (bewusst, Single-Tenant):** `POST /extract` 201 → **202**. Kein oasdiff-Breaking
+  (Spec hatte nur `default`-Responses); `/jobs`-Pfade sind additiv. Frontend ist mit umgestellt.
+- `pi-deploy.sh`: `messenger:setup-transports` vor Worker-Konsum; schwacher `chmod 0777`-Block für
+  `/data/audio` entfernt (Entrypoint übernimmt Rechte). `docker compose exec` mit `</dev/null` (L-024).
+- `AudioJob` vergibt seine UUID selbst im Konstruktor (`Uuid::v7()`, wie `ActivityLog`) → sofort
+  dispatch- und unit-testbar.
+- `findOutputFile` wählt deterministisch die neueste Datei (mtime) statt `glob()`-Reihenfolge.
+
+#### Dependencies
+- `symfony/messenger`, `symfony/doctrine-messenger`, `symfony/lock` (`^7.4`, Stack-konform).
+
 ## [0.6.0] – 2026-06-05 — Sprint 06: Reader-Station UX + System-Config-DB + Flash-Zeit-NVS
 
 > Scope = Phase **A + B + C**. Phase D (NVS-first-Firmware) + E (realer RFID-E2E) sind bewusst

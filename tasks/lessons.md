@@ -399,5 +399,49 @@ Regressionstest blieb unentdeckt; wäre erst in der GitHub-CI rot geworden.
 **Regel:** Vor „Done"/PR **immer die komplette** Test-Suite laufen lassen (`phpunit` ohne Pfad-Filter),
 besonders nach Konstruktor-/Signatur-Änderungen an Klassen mit mehreren Konsumenten. Modul-Scope nur
 für schnelle Iteration, nie als Abschlussgate.
+**Vorkommen:** 2 (Sprint 06 `ReaderFirmwareControllerTest`; Sprint 07 `ExtractAudioTest`-Helper nach
+Validator-Injektion in `ExtractAudio`-Konstruktor)
+**Status:** Aktiv
+
+---
+
+### L-031 | 2026-06-05 | Tooling – `composer require` im Container: falsche Constraint + root-Ownership
+
+**Fehlermuster:** `composer require symfony/lock` (im app-Container) schrieb `^8.1` in `composer.json`,
+obwohl der Stack auf Symfony **7.4** steht (gelockt wurde korrekt `v7.4.x`) – Constraint und Lock
+divergierten. Zusätzlich gehörten alle erzeugten Dateien (`config/*.yaml`, `vendor/`, `composer.lock`)
+danach **root**, der Host-User konnte nicht mehr schreiben.
+**Root Cause:** Composer wählt ohne Pin die höchste passende Major-Range; der Container läuft als root.
+**Regel:** Neue Symfony-Komponenten **stack-konform pinnen** (`"7.4.*"` bzw. `^7.4`) und `composer.json`
+nach `require` prüfen; nach Container-Composer-Läufen `chown -R $(id -u):$(id -g)` auf die berührten
+Pfade. Danach `composer update --lock` zum Re-Sync des Hashes.
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
+### L-032 | 2026-06-05 | Tooling – lokale PHP-Version (8.3) < Stack (≥8.4): Tests im Stack-Container fahren
+
+**Fehlermuster:** `php vendor/bin/phpunit` lokal brach mit `platform_check.php`-Fatal
+(„requires PHP >= 8.4.0, running 8.3.6"). Außerdem scheiterte der Bootstrap am fehlenden `.env`.
+**Root Cause:** Der SpotFamServ-Stack läuft hier nicht (nur fremde Container, nur `docker-compose` v1);
+lokal ist PHP 8.3, der Stack will 8.5.6.
+**Regel:** Backend-Tests/PHPStan in einem **Wegwerf-Container** mit der Stack-PHP-Version fahren
+(`docker run --rm -e APP_ENV=test -v "$PWD":/app -w /app php:8.5.6-cli-alpine …`) und das **CI-Setup
+spiegeln** (`cp .env.example .env`, `APP_ENV=test`). Container schreibt root → danach Ownership fixen.
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
+### L-033 | 2026-06-05 | API – 201→202 ist nur Breaking, wenn die Spec den Code deklariert
+
+**Fehlermuster:** Sorge, der Statuscode-Wechsel `POST /extract` 201→202 sei ein oasdiff-Breaking und
+brauche `err-ignore`. Tatsächlich deklarierte die nelmio-generierte `openapi.yaml` nur eine
+`default`-Response (kein explizites `201`) → kein Vertragsbruch.
+**Root Cause:** `nelmio:apidoc:dump` erzeugt ohne explizite OA-Attribute nur generische
+`default`-Responses; oasdiff vergleicht deklarierte Codes, nicht reale.
+**Regel:** Vor „Breaking-Change-Panik" die **tatsächliche Spec** prüfen (`grep` auf den Pfad/Code),
+nicht annehmen. Blind-Ignore (`err-ignore`) ist tabu; stattdessen Spec regenerieren und Diff ansehen.
 **Vorkommen:** 1
 **Status:** Aktiv

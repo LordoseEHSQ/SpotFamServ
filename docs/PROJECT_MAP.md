@@ -17,10 +17,12 @@ Frontend = React/Vite SPA (nginx, gleicher Origin, `/api/v1`).
 - `backend/` — Symfony 7.4 / PHP 8.5. Modulstruktur unter `backend/src/Module/`:
   - `Scan/` — RFID-Scan + Reader-Control (next/prev), PlaybackSessionStore.
   - `Spotify/` — OAuth, API-Client, Playback, Device-Discovery.
+  - `AudioExtractor/` — yt-dlp/ffmpeg-Extraktion, **async** via Messenger (`AudioJob`, `/extract`→202+job_id,
+    `/jobs`-Status-API, Worker `messenger-worker`). Quota+Lock (D-033/D-034), Formate mp3/wav/opus/flac/m4a/aac.
   - (+ Profile/RFID/Setup/Device-Endpunkte). Routen: `php bin/console debug:router`.
-- `frontend/` — React SPA (Profile, RFID-Bindings, Spotify-Setup, Devices, Activity).
+- `frontend/` — React SPA (Profile, RFID-Bindings, Spotify-Setup, Devices, Activity, Audio-Extraktor mit Job-Polling).
 - `firmware/spotfam_reader/` — ESP32-Sketch (`.ino`), `config.h` (Pins), `secrets.h` (git-ignoriert).
-- `docker/` — nginx + postgres-Init. `docker-compose.yml` — Stack (app/nginx/db).
+- `docker/` — nginx + postgres-Init. `docker-compose.yml` — Stack (app/messenger-worker/nginx/db).
 - `docs/` — `pi-deployment.md` (Pi-Specs+Runbook), `SPOTIFY_INTEGRATION.md`, `sprints/`, dieses Map.
 - `tasks/` — `plan-*.md` (Pläne), `lessons.md` (L-001..), `decisions.md` (D-*), `todo.md` (Working-Memory).
 - `.github/` — CI-Workflow, `ISSUE_TEMPLATE/` (work-package, bug).

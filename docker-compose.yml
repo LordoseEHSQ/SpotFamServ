@@ -28,6 +28,31 @@ services:
     networks:
       - spotfam
 
+  # Async-Extraktions-Worker (D-032/D-033): genau EIN Prozess konsumiert die Doctrine-Queue,
+  # damit Extraktionen seriell laufen. Gleiches Image wie app; der Entrypoint (R7) chownt
+  # /data/audio. --time-limit/--memory-limit gegen Memory-Leaks im langlebigen PHP-Prozess,
+  # restart: unless-stopped startet den Worker nach Time-/Memory-Limit-Exit neu.
+  messenger-worker:
+    restart: unless-stopped
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /var/www/html
+    command: ["php", "bin/console", "messenger:consume", "async", "--time-limit=3600", "--memory-limit=128M", "--limit=50", "-v"]
+    volumes:
+      - ./backend:/var/www/html
+      - ${AUDIO_STORAGE_HOST_DIR:-./data/audio}:/data/audio
+    environment:
+      - DATABASE_URL=postgresql://spotfam:spotfam@db:5432/spotfam
+      - APP_ENV=${APP_ENV:-dev}
+      - APP_SECRET=${APP_SECRET:-change-me-in-env}
+      - AUDIO_EXTRACTOR_STORAGE_DIR=/data/audio
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - spotfam
+
   nginx:
     restart: unless-stopped
     # Web-Image (SPA + default.conf) wird in CI gebaut und aus GHCR gezogen (D-012/D-013).

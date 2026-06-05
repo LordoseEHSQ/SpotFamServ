@@ -48,16 +48,13 @@ git checkout -f "$LATEST_TAG"
 #    kommt aus GHCR. WEB_IMAGE_TAG bindet das Image an den deployten v*-Tag.
 export WEB_IMAGE_TAG="$LATEST_TAG"
 
-# 5b) Audio-Extractor (R7): Persistenz-Verzeichnis muss fuer den Container-User www-data
-#     (uid 82) beschreibbar sein. Sonst legt Docker den Bind-Mount root-owned an und die
-#     Extraktion bricht zur Laufzeit (Healthcheck bemerkt das nicht, da er nur /profiles prueft).
-#     Idempotent; chmod gelingt, wenn der Deploy-User das frisch angelegte Verzeichnis besitzt –
-#     andernfalls laut warnen statt unter set -e still abzubrechen.
+# 5b) Audio-Extractor (R7/D-021): Die Schreibrechte auf das Persistenz-Verzeichnis stellt jetzt
+#     der App-Image-Entrypoint (`backend/docker-entrypoint.sh`, chown www-data bei jedem Start)
+#     sicher – idempotent, self-healing, im selben Deploy wirksam. Der frueher hier stehende
+#     `chmod 0777`-Block ist entfernt (scheiterte am root-eigenen Dir + Ein-Deploy-Versatz, L-023).
+#     `mkdir -p` bleibt nur, damit der Bind-Mount-Quellpfad deterministisch existiert.
 AUDIO_DIR="${AUDIO_STORAGE_HOST_DIR:-$REPO_DIR/data/audio}"
 mkdir -p "$AUDIO_DIR"
-if ! chmod 0777 "$AUDIO_DIR" 2>/dev/null; then
-  log "WARN – Rechte auf $AUDIO_DIR nicht setzbar (Besitzer?). Audio-Extraktion evtl. nicht schreibbar; manuell: 'sudo chown 82:82 $AUDIO_DIR' oder 'sudo chmod 0777 $AUDIO_DIR'."
-fi
 
 # 6) App-Image bauen (nur bei relevanten Aenderungen; Backend baut weiterhin lokal)
 if [ "$need_build" = true ]; then
@@ -95,10 +92,16 @@ fi
 
 # 10) Migrationen (idempotent: nur ausstehende)
 log "Migrationen"
-docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction
+docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction </dev/null
+
+# 10b) Messenger-Transport-Tabelle deterministisch anlegen (D-032; idempotent). Sonst legt
+#      sie der Worker erst beim ersten Konsum lazy an. Vor dem Worker-Konsum ausfuehren.
+log "Messenger setup-transports"
+docker compose exec -T app php bin/console messenger:setup-transports --no-interaction </dev/null || \
+  log "WARN – messenger:setup-transports fehlgeschlagen (Worker legt Tabelle ggf. lazy an)."
 
 # 11) Cache leeren
-docker compose exec -T app php bin/console cache:clear >/dev/null 2>&1 || true
+docker compose exec -T app php bin/console cache:clear >/dev/null 2>&1 </dev/null || true
 
 # 12) Healthcheck
 CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$HEALTH_URL" || echo 000)"

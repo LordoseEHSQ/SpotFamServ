@@ -1,0 +1,27 @@
+parameters:
+    # Doctrine-Transport (kein Redis auf dem Pi, D-032). Default-Params, damit der Stack
+    # ohne gesetzte Env-Variablen bootet (kein committetes backend/.env – L-020).
+    # auto_setup=true: die messenger_messages-Tabelle wird beim ersten Setup/Send angelegt;
+    # im Deploy zusaetzlich `messenger:setup-transports` deterministisch ausgefuehrt.
+    messenger.transport_dsn_default: 'doctrine://default?queue_name=audio'
+    messenger.failed_transport_dsn_default: 'doctrine://default?queue_name=failed'
+
+framework:
+    messenger:
+        # Unerwartete Handler-Fehler (sollten dank Catch-im-Handler selten sein) landen hier
+        # statt verloren zu gehen. Der fachliche Fehlerpfad ist AudioJob.status=failed.
+        failure_transport: failed
+
+        transports:
+            async:
+                dsn: '%env(default:messenger.transport_dsn_default:MESSENGER_TRANSPORT_DSN)%'
+                # D-033: yt-dlp-Fehler sind meist deterministisch → kein Retry-Thrashing.
+                # Der Handler faengt Fehler und schreibt AudioJob.status=failed (einzige
+                # user-sichtbare Fehlerwahrheit).
+                retry_strategy:
+                    max_retries: 0
+            failed:
+                dsn: '%env(default:messenger.failed_transport_dsn_default:MESSENGER_FAILED_TRANSPORT_DSN)%'
+
+        routing:
+            'App\Module\AudioExtractor\Application\Message\ExtractAudioMessage': async
