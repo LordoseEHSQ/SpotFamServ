@@ -564,3 +564,28 @@ der laut D-018 ohnehin auf **PN532** migriert wird → Doppelarbeit am Config-La
 PN532-Firmware-Migration, damit der Config-Layer nur einmal geschrieben wird. Sprint-06-Scope = **A + B + C**.
 Env/`secrets.h` bleiben in B/C funktionale Fallbacks (kein Bruch). **Status:** Accepted
 (User-Empfehlung bestätigt, 2026-06-05).
+
+---
+
+### D-032 | 2026-06-05 | Phase C: vendored NVS-Generator, Injektions-Gate, NVS-Key-Vertrag
+
+**Kontext:** Phase C (Flash-Zeit-NVS-Injektion). User-Entscheidungen 2026-06-05:
+vendored NVS-Generator (kein Pip-Dep auf dem Pi), C jetzt bauen, Verifikation per Read-back.
+**Entscheidungen:**
+1. **NVS-Generator vendored** als getreue String-/Namespace-Teilmenge von esp-idf
+   `nvs_partition_gen.py` (`firmware/flash_agent/flash_agent/nvs.py`). **Korrektheit byte-genau
+   verifiziert**: Ausgabe == offizielles esp-idf-Tool (0 Diff-Bytes über alle Pages, 2026-06-05),
+   plus unabhängige CRC-Prüfung + Round-Trip-Parser.
+2. **Injektions-Gate statt per-Job-UI-Flag (Abweichung vom Plan-C3):** Ein per-Job-Checkbox
+   hätte eine **zweite Schema-Migration** auf `provisioning_flash_job` + breites Plumbing erfordert.
+   Stattdessen: Injektion gegated über (a) Config-Vollständigkeit im Backend (`reader-config.complete`)
+   und (b) Agent-Env-Flag `INJECT_READER_CONFIG` (Default an). Steuer-UI = die System-Card (Phase B).
+   Per-Job-Checkbox bleibt optionaler Follow-up.
+3. **NVS-Key-Vertrag** (Namespace `spotfam`, Keys ≤15 Byte) für die Phase-D-Firmware:
+   `wifi_ssid`, `wifi_pass`, `backend_url`, `ota_channel`, `reader_key`.
+4. **NVS-Offset/-Size**: Default `0x9000`/`0x5000` (ESP32-Arduino-Default-Partition), per Env
+   überschreibbar (`NVS_OFFSET`/`NVS_SIZE`), da offset zur Partitionstabelle der Firmware passen muss.
+**Status:** Accepted (User-Entscheidungen bestätigt, 2026-06-05).
+**Ehrliche Grenze:** Read-back-Verify (esptool read-flash → Re-Parse) ist struktur-/CRC-konsistent,
+aber **nicht geräte-autoritativ** – dass der ESP das NVS *liest*, ist erst mit der NVS-fähigen
+Reader-Firmware (Phase D / PN532) prüfbar.
