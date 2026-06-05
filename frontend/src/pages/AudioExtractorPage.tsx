@@ -31,6 +31,19 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * Guided legal source types (D-035). The backend does NOT enforce "legality" (an SSRF/host
+ * allow-list was deliberately declined for this single-tenant home setup), so this list is
+ * user guidance toward DRM-free / licensed sources – the responsibility stays with the user.
+ */
+const LEGAL_SOURCES: { label: string; hint: string; example: string }[] = [
+  { label: 'YouTube (Creative Commons)', hint: 'Nur als CC-BY lizenzierte Videos.', example: 'https://www.youtube.com/watch?v=…' },
+  { label: 'Direkte Audiodatei', hint: 'Frei zugängliche MP3/OGG/FLAC-Direktlinks.', example: 'https://example.org/track.mp3' },
+  { label: 'Podcast-RSS / Episode', hint: 'Öffentliche Podcast-Folgen mit Download.', example: 'https://feeds.example.org/…/episode.mp3' },
+  { label: 'Internet Archive', hint: 'Gemeinfreie / CC-Inhalte auf archive.org.', example: 'https://archive.org/details/…' },
+  { label: 'Public Domain', hint: 'Werke ohne Urheberrechtsschutz.', example: 'https://…' },
+];
+
 const JOB_STATUS: Record<AudioJobStatus, { label: string; variant: 'muted' | 'info' | 'success' | 'destructive' }> = {
   pending: { label: 'In Warteschlange', variant: 'muted' },
   running: { label: 'Läuft', variant: 'info' },
@@ -137,6 +150,21 @@ export function AudioExtractorPage() {
               Engine-Update fehlgeschlagen: {updateError}
             </p>
           )}
+
+          <details className="rounded-md border bg-card text-sm">
+            <summary className="cursor-pointer px-4 py-2.5 font-medium select-none">
+              Geeignete Quellen
+            </summary>
+            <ul className="space-y-2 border-t px-4 py-3">
+              {LEGAL_SOURCES.map((s) => (
+                <li key={s.label} className="space-y-0.5">
+                  <p className="font-medium">{s.label}</p>
+                  <p className="text-muted-foreground">{s.hint}</p>
+                  <code className="text-xs text-muted-foreground break-all">{s.example}</code>
+                </li>
+              ))}
+            </ul>
+          </details>
 
           <Card>
             <CardHeader>
