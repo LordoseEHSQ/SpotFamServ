@@ -2,9 +2,14 @@
 
 ## [Unreleased]
 
-### Sprint 07 – Audio-Extraktor: Refactor, Warteschlange, Quellen/Formate (Code complete, Ziel `v0.7.0`)
+_Keine unveröffentlichten Änderungen._
 
-#### Added
+## [0.7.0] – 2026-06-05 — Sprint 07: Audio-Extraktor: Refactor, Warteschlange, Quellen/Formate
+
+> Live auf dem Pi (tag-getriggerter Deploy, Health 200). Bekannte Folgepunkte: UI-Feedback bei
+> fehlgeschlagenen Jobs (Warteschlange/Toast) und Deploy-Crash-Loop-Härtung (L-034) → v0.7.1.
+
+### Added
 - **Asynchrone Extraktions-Warteschlange** (D-032): `POST /api/v1/audio-extractor/extract` reiht jetzt
   einen `AudioJob` ein und antwortet **202 + `job_id`** statt php-fpm bis zu ~5 min zu blockieren.
   Verarbeitung via **Symfony Messenger** (Doctrine-Transport). Job-Status-API: `GET /jobs`,
@@ -28,7 +33,7 @@
 - **Observability**: Job-Lifecycle-Logs (start/done/failed inkl. Dauer; Host statt voller URL),
   Fehlercodes 409/507/422/502/404 zentral gemappt.
 
-#### Changed
+### Changed
 - **API-Vertrag (bewusst, Single-Tenant):** `POST /extract` 201 → **202**. Kein oasdiff-Breaking
   (Spec hatte nur `default`-Responses); `/jobs`-Pfade sind additiv. Frontend ist mit umgestellt.
 - `pi-deploy.sh`: `messenger:setup-transports` vor Worker-Konsum; schwacher `chmod 0777`-Block für
@@ -37,7 +42,7 @@
   dispatch- und unit-testbar.
 - `findOutputFile` wählt deterministisch die neueste Datei (mtime) statt `glob()`-Reihenfolge.
 
-#### Dependencies
+### Dependencies
 - `symfony/messenger`, `symfony/doctrine-messenger`, `symfony/lock` (`^7.4`, Stack-konform).
 
 ## [0.6.0] – 2026-06-05 — Sprint 06: Reader-Station UX + System-Config-DB + Flash-Zeit-NVS
