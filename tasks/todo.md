@@ -72,6 +72,24 @@ Plan: `tasks/plan-pi-flash-provisioning-station.md` · Doku: `docs/flash-station
 - [ ] Optional: SSE-Aufrüstung statt Polling (**D-023** revidiert MVP → Polling)
 - [ ] Plan-Phasen 4–6: Artefakt-Registry/CI-Artefakte, serielles Hersteller-Provisioning, Härtung
 
+## Sprint 06 (GEPLANT) – Reader-Station-UX + Konfiguration in die DB
+Plan: `tasks/plan-sprint-06-reader-station-config-db.md` · Starter: `docs/sprints/sprint-06-starter.md`.
+Eigener frischer Chat (GATE). Entscheidungen D-028…D-031 zu bestätigen.
+- [ ] A: UX-Fixes (Chip-Match-Bug `ProvisioningPage.tsx:301`, Dialog-Overflow, Geräte-Panel, flashSize-Typ)
+- [ ] B: Systemeinstellungen erweitern (Reader-Netzwerk WLAN/Backend/OTA, Maschinen-Keys, Frontend-URL) – DB statt Secret/Env
+- [ ] C: Flash-Zeit-NVS-Injektion (Flash-Agent schreibt DB-Config als NVS)
+- [ ] D: Reader-Firmware NVS-first → WLAN-Join + self-claim nach Flash
+- [ ] E: realer RFID-E2E (HW-0/D-022-blockiert)
+
+## Sprint 07 (GEPLANT) – Audio-Extraktor: Refactor, Warteschlange, Quellen/Formate
+Plan: `tasks/plan-sprint-07-audio-extractor-refactor.md` · Starter: `docs/sprints/sprint-07-starter.md`.
+Eigener frischer Chat (GATE). Entscheidungen D-032…D-035 zu bestätigen.
+Harte Grenze: kein Spotify-/DRM-Ripping (nur legale/DRM-freie Quellen).
+- [ ] A: Stabilität (R7-Entrypoint, Quota, Concurrency, Output-Handling)
+- [ ] B: Async-Queue (Messenger+Doctrine, AudioJob, 202+job_id, Worker-Service, Polling-UI)
+- [ ] C: Formate (opus/flac/m4a/aac) + geführte legale Quelltypen
+- [ ] D: Observability + Doku
+
 ## Bugs (GitHub)
 - [x] #18 Spotify-App-Credentials aus UI ignoriert → SpotifyCredentialsProvider. Gefixt v0.2.1.
 - [x] #20 Frontend auf Pi nie gebaut → CI-Image GHCR. Gefixt v0.2.2 (D-012/D-013).
