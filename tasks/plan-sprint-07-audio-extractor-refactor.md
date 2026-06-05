@@ -1,7 +1,21 @@
 # Plan – Sprint 07: Audio-Extraktor – Refactor, Warteschlange, Quellen/Formate
 
-> Status: ENTWURF (Plan-vor-Code-GATE). Im Sprint-Chat prüfen, D-032…D-035 bestätigen, DANN umsetzen.
+> Status: **BESTÄTIGT (2026-06-05)** — D-032…D-035 vom User abgenommen inkl. Review-Deltas. Umsetzung läuft.
 > GitHub = SSoT (Milestone „Sprint 07").
+>
+> ## Review-Deltas (im Sprint-Chat 2026-06-05, gegen den Entwurf bestätigt)
+> - **oasdiff:** kein Breaking-Change-Phantom — generierte `openapi.yaml` deklariert für `/extract` nur
+>   `responses: default` (kein 201). 201→202 ist für oasdiff unsichtbar → **kein `err-ignore`**; Vertrag
+>   stattdessen additiv stärken (explizite 202 + `job_id` + `/jobs`). Echter Bruch = nur Frontend (selber PR).
+> - **Quota im Worker** durchgesetzt (Pre-/Post-Check), nicht am Request (Größe bei 202 unbekannt).
+> - **Messenger-Retry = 0/1**, `AudioJob.status` ist die einzige user-sichtbare Fehlerwahrheit.
+> - **Concurrency-Lock** als echter `yt-dlp -U`-vs-Extraktion-Race-Guard (nicht Wegwerf-Sync-Lock).
+> - **Per-Job-Timeout** neu (an `maxDurationSeconds` koppeln; 240s war php-fpm-Schutz, entfällt async).
+> - **SSRF:** interne-IP-Härtung bewusst NICHT gebaut (umgehbar) — Risiko dokumentiert akzeptiert
+>   (ROLE_ADMIN + Heim-LAN). Scheme bleibt http/https.
+> - **Release:** ein v0.7.0 (alle Phasen). **Vorab-Pflicht:** v0.6.0-`system_configuration`-Migration real
+>   auf dem Pi verifizieren (drei sonst gestapelte, ungeprüfte Migrationen — L-015-Deploy-Fenster einplanen).
+> - **R7:** `backend/docker-entrypoint.sh` existiert NICHT (v0.4.1 nie ausgeliefert) → D-021 wird hier real umgesetzt.
 
 ## Ziel
 1. Stabiler, eleganter Audio-Extraktor: blockiert keine php-fpm-Worker mehr, robust gegen

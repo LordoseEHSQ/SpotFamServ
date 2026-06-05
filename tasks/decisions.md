@@ -592,3 +592,73 @@ vendored NVS-Generator (kein Pip-Dep auf dem Pi), C jetzt bauen, Verifikation pe
 **Ehrliche Grenze:** Read-back-Verify (esptool read-flash → Re-Parse) ist struktur-/CRC-konsistent,
 aber **nicht geräte-autoritativ** – dass der ESP das NVS *liest*, ist erst mit der NVS-fähigen
 Reader-Firmware (Phase D / PN532) prüfbar.
+
+---
+
+### D-032 | 2026-06-05 | Sprint 07: Async-Queue via Symfony Messenger + Doctrine-Transport
+
+**Kontext:** Audio-Extraktor läuft synchron im php-fpm-Request (D-019/D-A), blockiert einen Worker
+bis ~5 min. Upgrade auf Async war als „später ohne API-Bruch (202 + Job-ID)" vorgesehen.
+**Optionen:** A) Redis-Transport (neuer Dienst auf dem Pi) · B) **Doctrine-Transport** (Doctrine ORM
+bereits vorhanden, kein neuer Dienst) · C) sync bleiben.
+**Entscheidung:** **B** – `symfony/messenger` + `symfony/doctrine-messenger`, Doctrine-Transport
+(`messenger_messages`-Tabelle). `POST /extract` → **202 + `job_id`**; `GET /jobs`, `GET /jobs/{id}`,
+`DELETE /jobs/{id}` (cancel). Polling-UI (~2–5 s, konsistent D-023).
+**Delta zum Plan (im Review bestätigt):** Der „201→202-Breaking-Change" ist **am oasdiff-Gate ein
+Phantom**: die generierte `openapi.yaml` deklariert für `/extract` nur `responses: default` (kein 201).
+oasdiff (`fail-on: ERR`) sieht den Wechsel nicht → **kein `err-ignore` nötig**. Saubere Strategie =
+Vertrag **stärken** (explizite 202 + `job_id` + `/jobs`-Endpoints annotieren, rein additiv). Echter
+Bruch trifft nur den **Frontend-Consumer** → wird im selben PR mitgezogen.
+**Begründung:** Entkoppelt Extraktion vom Request (php-fpm sofort frei), Standard-Symfony, kein Redis
+auf dem Pi. **Status:** Accepted (User, 2026-06-05).
+
+---
+
+### D-033 | 2026-06-05 | Sprint 07: Worker als Deploy-Service (ein Prozess) + Concurrency-Lock
+
+**Kontext:** Der Messenger-Worker (`messenger:consume`) ist ein langlebiger PHP-Prozess; Concurrency
+und Engine-Self-Update (`yt-dlp -U`) brauchen Schutz.
+**Entscheidung:**
+- **Genau ein Worker-Prozess** als eigener Compose-Service (`messenger:consume async --time-limit=3600
+  --memory-limit=128M`), `restart: unless-stopped`. Ein Prozess ⇒ **Serialität ohne separaten Lock**.
+- **Messenger-Retry = 0** (bzw. 1): yt-dlp-Fehler sind meist deterministisch (Video weg/Geo-Block) →
+  kein Thrashing. Der Handler fängt Fehler und schreibt `AudioJob.status=failed` als **einzige
+  user-sichtbare Wahrheit** (nicht Messengers Failure-Transport).
+- **Concurrency-Lock trotzdem gebaut (User-Wunsch `phaseA_lock=build`), aber als echter Guard**
+  (`symfony/lock`, Flock/Store): schützt die **`yt-dlp -U`-vs-laufende-Extraktion-Race** (Binary wird
+  sonst mitten im Lauf überschrieben) und Operator-Fehler (zweiter Worker/manuelles consume). **Nicht**
+  als Wegwerf-Sync-Lock.
+- **Per-Job-Timeout neu wählen:** der 240s-Wert war php-fpm-Schutz (entfällt im Async-Modell) →
+  an `maxDurationSeconds` (1800) koppeln, damit legitime längere CC-Inhalte/FLAC auf dem Pi 4B durchlaufen.
+**Status:** Accepted (User, 2026-06-05; Lock-Reframing autonom, Korrektur möglich).
+
+---
+
+### D-034 | 2026-06-05 | Sprint 07: Hartes Storage-Quota (im Worker) + R7-Entrypoint
+
+**Kontext:** Kein Quota (nur Anzeige), WAV/FLAC unbegrenzt; R7-Entrypoint nie ausgeliefert (v0.4.1
+geplant, aber nicht umgesetzt — `pi-deploy.sh`-`chmod 0777`-Block 5b noch aktiv).
+**Entscheidung:**
+- **R7-Entrypoint** (`backend/docker-entrypoint.sh`, chown `/data/audio`→www-data, idempotent,
+  self-healing, `exec docker-php-entrypoint`) gemäß Plan `plan-audio-extractor-r7.md`; ersetzt den
+  schwachen `pi-deploy.sh`-chmod (Block 5b entfernen). Übernimmt L-023/L-024, **D-021** wird damit
+  real umgesetzt.
+- **Hartes Quota** (Default ~2 GB, konfigurierbar) **im Worker durchgesetzt**, nicht am Request:
+  Pre-Check (Gesamtstand bereits über Limit → Job `failed`) + Post-Check (Ergebnis sprengt Limit →
+  Datei löschen, Job `failed` mit klarer Meldung). Request-Zeit-422 ist im Async-Modell konzeptionell
+  falsch (Größe bei 202 unbekannt).
+- `findOutputFile` deterministisch (neueste Datei / exakter Template-Match) statt `glob()[0]`.
+**Status:** Accepted (User, 2026-06-05; Durchsetzungspunkt-Korrektur autonom).
+
+---
+
+### D-035 | 2026-06-05 | Sprint 07: Formate erweitern + gef. legale Quelltypen (legal-only)
+
+**Kontext:** Nur mp3/wav exponiert; yt-dlp kann opus/flac/m4a/aac und viele legale Quellen.
+**Entscheidung:** `AudioFormat` um **opus, flac, m4a, aac** (ffmpeg-Postproc; Bitrate-Logik je Format,
+WAV/FLAC-Größenwarnung). Quell-UX: Hints/Validierung für Direkt-URL, YouTube, Podcast-RSS, Internet
+Archive; Hinweis „nur legale/DRM-freie Quellen". **Harte Grenze bleibt (D-019): kein Spotify/DRM-Ripping.**
+**SSRF (User `ssrf=accept`):** interne-IP-Härtung wird **bewusst nicht** gebaut (per Redirect ohnehin
+umgehbar); Risiko dokumentiert akzeptiert (Schutz = `ROLE_ADMIN` + Heim-LAN-Single-User). Scheme bleibt
+auf http/https beschränkt.
+**Status:** Accepted (User, 2026-06-05).
