@@ -42,6 +42,18 @@ class ProvisioningJob:
     artifact: JobArtifact
 
 
+@dataclass
+class ReaderConfig:
+    """Reader-Konfiguration für die Flash-Zeit-NVS-Injektion (Sprint 06 / C1)."""
+
+    wifi_ssid: str | None
+    wifi_password: str | None
+    backend_base_url: str | None
+    ota_channel: str
+    reader_api_key: str | None
+    complete: bool
+
+
 class BackendClient:
     """Duenner HTTP-Client fuer die Provisioning-API."""
 
@@ -146,6 +158,28 @@ class BackendClient:
             artifact.version,
         )
         return job
+
+    def get_reader_config(self) -> ReaderConfig:
+        """Holt die Reader-Konfiguration für die NVS-Injektion vom Backend.
+
+        Returns:
+            :class:`ReaderConfig` (Felder können None sein, ``complete`` zeigt Vollständigkeit).
+
+        Raises:
+            requests.RequestException: Bei Netz-/Verbindungsfehlern.
+        """
+        url = f"{self._base_url}/api/v1/provisioning/reader-config"
+        resp = self._session.get(url, timeout=self._timeout)
+        resp.raise_for_status()
+        body = resp.json()
+        return ReaderConfig(
+            wifi_ssid=body.get("wifiSsid"),
+            wifi_password=body.get("wifiPassword"),
+            backend_base_url=body.get("backendBaseUrl"),
+            ota_channel=str(body.get("otaChannel", "stable")),
+            reader_api_key=body.get("readerApiKey"),
+            complete=bool(body.get("complete", False)),
+        )
 
     def update_job_status(
         self,

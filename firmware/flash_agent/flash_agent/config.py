@@ -25,6 +25,13 @@ class Config:
     flash_baud: int = 460800
     log_level: str = "INFO"
 
+    # Flash-Zeit-NVS-Injektion (Sprint 06 / C2b). Offset/Size muessen zur Partitionstabelle
+    # der Firmware passen (ESP32-Arduino-Default: nvs @0x9000, size 0x5000).
+    inject_reader_config: bool = True
+    nvs_offset: int = 0x9000
+    nvs_size: int = 0x5000
+    nvs_namespace: str = "spotfam"
+
     @staticmethod
     def from_env() -> "Config":
         """Liest Konfiguration aus Umgebungsvariablen; wirft SystemExit bei Fehlern."""
@@ -65,11 +72,17 @@ class Config:
             if raw is None or raw.strip() == "":
                 return default
             try:
-                return int(raw)
+                return int(raw, 0)  # 0 = Auto-Basis (erlaubt 0x-Hex fuer Offsets)
             except ValueError:
                 raise SystemExit(
                     f"Umgebungsvariable {name} ist keine Ganzzahl: {raw!r}"
                 )
+
+        def _bool_env(name: str, default: bool) -> bool:
+            raw = os.environ.get(name)
+            if raw is None or raw.strip() == "":
+                return default
+            return raw.strip().lower() in ("1", "true", "yes", "on")
 
         return Config(
             backend_base_url=backend_base_url,
@@ -80,4 +93,8 @@ class Config:
             esptool_bin=os.environ.get("ESPTOOL_BIN", "esptool"),
             flash_baud=_int_env("FLASH_BAUD", 460800),
             log_level=os.environ.get("LOG_LEVEL", "INFO").upper(),
+            inject_reader_config=_bool_env("INJECT_READER_CONFIG", True),
+            nvs_offset=_int_env("NVS_OFFSET", 0x9000),
+            nvs_size=_int_env("NVS_SIZE", 0x5000),
+            nvs_namespace=os.environ.get("NVS_NAMESPACE", "spotfam"),
         )

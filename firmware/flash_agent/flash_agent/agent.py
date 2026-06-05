@@ -29,13 +29,103 @@ from typing import TextIO
 import requests
 
 from flash_agent.artifacts import ArtifactError, resolve, verify_sha256
-from flash_agent.backend_client import BackendClient, ProvisioningJob
+from flash_agent.backend_client import BackendClient, ProvisioningJob, ReaderConfig
 from flash_agent.config import Config
 from flash_agent.detect import list_candidate_ports
-from flash_agent.esptool_runner import ChipInfo, EsptoolError, detect_chip, flash
+from flash_agent.esptool_runner import (
+    ChipInfo,
+    EsptoolError,
+    detect_chip,
+    flash,
+    flash_at_offset,
+    read_flash,
+)
+from flash_agent.nvs import NvsError, generate_nvs_partition, parse_nvs_partition
 from flash_agent.variants import is_supported, matches
 
 log = logging.getLogger("spotfam.flash_agent.agent")
+
+
+class ConfigInjectionError(Exception):
+    """Fehler bei der Flash-Zeit-NVS-Injektion (nach erfolgreichem Firmware-Flash)."""
+
+
+def _reader_config_to_nvs_entries(cfg: ReaderConfig) -> dict[str, str]:
+    """Bildet die Reader-Config auf den NVS-Key-Vertrag (Namespace 'spotfam') ab.
+
+    Vertrag für die (Phase-D-)Reader-Firmware: Keys <= 15 Byte.
+    """
+    entries: dict[str, str] = {
+        "wifi_ssid": cfg.wifi_ssid or "",
+        "wifi_pass": cfg.wifi_password or "",
+        "backend_url": cfg.backend_base_url or "",
+        "ota_channel": cfg.ota_channel or "stable",
+    }
+    if cfg.reader_api_key:
+        entries["reader_key"] = cfg.reader_api_key
+    return entries
+
+
+def _inject_reader_config(
+    port: str,
+    cfg: ReaderConfig,
+    config: Config,
+) -> None:
+    """Generiert NVS aus der Reader-Config, flasht sie an nvs_offset und verifiziert per Read-back.
+
+    Muss innerhalb des Port-Locks aufgerufen werden (gleicher Port).
+
+    Raises:
+        ConfigInjectionError: Bei NVS-Generierung, Flash oder Read-back-Mismatch.
+    """
+    entries = _reader_config_to_nvs_entries(cfg)
+    try:
+        nvs_bin = generate_nvs_partition(entries, config.nvs_namespace, config.nvs_size)
+    except NvsError as exc:
+        raise ConfigInjectionError(f"NVS-Generierung fehlgeschlagen: {exc}")
+
+    with tempfile.NamedTemporaryFile(suffix="-nvs.bin", delete=False) as fh:
+        nvs_path = Path(fh.name)
+        fh.write(nvs_bin)
+    readback_path = nvs_path.with_suffix(".readback.bin")
+
+    try:
+        flash_at_offset(
+            port=port,
+            image_path=nvs_path,
+            offset=config.nvs_offset,
+            baud=config.flash_baud,
+            esptool_bin=config.esptool_bin,
+        )
+        raw = read_flash(
+            port=port,
+            offset=config.nvs_offset,
+            size=config.nvs_size,
+            out_path=readback_path,
+            baud=config.flash_baud,
+            esptool_bin=config.esptool_bin,
+        )
+        try:
+            parsed = parse_nvs_partition(raw, config.nvs_namespace)
+        except NvsError as exc:
+            raise ConfigInjectionError(f"Read-back nicht parsebar: {exc}")
+
+        expected = {k: v for k, v in entries.items() if v != ""}
+        for key, value in expected.items():
+            if parsed.get(key) != value:
+                raise ConfigInjectionError(
+                    f"Read-back-Mismatch für '{key}' (erwartet != gelesen)."
+                )
+        log.info("NVS-Config injiziert und per Read-back verifiziert: port=%s keys=%s",
+                 port, sorted(expected.keys()))
+    except EsptoolError as exc:
+        raise ConfigInjectionError(f"esptool-Fehler bei NVS-Injektion: {exc}")
+    finally:
+        for p in (nvs_path, readback_path):
+            try:
+                p.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 class PortLockError(Exception):
@@ -131,6 +221,7 @@ def _flash_job(
     def _progress(percent: int) -> None:
         client.update_job_status(job.job_id, "running", progress=percent)
 
+    injected = False
     with PortLock(port):
         flash(
             port=port,
@@ -140,11 +231,31 @@ def _flash_job(
             progress_cb=_progress,
         )
 
+        # Flash-Zeit-NVS-Injektion (Sprint 06 C2b), gated: Toggle + Config-Vollständigkeit.
+        if config.inject_reader_config:
+            try:
+                reader_cfg = client.get_reader_config()
+            except requests.RequestException as exc:
+                raise ConfigInjectionError(f"reader-config nicht abrufbar: {exc}")
+            if reader_cfg.complete:
+                client.update_job_status(
+                    job.job_id, "running", progress=100,
+                    message="Schreibe Reader-Konfiguration (NVS)…",
+                )
+                _inject_reader_config(port, reader_cfg, config)
+                injected = True
+            else:
+                log.info(
+                    "Reader-Config unvollständig – NVS-Injektion übersprungen (jobId=%s).",
+                    job.job_id,
+                )
+
+    suffix = " + Reader-Config (NVS) geschrieben" if injected else ""
     client.update_job_status(
         job.job_id,
         "success",
         progress=100,
-        message=f"Firmware {artifact.version} erfolgreich geflasht.",
+        message=f"Firmware {artifact.version} erfolgreich geflasht{suffix}.",
     )
     log.info(
         "Flash erfolgreich: jobId=%s version=%s",
@@ -194,6 +305,14 @@ def run_once(config: Config, client: BackendClient) -> None:
             log.error("Flash-Fehler fuer jobId=%s: %s", job.job_id, exc)
             client.update_job_status(
                 job.job_id, "failed", message=str(exc)
+            )
+        except ConfigInjectionError as exc:
+            # Firmware wurde geflasht, aber die NVS-Config-Injektion schlug fehl.
+            # Als 'failed' melden, damit der Operator es bemerkt (Reader ohne Config unbrauchbar).
+            log.error("Config-Injektion fehlgeschlagen fuer jobId=%s: %s", job.job_id, exc)
+            client.update_job_status(
+                job.job_id, "failed",
+                message=f"Firmware geflasht, aber Config-Injektion fehlgeschlagen: {exc}",
             )
         except Exception as exc:
             log.exception("Unerwarteter Fehler bei Flash-Job %s", job.job_id)
