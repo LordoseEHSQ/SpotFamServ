@@ -111,12 +111,30 @@ zweiter Start → **HTTP 409**. Der Agent arbeitet Flashes seriell (Port-Lock).
 
 - **`FLASH_AGENT_API_KEY`** in Produktion setzen und rotierbar halten; getrennt vom
   `READER_API_KEY` (**D-024**).
-- **Kein freier Firmware-Upload** über die Web-UI — nur vorab registrierte Artefakte
-  (**D-025**).
+- **Firmware-Upload nur authentifiziert** (Admin, `ROLE_ADMIN`) über die Web-UI bzw. API;
+  Server berechnet sha256 + registriert (**D-027**, ersetzt das frühere „kein Upload" aus D-025).
 - Vor dem Flash: **sha256** der Datei + **Chip-Whitelist** (Mismatch → Abbruch in UI/Agent).
 - **esptool** nur als **Argument-Array** (keine Shell-Interpolation).
 
-Details: `tasks/decisions.md` (**D-024**, **D-025**).
+Details: `tasks/decisions.md` (**D-024**, **D-025**, **D-027**).
+
+## Troubleshooting (real aufgetretene Stolpersteine v0.5.1–v0.5.7)
+
+| Symptom | Ursache | Fix |
+|---|---|---|
+| Deploy meldet Fehler trotz laufender App | Healthcheck pollte geschützten Endpunkt (401) | öffentlicher `GET /api/v1/health` (v0.5.1) |
+| `/provisioning/devices` → 500 | Doctrine-Mapping `Provisioning` fehlte | Mapping in `doctrine.yaml` (v0.5.2) |
+| Agent meldet nie ein Gerät | esptool **v5.3** gibt `Chip type:` statt `Chip is` | Parser akzeptiert beide Formate (v0.5.3) |
+| `GET /jobs/next` → 500 (`"next"` als UUID) | Admin-Route `/jobs/{jobId}` fängt `/jobs/next` | Route-`priority` auf `/jobs/next` (v0.5.4) |
+| Upload → HTTP 413 | nginx `client_max_body_size` Default 1 MB | `client_max_body_size 16m` (v0.5.5) |
+| Upload → HTTP 500 (`Datei konnte nicht gespeichert werden`) | PHP `upload_max_filesize=2M` < Artefakt **und** Backend-`FIRMWARE_DIR` leer | PHP-Limits 16M (v0.5.6) + `FIRMWARE_DIR` in `backend/.env.local` setzen |
+| Jeder Flash-Job → `[Errno 9] Bad file descriptor` | `PortLock` hielt FD ohne File-Referenz (GC schloss FD) | File-Objekt halten + im `__exit__` schließen (v0.5.7) |
+| Agent: `esptool` not found (systemd) | venv-Pfad nicht im Service-Env | `ESPTOOL_BIN=<venv>/bin/esptool` in `secrets.env` |
+
+**Backend-`FIRMWARE_DIR` (Container):** muss in `backend/.env.local` gesetzt sein (z. B.
+`FIRMWARE_DIR=/var/www/html/var/firmware`) und auf dasselbe Host-Volume zeigen wie der Agent
+(`/home/lars/SpotFamServ/backend/var/firmware`). Sonst landet der Upload im Nirgendwo bzw.
+der Agent findet die Datei nicht.
 
 ## Strom / Bricking
 
@@ -131,6 +149,10 @@ Details: `tasks/decisions.md` (**D-024**, **D-025**).
   RFID-Pfad (Karte → UID → Scan/Play) ist **nicht verifiziert**; bewiesen sind nur **Flash-Pfad**
   und **Chip-Detection**.
 - **Live-Status = Polling** (~2–5 s), kein WebSocket/SSE (**D-023**).
-- **Artefakt-Upload-UI fehlt** — Registrierung nur per Console-Command
-  `app:provisioning:register-artifact`.
+- **Artefakt-Upload** jetzt über authentifizierte Web-UI/API (**D-027**); Console-Command
+  `app:provisioning:register-artifact` bleibt als Alternative.
 - **Chip-Whitelist** startet mit `ESP32-D0WD*`; andere Chips werden abgelehnt, bis erweitert.
+
+> **Verifiziert (2026-06-05):** Erster echter End-to-End-Flash (Upload → Job → esptool-`write_flash`)
+> gegen ESP32-D0WD-V3 erfolgreich (`success`, progress 100). Der **RFID-Funktionspfad** (PN532,
+> Karte → UID → Play) bleibt weiterhin offen (HW-0, **D-022**).

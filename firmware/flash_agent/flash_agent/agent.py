@@ -24,6 +24,7 @@ import logging
 import tempfile
 import time
 from pathlib import Path
+from typing import TextIO
 
 import requests
 
@@ -56,13 +57,17 @@ class PortLock:
 
     def __init__(self, port: str) -> None:
         self._path = _port_lockfile_path(port)
-        self._fd: int | None = None
+        # Referenz auf das File-Objekt halten: sonst schliesst der GC den FD
+        # sofort und fcntl.flock scheitert mit [Errno 9] Bad file descriptor.
+        self._file: TextIO | None = None
 
     def __enter__(self) -> "PortLock":
-        self._fd = open(self._path, "w").fileno()
+        self._file = open(self._path, "w")
         try:
-            fcntl.flock(self._fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(self._file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
+            self._file.close()
+            self._file = None
             raise PortLockError(
                 f"Port {self._path.name} ist bereits durch einen anderen "
                 "Flash-Vorgang gesperrt."
@@ -70,8 +75,10 @@ class PortLock:
         return self
 
     def __exit__(self, *_: object) -> None:
-        if self._fd is not None:
-            fcntl.flock(self._fd, fcntl.LOCK_UN)
+        if self._file is not None:
+            fcntl.flock(self._file.fileno(), fcntl.LOCK_UN)
+            self._file.close()
+            self._file = None
 
 
 def _flash_job(
