@@ -9,6 +9,7 @@ use App\Module\Provisioning\Application\GetNextJob;
 use App\Module\Provisioning\Application\ProvisioningException;
 use App\Module\Provisioning\Application\UpdateJobStatus;
 use App\Module\Provisioning\Domain\FlashJob;
+use App\Module\System\Application\Port\SystemConfigurationProviderInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -26,8 +27,41 @@ final class ProvisioningAgentController
         private readonly DetectDevice $detectDevice,
         private readonly GetNextJob $getNextJob,
         private readonly UpdateJobStatus $updateJobStatus,
+        private readonly SystemConfigurationProviderInterface $systemConfig,
         private readonly string $flashAgentApiKey = '',
+        private readonly string $readerApiKey = '',
     ) {
+    }
+
+    /**
+     * GET /api/v1/provisioning/reader-config
+     * Liefert die Reader-Konfiguration für die Flash-Zeit-NVS-Injektion (Sprint 06 / C1):
+     * WLAN, Backend-URL, OTA-Kanal und der READER_API_KEY (env-kanonisch, D-030).
+     *
+     * Achtung: enthält Klartext-Secrets (WLAN-Passwort, Reader-Key) – nur über den
+     * agent-authentifizierten Kanal (X-API-Key) auszuliefern, nie öffentlich.
+     */
+    #[Route(path: '/reader-config', name: 'reader_config', methods: ['GET'])]
+    public function readerConfig(Request $request): JsonResponse
+    {
+        if (!$this->validateAgentAuth($request)) {
+            return $this->unauthorized();
+        }
+
+        $wifiSsid = $this->systemConfig->getWifiSsid();
+        $wifiPassword = $this->systemConfig->getWifiPassword();
+        $backendBaseUrl = $this->systemConfig->getBackendBaseUrl();
+
+        $complete = $wifiSsid !== null && $wifiPassword !== null && $backendBaseUrl !== null;
+
+        return new JsonResponse([
+            'wifiSsid'       => $wifiSsid,
+            'wifiPassword'   => $wifiPassword,
+            'backendBaseUrl' => $backendBaseUrl,
+            'otaChannel'     => $this->systemConfig->getOtaChannel(),
+            'readerApiKey'   => $this->readerApiKey !== '' ? $this->readerApiKey : null,
+            'complete'       => $complete,
+        ]);
     }
 
     /**

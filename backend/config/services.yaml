@@ -110,10 +110,12 @@ services:
     App\Module\Provisioning\Application\Port\FlashArtifactRepositoryInterface: '@App\Module\Provisioning\Infrastructure\Repository\DoctrineFlashArtifactRepository'
     App\Module\Provisioning\Application\Port\FlashJobRepositoryInterface: '@App\Module\Provisioning\Infrastructure\Repository\DoctrineFlashJobRepository'
 
-    # Agent-Controller: FLASH_AGENT_API_KEY (leer = Dev-offen, analog READER_API_KEY-Muster)
+    # Agent-Controller: FLASH_AGENT_API_KEY (leer = Dev-offen, analog READER_API_KEY-Muster).
+    # readerApiKey wird an den Reader-Config-Endpoint (C1) für die NVS-Injektion durchgereicht.
     App\Module\Provisioning\Infrastructure\Http\ProvisioningAgentController:
         arguments:
             $flashAgentApiKey: '%env(default:flash_agent_api_key:FLASH_AGENT_API_KEY)%'
+            $readerApiKey: '%env(default:reader_api_key:READER_API_KEY)%'
 
     # Console-Command: FIRMWARE_DIR (Default: %kernel.project_dir%/var/firmware)
     App\Module\Provisioning\Infrastructure\Console\RegisterArtifactCommand:

@@ -52,5 +52,7 @@ security:
         - { path: ^/api/v1/provisioning/devices/detect$, roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/provisioning/jobs/next$, roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/provisioning/jobs/[^/]+/status$, roles: PUBLIC_ACCESS }
+        # Reader-Config für NVS-Injektion (Sprint 06 C1, X-API-Key inline im AgentController)
+        - { path: ^/api/v1/provisioning/reader-config$, roles: PUBLIC_ACCESS }
         # ── Catch-all: alles weitere erfordert eingeloggten Admin ────────────
         - { path: ^/api/v1, roles: ROLE_ADMIN }
