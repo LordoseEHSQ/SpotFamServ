@@ -50,13 +50,28 @@ final readonly class ExtractAudioMessageHandler
         $job->markRunning();
         $this->jobs->save($job);
 
+        // Log the host only, not the full URL (avoid logging long/query-laden source URLs).
+        $host = parse_url($job->getUrl(), \PHP_URL_HOST) ?: 'unknown';
+        $startedAt = microtime(true);
+        $this->logger->info('AudioJob {id} started ({format} from {host}).', [
+            'id' => $message->jobId,
+            'format' => $job->getFormat(),
+            'host' => $host,
+        ]);
+
         try {
             $stored = ($this->extractAudio)($job->getUrl(), $job->getFormat(), $job->getBitrateKbps());
             $job->markDone($stored->name);
+            $this->logger->info('AudioJob {id} done in {ms}ms ({file}).', [
+                'id' => $message->jobId,
+                'ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                'file' => $stored->name,
+            ]);
         } catch (\Throwable $e) {
             $job->markFailed($e->getMessage());
-            $this->logger->info('AudioJob {id} failed: {error}', [
+            $this->logger->warning('AudioJob {id} failed after {ms}ms: {error}', [
                 'id' => $message->jobId,
+                'ms' => (int) round((microtime(true) - $startedAt) * 1000),
                 'error' => $e->getMessage(),
             ]);
         }

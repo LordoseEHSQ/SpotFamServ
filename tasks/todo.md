@@ -104,11 +104,12 @@ Entscheidungen **D-032…D-035 bestätigt** (User, 2026-06-05) inkl. Review-Delt
 ignore, Retry=0, Quota im Worker, Lock als Update-Race-Guard, SSRF dokumentiert akzeptiert).
 Release-Strategie: **ein v0.7.0** (alle Phasen) — vorher v0.6.0-`system_configuration`-Migration auf Pi verifizieren.
 Harte Grenze: kein Spotify-/DRM-Ripping (nur legale/DRM-freie Quellen).
-- [ ] A: Stabilität (R7-Entrypoint=D-021, Quota im Worker, Lock=Update-Race-Guard, findOutputFile deterministisch)
-- [ ] B: Async-Queue (Messenger+Doctrine-Transport, AudioJob+Migration, 202+job_id, /jobs-API, Worker-Service, Polling-UI)
-- [ ] C: Formate (opus/flac/m4a/aac) + geführte legale Quelltypen
-- [ ] D: Observability + Doku
-- [ ] Closeout: volle Test-Suite (L-030), oasdiff additiv, PR `Closes #..`, v0.7.0-Tag → Pi-Deploy
+- [x] A (#69): Stabilität (R7-Entrypoint=D-021, Quota im Worker, Lock=Update-Race-Guard, findOutputFile deterministisch)
+- [x] B (#70): Async-Queue (Messenger+Doctrine-Transport, AudioJob+Migration, 202+job_id, /jobs-API, Worker-Service, Polling-UI)
+- [x] C (#71): Formate (opus/flac/m4a/aac) + geführte legale Quelltypen
+- [x] D (#72): Observability (Job-Lifecycle-Logs + Fehlercodes) + Doku (CHANGELOG/sprint-07/decisions/lessons/PROJECT_MAP/Runbook)
+- [ ] Closeout: volle Suite lokal grün (**183**, PHPStan L8, lint:container) → CI/PR `Closes #69-72`, oasdiff additiv, v0.6.0-`system_configuration`-Migration auf Pi verifizieren, v0.7.0-Tag → Pi-Deploy
+- [ ] BLOCKIEREND (User): PR-CI grün abwarten; Pi-Deploy (neuer messenger-worker-Service + messenger:setup-transports + gestapelte Migrationen)
 - [ ] RISIKO: drei gestapelte Migrationen (v0.6.0 system_configuration noch nie real auf Pi + audio_job + messenger_messages); Deploy-Reihenfolge `up -d` vor `migrate` (L-015) → 500-/Crash-Fenster einplanen
 
 ## Bugs (GitHub)

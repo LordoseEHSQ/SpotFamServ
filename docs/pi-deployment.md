@@ -44,7 +44,7 @@ Stand: 2026-06-01. Begleitende Stolpersteine: siehe `tasks/lessons.md` (L-001..L
 |---|---|
 | Docker Engine | 29.5.2 (via `get.docker.com`) |
 | Docker Compose | v5.1.4 (**v2-Plugin** – `docker compose`, NICHT `docker-compose`) |
-| Container | `db` (postgres:17-alpine), `app` (php:8.5.6-fpm-alpine), `nginx:alpine` |
+| Container | `db` (postgres:17-alpine), `app` (php:8.5.6-fpm-alpine), `messenger-worker` (gleiches app-Image), `nginx:alpine` |
 | Repo-Pfad | `/home/lars/SpotFamServ` |
 
 ## Architektur auf dem Pi
@@ -57,6 +57,23 @@ Stand: 2026-06-01. Begleitende Stolpersteine: siehe `tasks/lessons.md` (L-001..L
   `docker compose pull nginx`. Der `frontend/dist`-Bind-Mount entfällt; `default.conf` + `backend/public:ro`
   bleiben gemountet. App-Image (Backend) wird weiterhin lokal auf dem Pi gebaut.
 - Secrets: `backend/.env.local` (Spotify Client-ID/Secret, READER_API_KEY), Root-`.env` (Redirect-URI, FRONTEND_URL, READER_API_KEY).
+- **Audio-Extraktion läuft asynchron** (Sprint 07 / D-032): `app` (php-fpm) reiht einen `AudioJob` ein
+  und antwortet 202; der **`messenger-worker`** (genau 1 Prozess, `messenger:consume async`) führt die
+  Extraktion aus. Beide teilen das app-Image und den `/data/audio`-Bind-Mount; der Entrypoint chownt
+  diesen self-healing auf `www-data` (uid 82). Worker neustart: `docker compose restart messenger-worker`,
+  Logs: `docker compose logs -f messenger-worker`.
+
+### Audio-Worker-Runbook (Sprint 07)
+
+- **Transport-Tabelle:** `messenger_messages` wird durch `php bin/console messenger:setup-transports`
+  angelegt – `pi-deploy.sh` führt das nach den Migrationen und **vor** dem Worker-Konsum aus (idempotent).
+- **Festhängende/abgebrochene Jobs:** Es gibt keine harte Unterbrechung eines laufenden yt-dlp-Prozesses;
+  Cancel wirkt nur auf `pending`. Hängt der Worker, hilft `docker compose restart messenger-worker`
+  (das `--time-limit=3600`/`--memory-limit=128M` beendet den Prozess ohnehin periodisch self-healing).
+- **Quota voll (507):** `/data/audio` aufräumen (über die UI „Gespeicherte Dateien" oder
+  `DELETE /api/v1/audio-extractor/files/{name}`); Limit via `AUDIO_EXTRACTOR_MAX_TOTAL_BYTES`.
+- **Stale Jobs in der Queue:** Failure-Transport `failed` ist konfiguriert, wird bei `max_retries: 0`
+  aber praktisch nicht befüllt (Fehler werden als `AudioJob.status=failed` festgehalten).
 
 ## Deployment (maßgeblich: tag-getriggert)
 
