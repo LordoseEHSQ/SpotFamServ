@@ -14,7 +14,9 @@ export interface DetectedDevice {
   chip: string;
   chipDescription: string;
   mac: string;
-  flashSize: number;
+  // Backend/Agent liefern eine vorformatierte Zeichenkette (z. B. "4MB"),
+  // KEINE Byte-Zahl. Nicht durch formatBytes() jagen (ergaebe "4MB B"/NaN).
+  flashSize: string;
   status: 'idle' | 'flashing';
   firstSeenAt: string;
   lastSeenAt: string;
