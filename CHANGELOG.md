@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased] — Sprint 06: Reader-Station UX + System-Config-DB + Flash-Zeit-NVS (Ziel-Tag `v0.6.0`)
+## [Unreleased]
+
+## [0.6.0] – 2026-06-05 — Sprint 06: Reader-Station UX + System-Config-DB + Flash-Zeit-NVS
 
 > Scope = Phase **A + B + C**. Phase D (NVS-first-Firmware) + E (realer RFID-E2E) sind bewusst
 > zurückgestellt bis zur PN532-Firmware-Migration (D-031), um den Config-Layer nur einmal zu schreiben.

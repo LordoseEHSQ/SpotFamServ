@@ -1,7 +1,7 @@
 # Sprint 6 – Reader-Station: UX, System-Config-DB, Flash-Zeit-NVS
 
-**Milestone:** Sprint 06 – Reader-Station: UX, System-Config-DB, Flash-Zeit-NVS (#6) · **Status:** Code fertig; PR/CI + Merge + Tag ausstehend
-**Ziel-Release:** `v0.6.0`
+**Milestone:** Sprint 06 – Reader-Station: UX, System-Config-DB, Flash-Zeit-NVS (#6) · **Status:** Done (PR #68 squash-merged, Tag `v0.6.0`)
+**Release:** `v0.6.0`
 **Branch:** `feat/sprint-06-reader-config-db` · **Worktree:** `../SpotFamServ-sprint-06`
 **Zeitraum:** 2026-06-05
 **Plan:** `tasks/plan-sprint-06-reader-station-config-db.md`
@@ -42,10 +42,10 @@ per NVS-Partition auf den ESP32 injizieren – ohne `secrets.h`-Handarbeit.
 | NVS-Injektion + Read-back-Verify im Agent | ✅ | gated über Config-Vollständigkeit + `INJECT_READER_CONFIG` |
 | Backend grün (PHPStan L8 / lint / PHPUnit) | ✅ | volle Suite **147** Tests (inkl. ReaderFirmware-Regressionsfix) |
 | Frontend grün (tsc / vitest / build) | ✅ | – |
-| OpenAPI additiv (2 neue Pfade, 0 entfernt) | ✅ | lokal regeneriert |
-| CI grün auf main | ⏳ | PR ausstehend (CI lief lokal, nicht auf GitHub) |
-| Migration gegen echte DB | ⏳ | nur statisch geprüft; Laufzeit erst bei Deploy |
-| Tag v0.6.0 | ⏳ | nach CI grün + Merge |
+| OpenAPI additiv (2 neue Pfade, 0 entfernt) | ✅ | lokal + CI (oasdiff) grün |
+| CI grün | ✅ | PR #68: Backend 8.4/8.5, Frontend, oasdiff, Flash-Agent, Trivy, ESP32-Compile |
+| Migration gegen echte DB | ⏳ | nur statisch geprüft; Laufzeit erst beim Pi-Deploy (Tag-Trigger) |
+| Tag v0.6.0 | ✅ | Squash-Merge → main, Tag gesetzt |
 
 ---
 
