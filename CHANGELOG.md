@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.5.8] – 2026-06-05 — Fix: UI-Versionsanzeige (Footer hing auf 0.4.0)
+
+### Fixed
+- **Footer zeigte dauerhaft `v0.4.0`** trotz Deploy v0.5.x: `__APP_VERSION__` kam aus
+  `frontend/package.json`, das seit v0.4.0 nie gebumpt wurde (L-016). Die Version wird jetzt
+  zur Build-Zeit **primär aus dem Release-Tag** abgeleitet: `release-web-image.yml` übergibt
+  `--build-arg APP_VERSION=<git-tag>`, das Frontend-Dockerfile reicht es als `ENV` an Vite
+  durch, `vite.config.ts` bevorzugt `APP_VERSION` (führendes `v` entfernt) vor `package.json`.
+  Damit zeigt der Footer ab jedem Tag automatisch die echte Release-Version – ohne manuellen
+  `package.json`-Bump. `package.json` zusätzlich auf `0.5.8` gesetzt (Fallback für lokale/PR-Builds).
+
 ## [0.5.7] – 2026-06-05 — Fix: Flash-Agent PortLock (jeder Flash-Job scheiterte)
 
 ### Fixed

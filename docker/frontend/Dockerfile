@@ -12,6 +12,10 @@ RUN corepack enable && corepack prepare pnpm@10 --activate
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY frontend/ ./
+# Release-Version in den Build geben (CI: --build-arg APP_VERSION=<git-tag>).
+# Vite bevorzugt APP_VERSION vor package.json -> Footer zeigt den echten Tag (L-016).
+ARG APP_VERSION=""
+ENV APP_VERSION=$APP_VERSION
 RUN pnpm build
 
 FROM nginx:alpine
