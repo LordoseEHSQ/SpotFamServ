@@ -23,7 +23,8 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+import { cn, formatDateRelative } from '@/lib/utils';
+import { evaluateChipMatch } from '@/lib/chipMatch';
 
 // ─── Hilfsfunktionen ──────────────────────────────────────────────────────────
 
@@ -296,9 +297,11 @@ function FlashDialog({
 
   const artifacts = artifactsData?.items ?? [];
   const selectedArtifact: FlashArtifact | undefined = artifacts.find((a) => a.id === selectedArtifactId);
+  // Familien-Abgleich gegen die volle chipDescription (beratend; der Flash-Agent
+  // ist das harte Gate). Nur ein echter Mismatch blockiert; 'unknown' nicht.
   const chipMismatch =
     selectedArtifact !== undefined &&
-    selectedArtifact.expectedChip.toLowerCase() !== device.chip.toLowerCase();
+    evaluateChipMatch(selectedArtifact.expectedChip, device) === 'mismatch';
   const hasActiveJob =
     device.latestJob?.status === 'pending' || device.latestJob?.status === 'running';
 
@@ -327,19 +330,27 @@ function FlashDialog({
 
   return (
     <Dialog open={!!device} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-warning" />
             Firmware flashen
           </DialogTitle>
           <DialogDescription>
-            Gerät: <span className="font-mono">{device.port}</span> · {device.chipDescription} · MAC{' '}
-            <span className="font-mono">{device.mac}</span>
+            Wähle ein Firmware-Artefakt für das ausgewählte Gerät und starte den Flash-Vorgang.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Geräte-Identität als umbruchsicheres Key-Value-Grid */}
+          <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+            <dt className="text-muted-foreground">Port</dt>
+            <dd className="min-w-0 break-words font-mono">{device.port}</dd>
+            <dt className="text-muted-foreground">Chip</dt>
+            <dd className="min-w-0 break-words font-mono">{device.chipDescription || device.chip}</dd>
+            <dt className="text-muted-foreground">MAC</dt>
+            <dd className="min-w-0 break-words font-mono">{device.mac}</dd>
+          </dl>
           {/* Artefakt-Auswahl */}
           {!activeJobId && (
             <div className="space-y-1.5">
@@ -356,11 +367,16 @@ function FlashDialog({
                     <SelectValue placeholder="Artefakt wählen…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {artifacts.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.board} · {a.channel} · v{a.version} · {a.expectedChip} · {formatBytes(a.sizeBytes)}
-                      </SelectItem>
-                    ))}
+                    {artifacts.map((a) => {
+                      const label = `${a.board} · ${a.channel} · v${a.version} · ${a.expectedChip} · ${formatBytes(a.sizeBytes)}`;
+                      return (
+                        <SelectItem key={a.id} value={a.id}>
+                          <span className="block max-w-[22rem] truncate" title={label}>
+                            {label}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               )}
@@ -371,11 +387,11 @@ function FlashDialog({
           {chipMismatch && !activeJobId && (
             <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-              <span>
+              <span className="min-w-0 break-words">
                 <strong>Chip-Mismatch:</strong> Das Artefakt erwartet{' '}
                 <span className="font-mono">{selectedArtifact?.expectedChip}</span>, das Gerät
-                meldet <span className="font-mono">{device.chip}</span>. Flashen könnte das Gerät
-                beschädigen.
+                meldet <span className="font-mono">{device.chipDescription || device.chip}</span>.
+                Flashen könnte das Gerät beschädigen.
               </span>
             </div>
           )}
@@ -494,6 +510,51 @@ function DeviceStatusBadge({ device }: { device: DetectedDevice }) {
   return <Badge variant="muted">Bereit</Badge>;
 }
 
+// ─── „Aktuell erkanntes Gerät"-Panel ──────────────────────────────────────────
+
+function CurrentDevicePanel({
+  device,
+  highlighted,
+}: {
+  device: DetectedDevice;
+  highlighted: boolean;
+}) {
+  const fields: Array<{ label: string; value: string; mono?: boolean }> = [
+    { label: 'Port', value: device.port, mono: true },
+    { label: 'Chip', value: device.chipDescription || device.chip, mono: true },
+    { label: 'MAC', value: device.mac, mono: true },
+    { label: 'Flash-Größe', value: device.flashSize },
+    { label: 'Zuletzt gesehen', value: formatDateRelative(device.lastSeenAt) },
+  ];
+
+  return (
+    <div
+      className={cn(
+        'rounded-lg border px-4 py-3',
+        highlighted ? 'border-primary/40 bg-primary/5' : 'bg-muted/20',
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Usb className="h-4 w-4 shrink-0 text-primary" />
+          <span className="text-sm font-medium">Aktuell erkanntes Gerät</span>
+        </div>
+        <DeviceStatusBadge device={device} />
+      </div>
+      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
+        {fields.map((f) => (
+          <div key={f.label} className="min-w-0">
+            <dt className="text-xs text-muted-foreground">{f.label}</dt>
+            <dd className={cn('truncate', f.mono && 'font-mono')} title={f.value}>
+              {f.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 // ─── Hauptseite ───────────────────────────────────────────────────────────────
 
 export function ProvisioningPage() {
@@ -502,6 +563,11 @@ export function ProvisioningPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
 
   const devices = data?.items ?? [];
+  // Zuletzt gesehenes Gerät zuerst (ISO-Timestamps sortieren lexikografisch korrekt).
+  const primaryDevice =
+    devices.length > 0
+      ? [...devices].sort((a, b) => (b.lastSeenAt ?? '').localeCompare(a.lastSeenAt ?? ''))[0]
+      : null;
 
   return (
     <div className="flex flex-col h-full">
@@ -578,7 +644,11 @@ export function ProvisioningPage() {
             </div>
           </div>
         ) : (
-          <Table>
+          <div className="space-y-4 p-6">
+            {primaryDevice && (
+              <CurrentDevicePanel device={primaryDevice} highlighted={devices.length === 1} />
+            )}
+            <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead>Port</TableHead>
@@ -617,7 +687,7 @@ export function ProvisioningPage() {
                       <span className="font-mono text-sm">{device.mac}</span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm">{formatBytes(device.flashSize)}</span>
+                      <span className="text-sm">{device.flashSize}</span>
                     </TableCell>
                     <TableCell>
                       <DeviceStatusBadge device={device} />
@@ -643,7 +713,8 @@ export function ProvisioningPage() {
                 );
               })}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         )}
       </div>
 

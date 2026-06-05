@@ -342,6 +342,14 @@ paths:
       responses:
         default:
           description: ''
+  /api/v1/provisioning/reader-config:
+    get:
+      summary: "GET /api/v1/provisioning/reader-config\nLiefert die Reader-Konfiguration für die Flash-Zeit-NVS-Injektion (Sprint 06 / C1):\nWLAN, Backend-URL, OTA-Kanal und der READER_API_KEY (env-kanonisch, D-030)."
+      description: "Achtung: enthält Klartext-Secrets (WLAN-Passwort, Reader-Key) – nur über den\nagent-authentifizierten Kanal (X-API-Key) auszuliefern, nie öffentlich."
+      operationId: get_api_provisioning_agent_reader_config
+      responses:
+        default:
+          description: ''
   /api/v1/provisioning/devices/detect:
     post:
       summary: "POST /api/v1/provisioning/devices/detect\nUpsert eines erkannten ESP32-Geräts; ActivityLog nur bei Neuanlage."
@@ -969,6 +977,17 @@ paths:
   /api/v1/system/spotify/validate:
     post:
       operationId: post_api_system_spotify_config_validate
+      responses:
+        default:
+          description: ''
+  /api/v1/system/configuration:
+    get:
+      operationId: get_api_system_config_get
+      responses:
+        default:
+          description: ''
+    put:
+      operationId: put_api_system_config_save
       responses:
         default:
           description: ''

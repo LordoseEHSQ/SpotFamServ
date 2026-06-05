@@ -110,10 +110,12 @@ services:
     App\Module\Provisioning\Application\Port\FlashArtifactRepositoryInterface: '@App\Module\Provisioning\Infrastructure\Repository\DoctrineFlashArtifactRepository'
     App\Module\Provisioning\Application\Port\FlashJobRepositoryInterface: '@App\Module\Provisioning\Infrastructure\Repository\DoctrineFlashJobRepository'
 
-    # Agent-Controller: FLASH_AGENT_API_KEY (leer = Dev-offen, analog READER_API_KEY-Muster)
+    # Agent-Controller: FLASH_AGENT_API_KEY (leer = Dev-offen, analog READER_API_KEY-Muster).
+    # readerApiKey wird an den Reader-Config-Endpoint (C1) für die NVS-Injektion durchgereicht.
     App\Module\Provisioning\Infrastructure\Http\ProvisioningAgentController:
         arguments:
             $flashAgentApiKey: '%env(default:flash_agent_api_key:FLASH_AGENT_API_KEY)%'
+            $readerApiKey: '%env(default:reader_api_key:READER_API_KEY)%'
 
     # Console-Command: FIRMWARE_DIR (Default: %kernel.project_dir%/var/firmware)
     App\Module\Provisioning\Infrastructure\Console\RegisterArtifactCommand:
@@ -143,6 +145,22 @@ services:
     App\Module\Admin\Infrastructure\Http\AuthController:
         arguments:
             $csrfCookieName: '%app.csrf_cookie_name%'
+    # ─────────────────────────────────────────────────────────────────────────
+
+    # ── System-Modul (systemweite Betriebs-Konfiguration, D-029) ──────────────
+    App\Module\System\Application\:
+        resource: '../src/Module/System/Application/'
+
+    App\Module\System\Application\Port\SystemConfigurationRepositoryInterface: '@App\Module\System\Infrastructure\Repository\DoctrineSystemConfigurationRepository'
+    App\Module\System\Application\Port\SystemConfigurationProviderInterface: '@App\Module\System\Infrastructure\SystemConfigurationProvider'
+
+    # Provider + Get-UseCase beziehen den Frontend-URL-Env-Fallback (DB gewinnt pro Feld).
+    App\Module\System\Infrastructure\SystemConfigurationProvider:
+        arguments:
+            $envFrontendUrl: '%spotify.frontend_url%'
+    App\Module\System\Application\GetSystemConfiguration:
+        arguments:
+            $envFrontendUrl: '%spotify.frontend_url%'
     # ─────────────────────────────────────────────────────────────────────────
 
     App\Module\Spotify\Application\Port\TokenEncryptionInterface: '@App\Module\Spotify\Infrastructure\Security\TokenEncryptionService'
@@ -178,6 +196,4 @@ services:
             $envClientSecret: '%spotify.client_secret%'
             $envRedirectUri: '%spotify.redirect_uri%'
 
-    App\Module\Spotify\Infrastructure\Http\SpotifyOAuthController:
-        arguments:
-            $frontendUrl: '%spotify.frontend_url%'
+    # SpotifyOAuthController bezieht die Frontend-URL über den SystemConfigurationProvider (autowired).

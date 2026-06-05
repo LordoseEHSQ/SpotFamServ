@@ -258,3 +258,62 @@ def flash(
         )
 
     log.info("Flash erfolgreich abgeschlossen: port=%s image=%s", port, image_path)
+
+
+def flash_at_offset(
+    port: str,
+    image_path: Path,
+    offset: int,
+    baud: int = 460800,
+    esptool_bin: str = "esptool",
+) -> None:
+    """Schreibt eine Binärdatei an einen bestimmten Flash-Offset (z.B. NVS @0x9000).
+
+    Subprozess als Argument-Array → keine Injection. esptool verifiziert den Hash.
+
+    Raises:
+        EsptoolError: Bei Subprozess- oder Flash-Fehler.
+    """
+    _run_esptool(
+        [
+            esptool_bin,
+            "--port", port,
+            "--baud", str(baud),
+            "write-flash",
+            hex(offset),
+            str(image_path),
+        ],
+        timeout=60,
+    )
+    log.info("Flash @%s erfolgreich: port=%s image=%s", hex(offset), port, image_path)
+
+
+def read_flash(
+    port: str,
+    offset: int,
+    size: int,
+    out_path: Path,
+    baud: int = 460800,
+    esptool_bin: str = "esptool",
+) -> bytes:
+    """Liest ``size`` Bytes ab ``offset`` aus dem Flash und gibt sie zurück (Read-back-Verify).
+
+    Raises:
+        EsptoolError: Bei Subprozess-Fehler oder wenn die Datei nicht gelesen werden kann.
+    """
+    _run_esptool(
+        [
+            esptool_bin,
+            "--port", port,
+            "--baud", str(baud),
+            "read-flash",
+            hex(offset),
+            hex(size),
+            str(out_path),
+        ],
+        timeout=60,
+    )
+    try:
+        return out_path.read_bytes()
+    except OSError as exc:
+        raise EsptoolError(f"Read-back-Datei nicht lesbar: {exc}")

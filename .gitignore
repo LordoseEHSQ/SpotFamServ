@@ -42,3 +42,8 @@ backups/
 firmware/flash_agent/.venv/
 firmware/flash_agent/secrets.env
 firmware/flash_agent/artifacts/
+
+# Python-Caches
+__pycache__/
+*.pyc
+.pytest_cache/
