@@ -110,9 +110,20 @@ Harte Grenze: kein Spotify-/DRM-Ripping (nur legale/DRM-freie Quellen).
 - [x] D (#72): Observability (Job-Lifecycle-Logs + Fehlercodes) + Doku (CHANGELOG/sprint-07/decisions/lessons/PROJECT_MAP/Runbook)
 - [x] Closeout: PR #73 squash-merged (CI grün, `Closes #69-72`); **v0.7.0 getaggt + Auto-Deploy auf Pi → Health 200** (2026-06-05 17:26 CEST)
 - [x] v0.6.0-`system_configuration`-Migration auf Pi verifiziert (lief bereits 2026-06-05 10:15); `audio_job` real migriert, `messenger_messages` via auto_setup; Worker konsumiert `async`; `/data/audio`=www-data
-- [ ] OFFEN (User): realer Extraktions-E2E (202→done→Datei) über UI mit ROLE_ADMIN + legaler URL
-- [ ] v0.7.1-HÄRTUNG (L-034): Worker-Crash-Loop beim Deploy – Dev-Bind-Mount überlagert Image-`vendor`, `up -d` vor `composer install` → `composer install` vorziehen oder Worker-`vendor` nicht mounten
-- [ ] Cleanup: Worktree `../SpotFamServ-sprint-07` + Branch `feat/sprint-07-audio-refactor` entfernen
+- [x] E2E teilweise verifiziert: Pipeline real bewiesen (UI→202→Worker→`failed` mit Fehlertext, Queue leer); Download-Toolkette serverseitig bewiesen (öffentliches Video → mp3, 447 KB). User-Testvideo war YouTube-`restricted` (Quellen-Problem, kein Bug).
+- [x] Cleanup: Worktree `../SpotFamServ-sprint-07` + Branch `feat/sprint-07-audio-refactor` entfernt (Closeout)
+
+## Backlog v0.7.1 (Audio-Extraktor Härtung – Folge-Chat, Plan-vor-Code)
+Starter: `docs/sprints/sprint-07-closeout-starter.md`.
+- [ ] **UX (P0):** Warteschlange ist faktisch unsichtbar + Fehler still. `{jobs.length>0 && …}` raus →
+  Card immer rendern mit Loading/**Error**/Empty-State (heute kein Error-State der `/jobs`-Query →
+  bei 401/500 sieht der User NICHTS). Toast-System (`sonner`) einführen: Submit/`failed`/`done`.
+- [ ] **UX (P1):** „Erneut versuchen" je `failed`-Zeile; yt-dlp-Rohfehler in verständliche Meldung
+  übersetzen (Rohtext aufklappbar); `failed`/`canceled` schließbar (`DELETE /jobs/{id}`);
+  `failed`-Icon `text-destructive` statt grau.
+- [ ] **Deploy-Härtung (L-034):** Worker-Crash-Loop – Dev-Bind-Mount überlagert Image-`vendor`,
+  `up -d` vor `composer install` → `composer install` vorziehen ODER Worker-`vendor` nicht mounten.
+- [ ] Offen (User): realer Extraktions-E2E mit echtem CC-/legalem Video bis `done` + Datei in „Gespeicherte Dateien".
 
 ## Bugs (GitHub)
 - [x] #18 Spotify-App-Credentials aus UI ignoriert → SpotifyCredentialsProvider. Gefixt v0.2.1.
