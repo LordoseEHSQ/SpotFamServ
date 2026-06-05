@@ -97,7 +97,7 @@ D-029 = **eine** typisierte `SystemConfiguration`-Entity; D-030 Maschinen-Keys *
 - [ ] D: Reader-Firmware NVS-first → WLAN-Join + self-claim (Empfehlung: zurückstellen bis PN532)
 - [ ] E: realer RFID-E2E (HW-0/D-022-blockiert)
 
-## Sprint 07 (IN ARBEIT) – Audio-Extraktor: Refactor, Warteschlange, Quellen/Formate
+## Sprint 07 (DONE – v0.7.0 LIVE AUF PI) – Audio-Extraktor: Refactor, Warteschlange, Quellen/Formate
 Plan: `tasks/plan-sprint-07-audio-extractor-refactor.md` · Starter: `docs/sprints/sprint-07-starter.md`.
 Branch: `feat/sprint-07-audio-refactor` · Worktree: `../SpotFamServ-sprint-07`. Eigener frischer Chat (GATE).
 Entscheidungen **D-032…D-035 bestätigt** (User, 2026-06-05) inkl. Review-Deltas (oasdiff additiv statt
@@ -108,9 +108,11 @@ Harte Grenze: kein Spotify-/DRM-Ripping (nur legale/DRM-freie Quellen).
 - [x] B (#70): Async-Queue (Messenger+Doctrine-Transport, AudioJob+Migration, 202+job_id, /jobs-API, Worker-Service, Polling-UI)
 - [x] C (#71): Formate (opus/flac/m4a/aac) + geführte legale Quelltypen
 - [x] D (#72): Observability (Job-Lifecycle-Logs + Fehlercodes) + Doku (CHANGELOG/sprint-07/decisions/lessons/PROJECT_MAP/Runbook)
-- [ ] Closeout: volle Suite lokal grün (**183**, PHPStan L8, lint:container) → CI/PR `Closes #69-72`, oasdiff additiv, v0.6.0-`system_configuration`-Migration auf Pi verifizieren, v0.7.0-Tag → Pi-Deploy
-- [ ] BLOCKIEREND (User): PR-CI grün abwarten; Pi-Deploy (neuer messenger-worker-Service + messenger:setup-transports + gestapelte Migrationen)
-- [ ] RISIKO: drei gestapelte Migrationen (v0.6.0 system_configuration noch nie real auf Pi + audio_job + messenger_messages); Deploy-Reihenfolge `up -d` vor `migrate` (L-015) → 500-/Crash-Fenster einplanen
+- [x] Closeout: PR #73 squash-merged (CI grün, `Closes #69-72`); **v0.7.0 getaggt + Auto-Deploy auf Pi → Health 200** (2026-06-05 17:26 CEST)
+- [x] v0.6.0-`system_configuration`-Migration auf Pi verifiziert (lief bereits 2026-06-05 10:15); `audio_job` real migriert, `messenger_messages` via auto_setup; Worker konsumiert `async`; `/data/audio`=www-data
+- [ ] OFFEN (User): realer Extraktions-E2E (202→done→Datei) über UI mit ROLE_ADMIN + legaler URL
+- [ ] v0.7.1-HÄRTUNG (L-034): Worker-Crash-Loop beim Deploy – Dev-Bind-Mount überlagert Image-`vendor`, `up -d` vor `composer install` → `composer install` vorziehen oder Worker-`vendor` nicht mounten
+- [ ] Cleanup: Worktree `../SpotFamServ-sprint-07` + Branch `feat/sprint-07-audio-refactor` entfernen
 
 ## Bugs (GitHub)
 - [x] #18 Spotify-App-Credentials aus UI ignoriert → SpotifyCredentialsProvider. Gefixt v0.2.1.
