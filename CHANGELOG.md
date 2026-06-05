@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [0.5.7] – 2026-06-05 — Fix: Flash-Agent PortLock (jeder Flash-Job scheiterte)
+
+### Fixed
+- **Flash-Job scheiterte sofort mit `[Errno 9] Bad file descriptor`:** Der `PortLock`
+  hielt nur den File-Descriptor (`open(...).fileno()`) ohne Referenz auf das File-Objekt.
+  Der GC schloss den FD sofort → `fcntl.flock` auf ungültigem FD → **jeder** Flash-Job
+  failte vor dem ersten `esptool`-Aufruf. Der Bug betraf ausschließlich den Flash-Pfad
+  (Chip-Erkennung/Geräte-Meldung liefen, daher in v0.5.2–v0.5.6 unentdeckt). Fix hält das
+  File-Objekt am Leben und schließt es sauber im `__exit__`. Erster **echter End-to-End-Flash**
+  (Upload → Job → esptool) gegen ESP32-D0WD-V3 verifiziert (Job `success`, progress 100).
+  Regressionstest `tests/test_agent.py` (GC-Überleben, Zweitsperre, Wiederverwendung) ergänzt.
+
 ## [0.5.6] – 2026-06-04 — Fix: PHP-Upload-Limits für Firmware
 
 ### Fixed

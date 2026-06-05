@@ -56,23 +56,21 @@ L-020–L-022 (L-023/L-024 geplant). Starter v0.4.1: `docs/sprints/v0.4.1-r7-sta
 - [ ] Out of scope (offen): Quota/Größenlimit für `data/audio`; asynchrone Extraktion (Queue)
 - [ ] Aufräumen: Worktree `../SpotFamServ-audio-extractor` + Branch `feat/audio-extractor` (gemergt)
 
-## Feature: Admin-Auth + Upload — Branch `feat/admin-auth`
-Worktree: `../SpotFamServ-admin-auth` · Plan: `tasks/plan-admin-auth.md` · Doku: `docs/admin-auth-runbook.md` ·
-D-026/D-027.
-- [x] Backend (Session-Auth, CSRF, Upload) + Frontend (Login, Route-Schutz, Upload-UI) — erledigt auf `feat/admin-auth`
-- [ ] PR/Merge
-- [ ] Deploy auf Pi (Migration `admin_user` + `app:admin:upsert` + Secrets + Flash-Agent-Service)
+## Feature: Admin-Auth + Upload — GEMERGT + LIVE (v0.5.0)
+Doku: `docs/admin-auth-runbook.md` · D-026/D-027.
+- [x] Backend (Session-Auth, CSRF, Upload) + Frontend (Login, Route-Schutz, Upload-UI)
+- [x] PR/Merge + Deploy auf Pi (Migration `admin_user`, Secrets, Flash-Agent-Service)
 - [ ] Optional: HTTPS, Multi-User, Passwort-Reset
 
-## Feature: Flash-Station (Reader-Station) — Branch `feat/flash-station`
-Worktree: `../SpotFamServ-flash-station` · Plan: `tasks/plan-pi-flash-provisioning-station.md` ·
-Doku: `docs/flash-station-runbook.md` · D-021–D-025.
-- [x] Phasen 1–3 + CI (Flash-Agent Python-Job) — committed auf `feat/flash-station`
-- [ ] HW-0: PN532 löten + funktionaler Reader-Test (**D-022**, aus WSL2/Pi ohne Lötung blockiert)
-- [ ] Artefakt-Upload-UI (Registrierung heute nur `app:provisioning:register-artifact`)
+## Feature: Flash-Station (Reader-Station) — GEMERGT + E2E VERIFIZIERT (v0.5.0–v0.5.7)
+Plan: `tasks/plan-pi-flash-provisioning-station.md` · Doku: `docs/flash-station-runbook.md` · D-021–D-027.
+- [x] Phasen 1–3 + CI (Flash-Agent Python-Job), Admin-Auth, Upload-UI (D-027)
+- [x] **E2E real verifiziert (2026-06-05):** Upload → Job → esptool-Flash → `success` (ESP32-D0WD-V3)
+- [x] Folgebugs gefixt: Healthcheck (v0.5.1), Doctrine-Mapping (v0.5.2), esptool-v5.3 (v0.5.3),
+      Routing (v0.5.4), nginx-413 (v0.5.5), PHP-Limits (v0.5.6), PortLock-FD (v0.5.7)
+- [ ] HW-0: PN532 löten + funktionaler Reader-Test (**D-022**, ohne Lötung blockiert — RFID-Pfad unverifiziert)
 - [ ] Optional: SSE-Aufrüstung statt Polling (**D-023** revidiert MVP → Polling)
 - [ ] Plan-Phasen 4–6: Artefakt-Registry/CI-Artefakte, serielles Hersteller-Provisioning, Härtung
-- [ ] PR → Squash-Merge → Release-Tag (nach User-Freigabe)
 
 ## Bugs (GitHub)
 - [x] #18 Spotify-App-Credentials aus UI ignoriert → SpotifyCredentialsProvider. Gefixt v0.2.1.

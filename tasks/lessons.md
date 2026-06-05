@@ -344,3 +344,38 @@ Für Login/CSRF/Protected-Routes gezielt Kernel- oder API-Integrationstests plan
 verbindlich abgesichert werden soll.
 **Vorkommen:** 1
 **Status:** Aktiv
+
+---
+
+### L-028 | 2026-06-05 | Python/Resource-Lifetime – `open(...).fileno()`
+
+**Fehlermuster:** Flash-Agent failte jeden Job sofort mit `OSError: [Errno 9] Bad file descriptor`
+in `fcntl.flock`. Chip-Erkennung/Geräte-Meldung liefen aber fehlerfrei.
+**Root Cause:** `PortLock` speicherte nur den FD via `open(path,"w").fileno()`. Das File-Objekt
+hatte keine Referenz → GC schloss es (und damit den FD) sofort → `flock` auf totem FD.
+**Regel:** Bei `fcntl`/`os`-Operationen auf FDs IMMER das File-Objekt referenziert halten
+(`self._file = open(...)`, dann `self._file.fileno()`) und im `__exit__`/`finally` schließen.
+Nie `open(...).fileno()` als Einzeiler verwenden, wenn der FD länger leben muss.
+**Zusatz:** Der Flash-Pfad war ohne echte Hardware nie durchlaufen (kein `test_agent.py`) → Bug erst
+beim ersten echten E2E-Flash sichtbar. Regressionstest ergänzt.
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
+### L-029 | 2026-06-05 | Integration/Deploy – Provisioning-Modul: 6 Folgebugs nach Merge
+
+**Fehlermuster:** Trotz grüner Unit-Tests + CI war die Reader-Station nach Merge nicht nutzbar;
+sechs Bugs erst bei echter Integration sichtbar (v0.5.1–v0.5.7): Healthcheck-401, fehlendes
+Doctrine-Mapping, esptool-v5.3-Parsing, Routing-Kollision `/jobs/next`, nginx-413, PHP-Upload-Limit,
+PortLock-FD. **Zusätzlich:** Der Flash-Agent war als Komponente fertig, aber nie als systemd-Service
+auf dem Pi deployed → UI blieb leer.
+**Root Cause:** Komponenten isoliert (Unit) getestet, aber nie als Gesamtsystem auf dem Pi
+(Docker ohne USB, echte esptool-Version, echte Datei-Limits, echter Flash). „Fertig" wurde mit
+„Code + Unit-Test grün" verwechselt, nicht mit „auf Ziel-Hardware deployed + E2E verifiziert".
+**Regel:** Ein Feature mit Hardware-/Deploy-Anteil ist erst „Done", wenn der **vollständige
+End-to-End-Pfad auf der Ziel-Plattform** einmal real durchlief (hier: Upload → Job → esptool-Flash
+→ `success`). Deploy-Schritte (systemd-Services, Env, Volumes, nginx/PHP-Limits) gehören in die
+Definition of Done, nicht in einen späteren „Betrieb"-Schritt.
+**Vorkommen:** 1
+**Status:** Aktiv
