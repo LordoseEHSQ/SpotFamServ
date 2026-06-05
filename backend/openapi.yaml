@@ -972,6 +972,17 @@ paths:
       responses:
         default:
           description: ''
+  /api/v1/system/configuration:
+    get:
+      operationId: get_api_system_config_get
+      responses:
+        default:
+          description: ''
+    put:
+      operationId: put_api_system_config_save
+      responses:
+        default:
+          description: ''
 tags:
   -
     name: Auth

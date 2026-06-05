@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import {
-  Settings, Music2, CheckCircle2, XCircle, AlertCircle, RefreshCw, Save, Eye, EyeOff,
+  Settings, Music2, CheckCircle2, XCircle, AlertCircle, RefreshCw, Save, Eye, EyeOff, Wifi,
 } from 'lucide-react';
 import { useSpotifyAppConfig, useSaveSpotifyAppConfig, useValidateSpotifyAppConfig } from '@/hooks/useSpotifyAppConfig';
+import { useSystemConfiguration, useSaveSystemConfiguration } from '@/hooks/useSystemConfiguration';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,8 +11,12 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { formatDate } from '@/lib/utils';
 import type { SpotifyConfigStatus } from '@/api/endpoints/spotify';
+import type { OtaChannel } from '@/api/endpoints/system';
 
 function statusBadge(status: SpotifyConfigStatus) {
   switch (status) {
@@ -208,7 +213,184 @@ export function SystemPage() {
           )}
         </CardContent>
       </Card>
+
+      <ReaderNetworkCard />
     </div>
+  );
+}
+
+function ReaderNetworkCard() {
+  const { data: config, isLoading } = useSystemConfiguration();
+  const save = useSaveSystemConfiguration();
+
+  const [wifiSsid, setWifiSsid] = useState('');
+  const [wifiPassword, setWifiPassword] = useState('');
+  const [backendBaseUrl, setBackendBaseUrl] = useState('');
+  const [otaChannel, setOtaChannel] = useState<OtaChannel>('stable');
+  const [frontendUrl, setFrontendUrl] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  if (config && !initialized) {
+    setWifiSsid(config.wifi_ssid ?? '');
+    setBackendBaseUrl(config.backend_base_url ?? '');
+    setOtaChannel(config.ota_channel);
+    setFrontendUrl(config.frontend_url ?? '');
+    setInitialized(true);
+  }
+
+  const handleSave = async () => {
+    const payload: Parameters<typeof save.mutateAsync>[0] = {
+      wifi_ssid: wifiSsid,
+      backend_base_url: backendBaseUrl,
+      ota_channel: otaChannel,
+      frontend_url: frontendUrl,
+    };
+    if (wifiPassword.trim() !== '') {
+      payload.wifi_password = wifiPassword;
+    }
+    await save.mutateAsync(payload);
+    setWifiPassword('');
+  };
+
+  const channels: OtaChannel[] = config?.ota_channels ?? ['stable', 'beta', 'dev'];
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Wifi className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">Reader-Netzwerk &amp; System</CardTitle>
+          </div>
+          {!isLoading && config && (
+            config.reader_network_complete ? (
+              <Badge variant="success"><CheckCircle2 className="h-3 w-3 mr-1" />Reader-Netzwerk vollständig</Badge>
+            ) : (
+              <Badge variant="outline"><AlertCircle className="h-3 w-3 mr-1" />Unvollständig</Badge>
+            )
+          )}
+        </div>
+        <CardDescription>
+          WLAN, Backend-URL und OTA-Kanal werden beim Flashen als Geräte-Konfiguration (NVS) geschrieben
+          (Phase C). Die Frontend-URL steuert u. a. den Spotify-OAuth-Redirect. Secrets werden verschlüsselt
+          gespeichert und nie zurückgegeben.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        ) : (
+          <>
+            {config?.source === 'env' && (
+              <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+                <AlertCircle className="h-4 w-4 inline mr-1.5 align-middle" />
+                Noch keine DB-Konfiguration gespeichert. Werte stammen aus Umgebungsvariablen/Defaults.
+                Speichern legt sie in der Datenbank an und überschreibt die Env-Werte.
+              </div>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="wifi-ssid">WLAN-SSID</Label>
+                <Input
+                  id="wifi-ssid"
+                  value={wifiSsid}
+                  onChange={(e) => setWifiSsid(e.target.value)}
+                  placeholder="z. B. Heimnetz"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="wifi-password">
+                  WLAN-Passwort
+                  {config?.has_wifi_password && (
+                    <span className="ml-2 text-xs text-muted-foreground">(gesetzt, zum Ändern neu eingeben)</span>
+                  )}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="wifi-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={wifiPassword}
+                    onChange={(e) => setWifiPassword(e.target.value)}
+                    placeholder={config?.has_wifi_password ? '••••••••••••' : 'WLAN-Passwort eingeben'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="backend-url">Backend-Basis-URL (für Reader)</Label>
+                <Input
+                  id="backend-url"
+                  value={backendBaseUrl}
+                  onChange={(e) => setBackendBaseUrl(e.target.value)}
+                  placeholder="http://192.168.1.91:8080"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>OTA-Kanal</Label>
+                <Select value={otaChannel} onValueChange={(v) => setOtaChannel(v as OtaChannel)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {channels.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="frontend-url">Frontend-URL</Label>
+              <Input
+                id="frontend-url"
+                value={frontendUrl}
+                onChange={(e) => setFrontendUrl(e.target.value)}
+                placeholder="http://127.0.0.1:8080"
+              />
+              <p className="text-xs text-muted-foreground">
+                Ziel für Spotify-OAuth-Redirects. Leer lassen, um die Env-Variable FRONTEND_URL zu nutzen.
+              </p>
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-end">
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={save.isPending}
+              >
+                <Save className="h-4 w-4" />
+                {save.isPending ? 'Speichert…' : 'Speichern'}
+              </Button>
+            </div>
+
+            {save.isError && (
+              <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-800">
+                <XCircle className="h-4 w-4 inline mr-1.5" />
+                Speichern fehlgeschlagen: {(save.error as Error).message}
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

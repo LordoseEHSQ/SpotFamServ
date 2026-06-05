@@ -49,6 +49,10 @@ doctrine:
                 type: attribute
                 dir: '%kernel.project_dir%/src/Module/Provisioning/Domain'
                 prefix: 'App\Module\Provisioning\Domain'
+            System:
+                type: attribute
+                dir: '%kernel.project_dir%/src/Module/System/Domain'
+                prefix: 'App\Module\System\Domain'
 
 when@test:
     doctrine:

@@ -508,3 +508,59 @@ sha256+Groesse, registriert `FlashArtifact`. Logik mit `RegisterArtifactCommand`
 vor dem Flash (D-025 fuer den Agent unveraendert). Damit ist die Backdoor geschlossen (nur eingeloggte
 Admins, serverseitige Validierung, Agent-seitige Gegenpruefung).
 **Status:** Accepted (User, 2026-06-04) — revidiert das Web-Upload-Verbot aus D-025.
+
+---
+
+### D-028 | 2026-06-05 | Reader-WLAN/Config via Flash-Zeit-NVS-Injektion (Primärpfad)
+
+**Kontext:** Henne-Ei – ein Gerät ohne WLAN kann WLAN-Credentials nicht „aus der DB ziehen".
+Plan `tasks/plan-sprint-06-reader-station-config-db.md`.
+**Optionen:** A) Captive Portal als Primärpfad · B) WLAN-/Reader-Config zur Flash-Zeit als NVS-Partition
+durch den (ohnehin USB-fähigen) Flash-Agent schreiben.
+**Entscheidung:** **B** als Primärpfad. Captive Portal bleibt Zukunft/Fallback (D-028b) für „Heimnetz-Wechsel
+ohne USB". **Status:** Accepted (User-Empfehlung bestätigt, 2026-06-05).
+**Ehrliche Grenze:** Voller E2E („Karte → Play über geflashten ESP im WLAN") bleibt HW-blockiert
+(echte Reader-Firmware + PN532/HW-0, D-022). Phasen A–C ohne HW-0 lauffähig/testbar.
+
+---
+
+### D-029 | 2026-06-05 | Settings-in-DB als EINE typisierte Entity (revidiert Plan-3-Entity-Vorschlag)
+
+**Kontext:** Plan B schlug drei pro-Domäne-Entities vor (ReaderNetwork, MachineKeys, SystemUrls) nach
+Spotify-Muster. Geprüft: das erzeugt ~3× Beinahe-Duplikat-Boilerplate (Entity/Repo/Provider/Controller/
+Tests/Card).
+**Optionen:** A) generischer KV-Store (verworfen, untypisiert) · B) 3 pro-Domäne-Entities (Plan) ·
+C) **eine** typisierte Singleton-Entity `SystemConfiguration` mit verschlüsselten Feldern.
+**Entscheidung:** **C.** Eigenes `System`-Modul, eine `SystemConfiguration`-Entity (wifiSsid,
+wifiPassword[verschlüsselt via `spotify_encrypted_string`, kein neues Crypto], backendBaseUrl, otaChannel,
+frontendUrl). Ein Provider mit **per-Feld**-Env-Fallback (kein Whole-Unit-Mix wie D-011, da hier keine
+gekoppelten Secret-Paare existieren). Endpoint `/api/v1/system/configuration` (GET ohne Secrets/`has_*`-Flags,
+PUT), ROLE_ADMIN via Catch-all. Eine Card in `SystemPage`.
+**Begründung:** Gleiche Sicherheit (verschlüsselt at rest, Secrets nie im GET), deutlich weniger Code,
+weiterhin typsicher. **Status:** Accepted (User-Empfehlung bestätigt, 2026-06-05).
+
+---
+
+### D-030 | 2026-06-05 | Maschinen-Keys bleiben env-kanonisch (revidiert Plan-DB-Rotation)
+
+**Kontext:** Plan B2 wollte READER_API_KEY/FLASH_AGENT_API_KEY in die DB + UI-Rotation. Problem:
+Agent (`secrets.env`) und ESP (NVS) ziehen **nicht** live aus der DB; eine DB-Rotation sperrt den Agent
+sofort aus (Bootstrap-Henne-Ei: der Agent braucht den Key, um den Config-Endpoint überhaupt aufzurufen).
+Es existiert kein Propagations-/Export-Mechanismus.
+**Entscheidung:** Maschinen-Keys bleiben **env-kanonisch** (`%env(default:...)%`-Bindings unverändert);
+**keine** DB-Persistenz/UI-Rotation in dieser Iteration → raus aus Sprint-06-Scope. Echte Rotation erst,
+wenn ein Export-Befehl + Rotations-Runbook (Agent `secrets.env` + ESP-NVS) als DoD spezifiziert ist.
+**Begründung:** Vermeidet ein halbes, gefährliches Feature (Lockout). **Status:** Accepted
+(User-Empfehlung bestätigt, 2026-06-05).
+
+---
+
+### D-031 | 2026-06-05 | secrets.h/.env → Dev-/Bootstrap-Fallback; Firmware-Phase D zurückgestellt
+
+**Kontext:** Zielbild: DB ist Quelle der Reader-Config; `secrets.h`/relevante `.env`-Werte werden
+Dev-/Bootstrap-Fallback. Firmware-Phase D (NVS-first + Self-Claim) würde am **MFRC522**-Sketch erfolgen,
+der laut D-018 ohnehin auf **PN532** migriert wird → Doppelarbeit am Config-Layer.
+**Entscheidung:** D-031 als Zielbild **Accepted**. **Phase D (+E) aus Sprint 06 zurückgestellt** bis zur
+PN532-Firmware-Migration, damit der Config-Layer nur einmal geschrieben wird. Sprint-06-Scope = **A + B + C**.
+Env/`secrets.h` bleiben in B/C funktionale Fallbacks (kein Bruch). **Status:** Accepted
+(User-Empfehlung bestätigt, 2026-06-05).

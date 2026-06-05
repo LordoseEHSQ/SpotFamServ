@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Module\Scan\Infrastructure\Http;
 
+use App\Module\System\Application\Port\SystemConfigurationProviderInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,20 +14,27 @@ use Symfony\Component\Routing\Attribute\Route;
 final class ReaderFirmwareController
 {
     private const SUPPORTED_BOARD = 'esp32-wroom-32';
-    private const SUPPORTED_CHANNEL = 'stable';
+
+    public function __construct(
+        private readonly SystemConfigurationProviderInterface $systemConfig,
+    ) {
+    }
 
     #[Route(path: '/manifest', name: 'manifest', methods: ['GET'])]
     public function manifest(Request $request): Response
     {
+        // Aktiver OTA-Kanal aus der System-Konfiguration (DB, sonst Default `stable`, D-029/B4).
+        $supportedChannel = $this->systemConfig->getOtaChannel();
+
         $board = strtolower(trim($request->query->getString('board')));
-        $channel = strtolower(trim($request->query->getString('channel', self::SUPPORTED_CHANNEL)));
+        $channel = strtolower(trim($request->query->getString('channel', $supportedChannel)));
         $currentVersion = trim($request->query->getString('current_version'));
 
         if ($board === '' || $currentVersion === '') {
             return $this->error('invalid_request', 'board and current_version are required.', Response::HTTP_BAD_REQUEST);
         }
 
-        if ($board !== self::SUPPORTED_BOARD || $channel !== self::SUPPORTED_CHANNEL) {
+        if ($board !== self::SUPPORTED_BOARD || $channel !== strtolower($supportedChannel)) {
             return $this->error('unsupported_board', 'Board or firmware channel is not supported.', Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
