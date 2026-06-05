@@ -1,6 +1,6 @@
 # Sprint 7 – Audio-Extraktor: Refactor, Warteschlange, Quellen/Formate
 
-**Milestone:** Sprint 07 – Audio-Extraktor (Refactor, Queue, Quellen/Formate) (#8) · **Status:** PR #73 offen, **CI grün** (Squash-Merge + Pi-Deploy + Tag v0.7.0 ausstehend)
+**Milestone:** Sprint 07 – Audio-Extraktor (Refactor, Queue, Quellen/Formate) (#8) · **Status:** ✅ **DONE** – PR #73 squash-merged, CI grün, **`v0.7.0` auf dem Pi deployed (Health 200)**
 **Ziel-Release:** `v0.7.0`
 **Branch:** `feat/sprint-07-audio-refactor` · **Worktree:** `../SpotFamServ-sprint-07`
 **Zeitraum:** 2026-06-05
@@ -46,9 +46,11 @@ kein Spotify-/DRM-Ripping.
 | Frontend grün (tsc/vitest/build) | ✅ | – |
 | OpenAPI additiv (3 neue Pfade, 0 entfernt) | ✅ | lokal regeneriert; 201→202 unkritisch (Spec hatte nur `default`-Responses) |
 | CI grün | ✅ | PR #73: Backend 8.4/8.5, Frontend, **oasdiff (additiv)**, Trivy, ESP32-Compile, Flash-Agent, Web-Image |
-| Migrationen gegen echte DB | ⏳ | `audio_job` + `messenger_messages` nur statisch geprüft; Laufzeit erst beim Pi-Deploy |
-| v0.6.0-Migration (`system_configuration`) auf Pi verifiziert | ⏳ | offen aus Sprint 06; Closeout-Schritt |
-| Tag v0.7.0 | ⏳ | nach CI grün + Squash-Merge |
+| Migrationen gegen echte DB | ✅ | Pi-Deploy: `audio_job` real migriert (1 migration, 3 SQL); `messenger_messages` via `auto_setup` angelegt |
+| v0.6.0-Migration (`system_configuration`) auf Pi verifiziert | ✅ | bereits am 2026-06-05 10:15 auf dem Pi gelaufen (Migrationsliste geprüft) |
+| Tag v0.7.0 | ✅ | getaggt, gepusht, Auto-Deploy (systemd-Timer) live → Health 200 |
+| Worker konsumiert `async` zur Laufzeit | ✅ | „[OK] Consuming messages from transport async"; `/data/audio` gehört www-data (R7-Entrypoint griff) |
+| Realer Extraktions-E2E (202→done→Datei) | ⏳ | noch offen: braucht ROLE_ADMIN-Login + legale URL über die UI |
 
 ---
 
@@ -92,14 +94,26 @@ neue Enum-Cases fließen automatisch in Validierung und `/config`.
 
 ---
 
-## Blockierend (User/Hardware)
+## Deploy-Ergebnis (v0.7.0, Pi, 2026-06-05 17:26 CEST)
 
-- **Deploy:** neuer `messenger-worker`-Service + `messenger:setup-transports` (Transport-Tabelle).
-  `pi-deploy.sh` ist angepasst (setup-transports vor consume); reale Ausführung erst beim Pi-Deploy.
-- **Migration-Laufzeit:** `audio_job` + `messenger_messages` nur statisch geprüft. Zusätzlich stehen
-  gestapelte Migrationen an (Sprint-06 `system_configuration` ist auf dem Pi ggf. noch nicht gelaufen).
-- **API-Wechsel 201→202** ist bewusst (Single-Tenant); Frontend ist mit umgestellt.
-- **Tag v0.7.0:** erst nach CI grün auf `main` (Squash-Merge via PR).
+- Auto-Deploy via systemd-Timer (`spotfam-deploy.timer`, alle 2 Min) zog `v0.7.0`: app-Image neu
+  gebaut (R7-Entrypoint), `messenger-worker`-Image gebaut, `audio_job` migriert, **Health 200**.
+- Verifiziert: 4 Container up; Worker konsumiert `async`; `messenger_messages` (auto_setup) +
+  `audio_job` existieren; `/data/audio` gehört `www-data:www-data` (Entrypoint, trotz Host-`chmod`-WARN);
+  `/audio-extractor/config` + `/jobs` liefern 401 (ROLE_ADMIN aktiv).
+- **Befund – transienter Worker-Crash-Loop (self-healing, 3 Restarts):** Der Dev-Bind-Mount
+  `./backend:/var/www/html` überlagert das Image-`vendor/` mit dem Host-`vendor/`. `pi-deploy.sh`
+  startet `up -d` **vor** `composer install` → beim ersten Worker-Boot fehlte `symfony/messenger`
+  im Host-`vendor` (`LogicException: Messenger component is not installed`). Nach `composer install`
+  + `restart: unless-stopped` lief der Worker sauber an. Kein Datenverlust, aber bei **jedem** Deploy
+  mit `composer.lock`-Änderung reproduzierbar (php-fpm: kurzes 500-Fenster). → Härtung in v0.7.1
+  (Reihenfolge `composer install` vor `up -d`, oder Worker-`vendor` nicht bind-mounten). Siehe L-034.
+
+## Noch offen
+
+- **Realer Extraktions-E2E** (`POST /extract` → 202 → `done` → Datei): über die UI mit
+  ROLE-ADMIN-Login + legaler URL durchspielen. Worker-Log live: `docker compose logs -f messenger-worker`.
+- **Legalität wird nicht erzwungen** (SSRF-Allow-List bewusst abgelehnt) – Verantwortung beim Admin.
 
 ---
 

@@ -445,3 +445,21 @@ brauche `err-ignore`. Tatsächlich deklarierte die nelmio-generierte `openapi.ya
 nicht annehmen. Blind-Ignore (`err-ignore`) ist tabu; stattdessen Spec regenerieren und Diff ansehen.
 **Vorkommen:** 1
 **Status:** Aktiv
+
+---
+
+### L-034 | 2026-06-05 | Deploy – Dev-Bind-Mount überlagert Image-`vendor`; Worker crasht bis `composer install`
+
+**Fehlermuster:** Nach dem `v0.7.0`-Pi-Deploy crashte der neue `messenger-worker` **3×**
+(`LogicException: Messenger support cannot be enabled … component is not installed`), bevor er sich
+fing und `async` konsumierte. php-fpm hatte im selben Fenster potenziell 500er.
+**Root Cause:** `docker-compose.yml` mountet `./backend:/var/www/html` (Dev-Komfort) und **überlagert
+damit das im Image frisch gebaute `vendor/` mit dem Host-`vendor/`**. `pi-deploy.sh` macht `up -d`
+**vor** `composer install` (Schritt 9). Beim ersten Worker-Boot fehlte `symfony/messenger` im
+Host-`vendor`. `restart: unless-stopped` + nachgelagertes `composer install` heilten es self-healing.
+**Regel:** Reproduzierbar bei **jedem** Deploy mit `composer.lock`-Änderung. Härtung: entweder
+`composer install` **vor** `docker compose up -d` ziehen (Deploy-Reihenfolge), oder den
+Worker/`vendor` **nicht** bind-mounten (Image-`vendor` nutzen). Bis dahin: nach Deploy Worker-Status
+prüfen (`docker inspect … RestartCount`, `logs messenger-worker`), nicht nur den HTTP-Health.
+**Vorkommen:** 1
+**Status:** Aktiv (Fix offen → v0.7.1)
