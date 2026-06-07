@@ -14,6 +14,8 @@ Privat gehostetes Familien-Musiksystem: Ein Admin verwaltet Familienprofile mit 
 - PHP 8.4+ und Composer (für lokale Backend-Entwicklung ohne Docker; Docker-Stack nutzt PHP 8.5.6)
 - Node 20+ und pnpm (Frontend)
 
+Für eine frische Raspberry-Pi-Installation siehe `docs/installation.md`.
+
 ## Schnellstart
 
 ```bash

@@ -3,6 +3,9 @@
 Referenz/Runbook für den Betrieb des Backends + Frontends auf dem Pi.
 Stand: 2026-06-01. Begleitende Stolpersteine: siehe `tasks/lessons.md` (L-001..L-010).
 
+Für eine frische Installation ab leerem Raspberry Pi zuerst `docs/installation.md` verwenden.
+Diese Datei hier ist die Betriebs-/Referenzdoku für den eingerichteten Zielstand.
+
 > **Ab `v0.1.0`: Deployment ist automatisiert (Pull-basiert).** Der Pi ist ein read-only
 > git-Clone und zieht per `systemd`-Timer neue `v*`-Tags. Maßgebliches Runbook:
 > [`deploy/README.md`](../deploy/README.md). Der manuelle rsync-Abschnitt weiter unten ist
