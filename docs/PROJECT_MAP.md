@@ -23,7 +23,8 @@ Frontend = React/Vite SPA (nginx, gleicher Origin, `/api/v1`).
 - `frontend/` — React SPA (Profile, RFID-Bindings, Spotify-Setup, Devices, Activity, Audio-Extraktor mit Job-Polling).
 - `firmware/spotfam_reader/` — ESP32-Sketch (`.ino`), `config.h` (Pins), `secrets.h` (git-ignoriert).
 - `docker/` — nginx + postgres-Init. `docker-compose.yml` — Stack (app/messenger-worker/nginx/db).
-- `docs/` — `pi-deployment.md` (Pi-Specs+Runbook), `SPOTIFY_INTEGRATION.md`, `sprints/`, dieses Map.
+- `docs/` — `installation.md` (frische Pi-Installation), `pi-deployment.md` (Pi-Specs+Runbook),
+  `SPOTIFY_INTEGRATION.md`, `sprints/`, dieses Map.
 - `tasks/` — `plan-*.md` (Pläne), `lessons.md` (L-001..), `decisions.md` (D-*), `todo.md` (Working-Memory).
 - `.github/` — CI-Workflow, `ISSUE_TEMPLATE/` (work-package, bug).
 - `.cursor/rules/` — Standing-Regeln (planning-discipline, project-architecture, branch-workflow, sprint-workflow, chat-isolation-swarm).
@@ -32,6 +33,7 @@ Frontend = React/Vite SPA (nginx, gleicher Origin, `/api/v1`).
 - **Aktuelle Arbeit:** `tasks/todo.md` + GitHub Issues/Milestones (Board #2).
 - **Warum etwas so ist:** `tasks/decisions.md`.
 - **Stolpersteine/Was schiefging:** `tasks/lessons.md`.
+- **Frisch installieren:** `docs/installation.md`.
 - **Pi betreiben/deployen:** `docs/pi-deployment.md`.
 - **Prozess/Regeln:** `.cursor/rules/`.
 
