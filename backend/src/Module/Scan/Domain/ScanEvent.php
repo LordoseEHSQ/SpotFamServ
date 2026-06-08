@@ -88,4 +88,10 @@ class ScanEvent
     {
         return $this->familyProfileId;
     }
+
+    /** @return array<string, mixed>|null */
+    public function getDetails(): ?array
+    {
+        return $this->details;
+    }
 }

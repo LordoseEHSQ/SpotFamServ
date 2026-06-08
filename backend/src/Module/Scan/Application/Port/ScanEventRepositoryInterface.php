@@ -22,5 +22,5 @@ interface ScanEventRepositoryInterface
     public function findRecentScan(string $cardUidRaw, int $withinSeconds, ?string $readerId = null): ?ScanEvent;
 
     /** @return list<ScanEvent> */
-    public function findRecent(int $limit = 50, int $offset = 0, ?string $profileId = null): array;
+    public function findRecent(int $limit = 50, int $offset = 0, ?string $profileId = null, ?string $readerDeviceId = null): array;
 }

@@ -48,6 +48,16 @@ final class ScanController
             return new JsonResponse(['outcome' => ScanOutcome::INVALID_REQUEST, 'message' => 'Missing card_uid.'], 400);
         }
 
+        // Update last_seen_at so the admin UI shows the reader as recently active.
+        if ($readerId !== '') {
+            $reader = $this->readerDevices->findByReaderId($readerId);
+            if ($reader !== null) {
+                $ip = $request->getClientIp();
+                $reader->touchSeen($ip);
+                $this->readerDevices->save($reader);
+            }
+        }
+
         $result = ($this->processScan)($readerId, $cardUid);
         return new JsonResponse(['outcome' => $result->outcome, 'message' => $result->message]);
     }
@@ -82,16 +92,37 @@ final class ScanController
     public function scanEvents(Request $request): JsonResponse
     {
         $profileId = $request->query->getString('profile_id') ?: null;
+        $readerDeviceId = $request->query->getString('reader_device_id') ?: null;
         $limit = min(100, max(1, (int) $request->query->get('limit', '50')));
         $offset = max(0, (int) $request->query->get('offset', '0'));
-        $events = ($this->listScanEvents)($limit, $offset, $profileId);
-        $items = array_map(fn (ScanEvent $e) => [
+        $events = ($this->listScanEvents)($limit, $offset, $profileId, $readerDeviceId);
+        $items = array_map(fn (ScanEvent $e) => $this->scanEventToArray($e), $events);
+        return new JsonResponse(['items' => $items]);
+    }
+
+    /**
+     * @return array{id: string|null, card_uid_raw: string, outcome: string, reader_device_id: string|null, reader_id: string|null, message: string|null, created_at: string}
+     */
+    private function scanEventToArray(ScanEvent $e): array
+    {
+        $details = $e->getDetails();
+        $readerId = isset($details['reader_id']) ? (string) $details['reader_id'] : null;
+        // Expose a safe subset of details: only the human-readable error and device source.
+        $message = null;
+        if (isset($details['error'])) {
+            $msg = (string) $details['error'];
+            // Strip internal exception details beyond the first sentence.
+            $message = strlen($msg) > 200 ? substr($msg, 0, 200) . '…' : $msg;
+        }
+        return [
             'id' => $e->getId(),
             'card_uid_raw' => $e->getCardUidRaw(),
             'outcome' => $e->getOutcome(),
+            'reader_device_id' => $e->getReaderDeviceId(),
+            'reader_id' => $readerId,
+            'message' => $message,
             'created_at' => $e->getCreatedAt()->format(\DateTimeInterface::ATOM),
-        ], $events);
-        return new JsonResponse(['items' => $items]);
+        ];
     }
 
     /**

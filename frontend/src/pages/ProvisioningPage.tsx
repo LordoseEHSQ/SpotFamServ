@@ -108,7 +108,7 @@ function UploadArtifactDialog({
   const upload = useUploadArtifact();
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [board, setBoard] = useState('spotfam_reader');
+  const [board, setBoard] = useState('esp32-wroom-32');
   const [channel, setChannel] = useState('stable');
   const [version, setVersion] = useState('');
   const [expectedChip, setExpectedChip] = useState('ESP32');

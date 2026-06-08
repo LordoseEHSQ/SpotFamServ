@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Radio, RefreshCw, Speaker, MapPin, Unlink, Info, Plus, Copy, KeyRound } from 'lucide-react';
+import {
+  Radio, RefreshCw, Speaker, MapPin, Unlink, Plus, Copy, KeyRound,
+  Wifi, WifiOff, Cpu, ChevronDown, ChevronUp, CheckCircle2, Loader2,
+  AlertCircle, ArrowRight, Zap, Info,
+} from 'lucide-react';
 import {
   useReaders,
   useSetReaderBox,
@@ -7,6 +11,12 @@ import {
   useCreateReaderClaim,
   useReaderClaimStatus,
 } from '@/hooks/useReaders';
+import {
+  useDetectedDevices,
+  useArtifacts,
+  useCreateFlashJob,
+  useFlashJob,
+} from '@/hooks/useProvisioning';
 import { useDevices } from '@/hooks/useDevices';
 import type { ReaderClaimResponse, ReaderDto } from '@/api/endpoints/readers';
 import { Button } from '@/components/ui/button';
@@ -21,9 +31,37 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+import { cn, formatDateRelative } from '@/lib/utils';
 
-// ─── Box-Zuweisungs-Dialog ──────────────────────────────────────────────────
+// ─── Outcome-Labels und -Hilfen ──────────────────────────────────────────────
+
+const OUTCOME_LABELS: Record<string, { label: string; hint?: string; variant: 'success' | 'warning' | 'destructive' | 'muted' | 'info' }> = {
+  success:          { label: 'Erfolg',                      variant: 'success' },
+  debounced:        { label: 'Doppelscan ignoriert',         variant: 'muted',       hint: 'Karte wurde innerhalb von 5 s erneut aufgelegt. Normal.' },
+  unknown_card:     { label: 'Karte unbekannt',              variant: 'warning',     hint: 'Diese Karte ist keinem Profil zugeordnet. Karte in der Karten-Verwaltung hinzufügen.' },
+  no_binding:       { label: 'Keine Playlist',               variant: 'warning',     hint: 'Die Karte ist einem Profil zugeordnet, hat aber keine Playlist-Bindung.' },
+  no_device:        { label: 'Kein Spotify-Gerät',           variant: 'destructive', hint: 'Kein Wiedergabegerät ausgewählt oder Spotify läuft nicht. Unter „Lautsprecher" ein Gerät starten und diesem Reader zuweisen.' },
+  token_invalid:    { label: 'Spotify nicht verbunden',      variant: 'destructive', hint: 'Spotify-Token abgelaufen oder ungültig. Im Setup-Wizard neu verbinden.' },
+  playback_failed:  { label: 'Wiedergabe fehlgeschlagen',    variant: 'destructive', hint: 'Spotify hat die Wiedergabe abgelehnt. Prüfe ob Spotify Premium aktiv ist.' },
+  invalid_request:  { label: 'Ungültige Anfrage',            variant: 'muted' },
+  unknown_reader:   { label: 'Unbekannter Leser',            variant: 'muted' },
+  no_session:       { label: 'Keine aktive Session',         variant: 'muted' },
+};
+
+function outcomeInfo(outcome: string) {
+  return OUTCOME_LABELS[outcome] ?? { label: outcome, variant: 'muted' as const };
+}
+
+// ─── Hilfsfunktionen ─────────────────────────────────────────────────────────
+
+function lastSeenLabel(lastSeenAt: string | null): { text: string; online: boolean } {
+  if (!lastSeenAt) return { text: 'Nie gesehen', online: false };
+  const mins = Math.floor((Date.now() - new Date(lastSeenAt).getTime()) / 60000);
+  const online = mins <= 10;
+  return { text: formatDateRelative(lastSeenAt), online };
+}
+
+// ─── Box-Zuweisungs-Dialog ───────────────────────────────────────────────────
 
 function AssignBoxDialog({ reader, onClose }: { reader: ReaderDto | null; onClose: () => void }) {
   const { data: devicesData, isLoading } = useDevices();
@@ -31,17 +69,7 @@ function AssignBoxDialog({ reader, onClose }: { reader: ReaderDto | null; onClos
   const [deviceId, setDeviceId] = useState<string>(reader?.default_spotify_device_id ?? '');
 
   if (!reader) return null;
-
   const devices = devicesData?.items ?? [];
-
-  const handleSave = () => {
-    const device = devices.find((d) => d.spotify_device_id === deviceId);
-    if (!device) return;
-    setBox.mutate(
-      { readerId: reader.reader_id, deviceId: device.spotify_device_id, deviceName: device.spotify_device_name },
-      { onSuccess: onClose },
-    );
-  };
 
   return (
     <Dialog open={!!reader} onOpenChange={(v) => !v && onClose()}>
@@ -65,9 +93,7 @@ function AssignBoxDialog({ reader, onClose }: { reader: ReaderDto | null; onClos
               </p>
             ) : (
               <Select value={deviceId} onValueChange={setDeviceId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Lautsprecher wählen…" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Lautsprecher wählen…" /></SelectTrigger>
                 <SelectContent>
                   {devices.map((d) => (
                     <SelectItem key={d.id} value={d.spotify_device_id}>
@@ -84,7 +110,11 @@ function AssignBoxDialog({ reader, onClose }: { reader: ReaderDto | null; onClos
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Abbrechen</Button>
-          <Button onClick={handleSave} disabled={!deviceId || setBox.isPending}>
+          <Button onClick={() => {
+            const device = devices.find((d) => d.spotify_device_id === deviceId);
+            if (!device) return;
+            setBox.mutate({ readerId: reader.reader_id, deviceId: device.spotify_device_id, deviceName: device.spotify_device_name }, { onSuccess: onClose });
+          }} disabled={!deviceId || setBox.isPending}>
             {setBox.isPending ? 'Speichert…' : 'Box zuweisen'}
           </Button>
         </DialogFooter>
@@ -93,9 +123,11 @@ function AssignBoxDialog({ reader, onClose }: { reader: ReaderDto | null; onClos
   );
 }
 
-// ─── Reader-Provisioning-Dialog ──────────────────────────────────────────────
+// ─── Onboarding-Wizard ───────────────────────────────────────────────────────
 
-function AddReaderDialog({
+type WizardStep = 'claim' | 'flash' | 'portal' | 'waiting' | 'done';
+
+function AddReaderWizard({
   open,
   onClose,
   onClaimed,
@@ -105,109 +137,254 @@ function AddReaderDialog({
   onClaimed: () => void;
 }) {
   const createClaim = useCreateReaderClaim();
+  const [step, setStep] = useState<WizardStep>('claim');
   const [readerName, setReaderName] = useState('');
+  const [fwChannel, setFwChannel] = useState('stable');
   const [claim, setClaim] = useState<ReaderClaimResponse | null>(null);
   const { data: status } = useReaderClaimStatus(claim?.claim_code ?? null);
 
-  const payload = useMemo(() => {
-    if (!claim) return '';
-    return JSON.stringify({
-      backend_url: claim.backend_url,
-      claim_code: claim.claim_code,
-    }, null, 2);
-  }, [claim]);
+  // USB-Flash (optional)
+  const { data: devicesData } = useDetectedDevices();
+  const { data: artifactsData } = useArtifacts();
+  const createJob = useCreateFlashJob();
+  const [selectedDeviceId, setSelectedDeviceId] = useState('');
+  const [selectedArtifactId, setSelectedArtifactId] = useState('');
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const { data: job } = useFlashJob(activeJobId);
+
+  const devices = devicesData?.items ?? [];
+  const artifacts = (artifactsData?.items ?? []).filter((a) => a.board === 'esp32-wroom-32');
 
   useEffect(() => {
     if (status?.status === 'claimed') {
+      setStep('done');
       onClaimed();
     }
   }, [status?.status, onClaimed]);
 
-  const handleCreate = () => {
-    createClaim.mutate(
-      { reader_name: readerName.trim() || null, fw_channel: 'stable' },
-      { onSuccess: setClaim },
-    );
+  const payload = useMemo(() => {
+    if (!claim) return '';
+    return JSON.stringify({ backend_url: claim.backend_url, claim_code: claim.claim_code }, null, 2);
+  }, [claim]);
+
+  const handleReset = () => {
+    setStep('claim');
+    setReaderName('');
+    setFwChannel('stable');
+    setClaim(null);
+    createClaim.reset();
+    setSelectedDeviceId('');
+    setSelectedArtifactId('');
+    setActiveJobId(null);
   };
 
   const handleClose = () => {
-    setClaim(null);
-    setReaderName('');
-    createClaim.reset();
+    handleReset();
     onClose();
   };
 
-  const copyPayload = async () => {
-    if (payload) {
-      await navigator.clipboard.writeText(payload);
-    }
+  const handleCreateClaim = () => {
+    createClaim.mutate({ reader_name: readerName.trim() || null, fw_channel: fwChannel }, {
+      onSuccess: (c) => { setClaim(c); setStep('flash'); },
+    });
   };
+
+  const handleFlash = () => {
+    if (!selectedDeviceId || !selectedArtifactId) return;
+    createJob.mutate({ deviceId: selectedDeviceId, artifactId: selectedArtifactId }, {
+      onSuccess: (j) => { setActiveJobId(j.jobId); },
+    });
+  };
+
+  const flashDone = job?.status === 'success';
+  const flashFailed = job?.status === 'failed';
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Reader hinzufügen</DialogTitle>
+          <DialogTitle>Neuen Reader einrichten</DialogTitle>
           <DialogDescription>
-            Erzeuge einen kurzlebigen Claim-Code für das ESP32-Captive-Portal. Der API-Key
-            wird erst beim Einlösen erzeugt und hier nicht dauerhaft angezeigt.
+            {step === 'claim' && 'Schritt 1 von 4: Claim-Code und Reader-Name'}
+            {step === 'flash' && 'Schritt 2 von 4: Firmware flashen (optional)'}
+            {step === 'portal' && 'Schritt 3 von 4: Captive Portal befüllen'}
+            {step === 'waiting' && 'Schritt 4 von 4: Warte auf ESP…'}
+            {step === 'done' && 'Reader erfolgreich provisioniert!'}
           </DialogDescription>
         </DialogHeader>
 
-        {!claim ? (
+        {/* ── Schritt 1: Claim ───────────────────────────── */}
+        {step === 'claim' && (
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>Reader-Name (optional)</Label>
-              <Input
-                value={readerName}
-                onChange={(e) => setReaderName(e.target.value)}
-                placeholder="z. B. Küche"
-              />
+              <Input value={readerName} onChange={(e) => setReaderName(e.target.value)} placeholder="z. B. Küche" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Firmware-Kanal</Label>
+              <Select value={fwChannel} onValueChange={setFwChannel}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="stable">stable</SelectItem>
+                  <SelectItem value="beta">beta</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             {createClaim.isError && (
               <p className="text-sm text-destructive">{(createClaim.error as Error).message}</p>
             )}
             <DialogFooter>
               <Button variant="outline" onClick={handleClose}>Abbrechen</Button>
-              <Button onClick={handleCreate} disabled={createClaim.isPending}>
-                {createClaim.isPending ? 'Erzeuge…' : 'Claim-Code erzeugen'}
+              <Button onClick={handleCreateClaim} disabled={createClaim.isPending}>
+                {createClaim.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Erzeuge…</> : <>Weiter <ArrowRight className="h-4 w-4" /></>}
               </Button>
             </DialogFooter>
           </div>
-        ) : (
+        )}
+
+        {/* ── Schritt 2: Optional Flash ──────────────────── */}
+        {step === 'flash' && (
           <div className="space-y-4">
-            <div className="rounded-md border bg-muted/20 p-4">
-              <p className="text-xs uppercase text-muted-foreground mb-1">Claim-Code</p>
-              <div className="font-mono text-3xl tracking-[0.25em]">{claim.claim_code}</div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Gültig bis {new Date(claim.expires_at).toLocaleTimeString()} · Kanal {claim.fw_channel}
-              </p>
+            <div className="rounded-md border bg-muted/20 p-3">
+              <p className="text-xs text-muted-foreground mb-1">Claim-Code</p>
+              <div className="font-mono text-2xl tracking-[0.25em]">{claim?.claim_code}</div>
+              <p className="text-xs text-muted-foreground mt-1">Kanal: {claim?.fw_channel}</p>
             </div>
 
+            <div className="rounded-md border bg-blue-50 dark:bg-blue-950/20 px-3 py-2 text-sm flex gap-2">
+              <Info className="h-4 w-4 mt-0.5 shrink-0 text-blue-600" />
+              <span>Wenn der ESP bereits geflasht ist, diesen Schritt überspringen und direkt zum Portal gehen.</span>
+            </div>
+
+            {devices.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Kein ESP via USB erkannt. Verbinde den ESP per USB mit dem Pi oder überspringe diesen Schritt.</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>USB-Gerät</Label>
+                  <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
+                    <SelectTrigger><SelectValue placeholder="Gerät wählen…" /></SelectTrigger>
+                    <SelectContent>
+                      {devices.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.chip} · {d.port} · {d.mac}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Firmware-Artefakt</Label>
+                  {artifacts.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Keine Artefakte für esp32-wroom-32. Lade unter Flash-Station eine Firmware hoch.</p>
+                  ) : (
+                    <Select value={selectedArtifactId} onValueChange={setSelectedArtifactId}>
+                      <SelectTrigger><SelectValue placeholder="Artefakt wählen…" /></SelectTrigger>
+                      <SelectContent>
+                        {artifacts.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.version} · {a.channel}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                {activeJobId && job && (
+                  <div className="flex items-center gap-2 text-sm">
+                    {(job.status === 'pending' || job.status === 'running') && <Loader2 className="h-4 w-4 animate-spin text-info" />}
+                    {flashDone && <CheckCircle2 className="h-4 w-4 text-success" />}
+                    {flashFailed && <AlertCircle className="h-4 w-4 text-destructive" />}
+                    <span>{job.status === 'running' ? `Flasht… ${job.progress}%` : job.status === 'success' ? 'Fertig' : job.status === 'failed' ? 'Fehler' : 'Wartend'}</span>
+                    {job.message && <span className="text-muted-foreground truncate max-w-xs">{job.message}</span>}
+                  </div>
+                )}
+                {createJob.isError && (
+                  <p className="text-sm text-destructive">{(createJob.error as Error).message}</p>
+                )}
+              </div>
+            )}
+
+            <DialogFooter className="gap-2 flex-wrap">
+              <Button variant="outline" onClick={handleClose}>Abbrechen</Button>
+              {!activeJobId && devices.length > 0 && (
+                <Button variant="outline" onClick={handleFlash} disabled={!selectedDeviceId || !selectedArtifactId || createJob.isPending}>
+                  <Zap className="h-4 w-4" />
+                  {createJob.isPending ? 'Startet…' : 'Jetzt flashen'}
+                </Button>
+              )}
+              <Button onClick={() => setStep('portal')}>
+                {flashDone ? 'Weiter zum Portal' : 'Überspringen'} <ArrowRight className="h-4 w-4" />
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {/* ── Schritt 3: Portal ──────────────────────────── */}
+        {step === 'portal' && claim && (
+          <div className="space-y-4">
+            <ol className="list-decimal list-inside space-y-2 text-sm">
+              <li>Verbinde dein Handy/Laptop mit dem WLAN <span className="font-mono bg-muted px-1 rounded">SpotFam-Reader-XXXXXX</span></li>
+              <li>Öffne <span className="font-mono bg-muted px-1 rounded">http://192.168.4.1</span> im Browser</li>
+              <li>
+                Trage ein:
+                <ul className="list-disc list-inside ml-4 mt-1 space-y-0.5">
+                  <li><strong>Backend URL:</strong> <span className="font-mono">{claim.backend_url}</span></li>
+                  <li><strong>Claim-Code:</strong> <span className="font-mono text-lg tracking-widest">{claim.claim_code}</span></li>
+                  <li><strong>WLAN SSID + Passwort</strong> des Heimnetzwerks</li>
+                </ul>
+              </li>
+              <li>Klicke „Speichern und neu starten"</li>
+            </ol>
             <div className="space-y-1.5">
-              <Label>Payload fürs Captive Portal</Label>
+              <Label>Payload (alternativ als JSON kopieren)</Label>
               <pre className="rounded-md border bg-muted/30 p-3 text-xs overflow-auto">{payload}</pre>
-              <Button variant="outline" size="sm" onClick={copyPayload}>
-                <Copy className="h-3.5 w-3.5" />
-                Payload kopieren
+              <Button variant="outline" size="sm" onClick={() => void navigator.clipboard.writeText(payload)}>
+                <Copy className="h-3.5 w-3.5" /> Payload kopieren
               </Button>
             </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleClose}>Abbrechen</Button>
+              <Button onClick={() => setStep('waiting')}>Fertig – warte auf ESP <ArrowRight className="h-4 w-4" /></Button>
+            </DialogFooter>
+          </div>
+        )}
 
-            <div className="rounded-md border px-3 py-2 text-sm flex items-center gap-2">
-              <KeyRound className="h-4 w-4 text-muted-foreground" />
-              {status?.status === 'claimed' ? (
-                <span>Reader wurde provisioniert: <span className="font-mono">{status.reader_id}</span></span>
-              ) : status?.status === 'expired' ? (
-                <span className="text-destructive">Claim ist abgelaufen. Erzeuge einen neuen Code.</span>
+        {/* ── Schritt 4: Warten ──────────────────────────── */}
+        {step === 'waiting' && claim && (
+          <div className="space-y-4">
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              {status?.status !== 'expired' ? (
+                <>
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Warte auf Einlösung durch den ESP…</p>
+                  <p className="text-xs text-muted-foreground">Gültig bis {new Date(claim.expires_at).toLocaleTimeString('de-DE')}</p>
+                </>
               ) : (
-                <span className="text-muted-foreground">Warte auf Einlösung durch den ESP…</span>
+                <>
+                  <AlertCircle className="h-8 w-8 text-destructive" />
+                  <p className="text-sm text-destructive">Claim abgelaufen.</p>
+                  <Button size="sm" onClick={() => { handleReset(); setStep('claim'); }}>Neu starten</Button>
+                </>
               )}
             </div>
-
             <DialogFooter>
-              <Button onClick={handleClose}>
-                {status?.status === 'claimed' ? 'Schließen' : 'Abbrechen'}
-              </Button>
+              <Button variant="outline" onClick={handleClose}>Abbrechen</Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {/* ── Schritt 5: Fertig ──────────────────────────── */}
+        {step === 'done' && (
+          <div className="space-y-4">
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <CheckCircle2 className="h-10 w-10 text-success" />
+              <p className="font-medium">Reader provisioniert!</p>
+              <p className="text-sm text-muted-foreground">Reader-ID: <span className="font-mono">{status?.reader_id}</span></p>
+              <p className="text-sm text-muted-foreground">Lege jetzt eine Karte auf den Reader. Falls der Scan fehlschlägt, prüfe den Status in der Tabelle.</p>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleClose}>Schließen</Button>
             </DialogFooter>
           </div>
         )}
@@ -216,7 +393,147 @@ function AddReaderDialog({
   );
 }
 
-// ─── Hauptseite ─────────────────────────────────────────────────────────────
+// ─── Reader-Detail-Zeile ─────────────────────────────────────────────────────
+
+function ReaderRow({
+  reader,
+  onAssign,
+  onClear,
+}: {
+  reader: ReaderDto;
+  onAssign: (r: ReaderDto) => void;
+  onClear: (readerId: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const { text: seenText, online } = lastSeenLabel(reader.last_seen_at);
+  const lastScan = reader.last_scan;
+  const outcome = lastScan ? outcomeInfo(lastScan.outcome) : null;
+
+  return (
+    <>
+      <TableRow
+        className="cursor-pointer hover:bg-muted/30"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <TableCell>
+          <div className="flex items-center gap-2">
+            {online
+              ? <Wifi className="h-4 w-4 text-success shrink-0" />
+              : <WifiOff className="h-4 w-4 text-muted-foreground shrink-0" />}
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono text-sm">{reader.reader_id}</span>
+                {reader.has_api_key
+                  ? <Badge variant="success" className="gap-1 text-[10px] px-1"><KeyRound className="h-2.5 w-2.5" />ESP</Badge>
+                  : <Badge variant="muted" className="text-[10px] px-1">Legacy</Badge>}
+              </div>
+              <div className="text-xs text-muted-foreground">{reader.name ?? '—'}</div>
+            </div>
+          </div>
+        </TableCell>
+
+        <TableCell>
+          <div className="text-xs space-y-0.5">
+            <div className={cn('font-medium', online ? 'text-success' : 'text-muted-foreground')}>
+              {seenText}
+            </div>
+            {reader.firmware_version && (
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Cpu className="h-3 w-3" />
+                <span>{reader.firmware_version}</span>
+                {reader.fw_channel && <span>· {reader.fw_channel}</span>}
+              </div>
+            )}
+          </div>
+        </TableCell>
+
+        <TableCell>
+          {lastScan && outcome ? (
+            <div className="space-y-0.5">
+              <Badge variant={outcome.variant} className="text-xs">
+                {outcome.label}
+              </Badge>
+              <div className="text-xs text-muted-foreground font-mono">{lastScan.card_uid_raw}</div>
+              <div className="text-xs text-muted-foreground">{formatDateRelative(lastScan.created_at)}</div>
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+        </TableCell>
+
+        <TableCell>
+          {reader.default_device_name ? (
+            <Badge variant="info"><Speaker className="h-3 w-3 mr-1" />{reader.default_device_name}</Badge>
+          ) : (
+            <Badge variant="muted">Profil-Standard</Badge>
+          )}
+        </TableCell>
+
+        <TableCell className="text-right">
+          <div className="flex justify-end items-center gap-1.5">
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); onAssign(reader); }}>
+              <MapPin className="h-3.5 w-3.5" />Box
+            </Button>
+            {reader.default_spotify_device_id && (
+              <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={(e) => { e.stopPropagation(); onClear(reader.reader_id); }}>
+                <Unlink className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" className="h-7 px-1" onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}>
+              {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+
+      {expanded && (
+        <TableRow className="bg-muted/10 hover:bg-muted/10">
+          <TableCell colSpan={5} className="py-3 px-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              {/* Status & Firmware */}
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Reader-Info</p>
+                <div className="space-y-0.5">
+                  <div><span className="text-muted-foreground">ID:</span> <span className="font-mono">{reader.reader_id}</span></div>
+                  <div><span className="text-muted-foreground">UUID:</span> <span className="font-mono text-xs">{reader.id ?? '—'}</span></div>
+                  <div><span className="text-muted-foreground">Firmware:</span> {reader.firmware_version ?? '—'}</div>
+                  <div><span className="text-muted-foreground">Board:</span> {reader.board ?? '—'}</div>
+                  <div><span className="text-muted-foreground">Kanal:</span> {reader.fw_channel ?? '—'}</div>
+                  <div><span className="text-muted-foreground">Zuletzt gesehen:</span> {formatDateRelative(reader.last_seen_at)}</div>
+                </div>
+              </div>
+
+              {/* Letzter Scan + Hinweis */}
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Letzter Scan</p>
+                {lastScan && outcome ? (
+                  <div className="space-y-1">
+                    <Badge variant={outcome.variant}>{outcome.label}</Badge>
+                    <div className="text-xs font-mono text-muted-foreground">{lastScan.card_uid_raw}</div>
+                    <div className="text-xs text-muted-foreground">{formatDateRelative(lastScan.created_at)}</div>
+                    {lastScan.message && (
+                      <div className="rounded border bg-muted/30 px-2 py-1 text-xs text-muted-foreground font-mono">{lastScan.message}</div>
+                    )}
+                    {outcome.hint && (
+                      <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-3 py-2 text-xs flex gap-2">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-600 mt-0.5" />
+                        <span>{outcome.hint}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Noch kein Scan</p>
+                )}
+              </div>
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
+  );
+}
+
+// ─── Hauptseite ──────────────────────────────────────────────────────────────
 
 export function ReadersPage() {
   const { data, isLoading, error, refetch, isFetching } = useReaders();
@@ -236,7 +553,7 @@ export function ReadersPage() {
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={() => setAddDialogOpen(true)}>
             <Plus className="h-4 w-4" />
-            Reader hinzufügen
+            Reader einrichten
           </Button>
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
@@ -244,22 +561,10 @@ export function ReadersPage() {
         </div>
       </div>
 
-      <div className="px-6 py-4 border-b shrink-0">
-        <div className="rounded-md border bg-muted/20 px-4 py-3 text-sm text-muted-foreground flex gap-2">
-          <Info className="h-4 w-4 mt-0.5 shrink-0 text-info" />
-          <span>
-            ESP-Reader werden über „Reader hinzufügen" mit einem kurzlebigen Claim-Code provisioniert.
-            Pi-/Bestandsleser können weiterhin beim ersten Scan erscheinen. Weist du einem Leser eine
-            Box zu, spielt jeder Scan an diesem Leser auf <strong>dieser</strong> Box. Ohne Zuweisung
-            gilt der Standard-Lautsprecher des Karten-Profils.
-          </span>
-        </div>
-      </div>
-
       <div className="flex-1 overflow-auto">
         {isLoading ? (
           <div className="p-6 space-y-3">
-            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
@@ -267,70 +572,34 @@ export function ReadersPage() {
             <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>Erneut versuchen</Button>
           </div>
         ) : readers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-center">
-            <Radio className="h-8 w-8 text-muted-foreground mb-3" />
+          <div className="flex flex-col items-center justify-center h-64 text-center gap-3">
+            <Radio className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Noch keine Leser. Ein Leser erscheint hier nach seinem ersten Scan.
+              Noch keine Leser. Klicke auf „Reader einrichten", um einen neuen ESP32-Reader hinzuzufügen.
             </p>
+            <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4" />Reader einrichten
+            </Button>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead>Leser-ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Reader</TableHead>
+                <TableHead>Status / Firmware</TableHead>
+                <TableHead>Letzter Scan</TableHead>
                 <TableHead>Zugewiesene Box</TableHead>
-                <TableHead className="w-48" />
+                <TableHead className="w-36" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {readers.map((reader) => (
-                <TableRow key={reader.reader_id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Radio className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="font-mono text-sm">{reader.reader_id}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">{reader.name ?? '—'}</span>
-                  </TableCell>
-                  <TableCell>
-                    {reader.has_api_key ? (
-                      <Badge variant="success"><KeyRound className="h-3 w-3 mr-1" />Provisioniert</Badge>
-                    ) : (
-                      <Badge variant="muted">Legacy/Fallback</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {reader.default_device_name ? (
-                      <Badge variant="info"><Speaker className="h-3 w-3 mr-1" />{reader.default_device_name}</Badge>
-                    ) : (
-                      <Badge variant="muted">Profil-Standard</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1.5">
-                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setAssignTarget(reader)}>
-                        <MapPin className="h-3.5 w-3.5" />
-                        Box zuweisen
-                      </Button>
-                      {reader.default_spotify_device_id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs text-destructive"
-                          onClick={() => clearBox.mutate(reader.reader_id)}
-                          disabled={clearBox.isPending}
-                        >
-                          <Unlink className="h-3.5 w-3.5" />
-                          Entfernen
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <ReaderRow
+                  key={reader.reader_id}
+                  reader={reader}
+                  onAssign={setAssignTarget}
+                  onClear={(id) => clearBox.mutate(id)}
+                />
               ))}
             </TableBody>
           </Table>
@@ -338,7 +607,7 @@ export function ReadersPage() {
       </div>
 
       <AssignBoxDialog reader={assignTarget} onClose={() => setAssignTarget(null)} />
-      <AddReaderDialog
+      <AddReaderWizard
         open={addDialogOpen}
         onClose={() => setAddDialogOpen(false)}
         onClaimed={() => void refetch()}

@@ -111,6 +111,10 @@ services:
         arguments:
             $readerApiKey: '%env(default:reader_api_key:READER_API_KEY)%'
 
+    App\Module\Scan\Infrastructure\Http\ReaderFirmwareController:
+        arguments:
+            $firmwareDir: '%env(default:provisioning.firmware_dir:FIRMWARE_DIR)%'
+
     # ── Provisioning-Modul ────────────────────────────────────────────────────
     App\Module\Provisioning\Application\:
         resource: '../src/Module/Provisioning/Application/'

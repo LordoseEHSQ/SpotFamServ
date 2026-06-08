@@ -17,8 +17,8 @@ final readonly class ListScanEvents
     /**
      * @return list<ScanEvent>
      */
-    public function __invoke(int $limit = 50, int $offset = 0, ?string $profileId = null): array
+    public function __invoke(int $limit = 50, int $offset = 0, ?string $profileId = null, ?string $readerDeviceId = null): array
     {
-        return $this->scanEventRepository->findRecent($limit, $offset, $profileId);
+        return $this->scanEventRepository->findRecent($limit, $offset, $profileId, $readerDeviceId);
     }
 }
