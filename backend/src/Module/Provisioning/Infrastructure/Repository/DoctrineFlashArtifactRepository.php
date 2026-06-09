@@ -30,6 +30,15 @@ final class DoctrineFlashArtifactRepository implements FlashArtifactRepositoryIn
     }
 
     /** @return list<FlashArtifact> */
+    public function findByBoardChannel(string $board, string $channel): array
+    {
+        return $this->em->getRepository(FlashArtifact::class)->findBy([
+            'board'   => $board,
+            'channel' => $channel,
+        ]);
+    }
+
+    /** @return list<FlashArtifact> */
     public function findAll(): array
     {
         return $this->em->getRepository(FlashArtifact::class)->findBy([], ['createdAt' => 'DESC']);

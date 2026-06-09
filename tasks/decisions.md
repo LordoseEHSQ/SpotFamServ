@@ -652,6 +652,22 @@ geplant, aber nicht umgesetzt — `pi-deploy.sh`-`chmod 0777`-Block 5b noch akti
 
 ---
 
+### D-036 | 2026-06-09 | Sprint 08: firmware_version-Tracking nur via Claim + Manifest-Heartbeat
+
+**Kontext:** Dry-Run ergab C-1: Plan nahm an, firmware_version ließe sich aus dem Scan-Body extrahieren. Scan-Body enthält aber nur `{reader_id, card_uid}`, kein firmware_version-Feld.
+**Entscheidung:** `firmware_version` wird ausschließlich (a) bei Claim-Aktivierung (bekannt aus Request-Body) und (b) bei Manifest-Check (`current_version`-Param) gespeichert. Scan-Body bleibt unverändert. Manifest-Check-Interval 60 min → Reader-Version spätestens nach 60 min aktuell.
+**Status:** Accepted (autonom, Sprint 08).
+
+---
+
+### D-037 | 2026-06-09 | Sprint 08: Board-Name-Kanonisierung
+
+**Kontext:** ProvisioningPage hatte `spotfam_reader` als Default, Backend-Konstante und OTA-Manifest-Check erwarten `esp32-wroom-32`. Bestehende hochgeladene Artefakte mit falschem Board-Namen würden durch OTA nie gefunden.
+**Entscheidung:** `esp32-wroom-32` ist der einzige unterstützte Board-Name (Backend-Konstante, Frontend-Default). Bestehende Artefakte mit `board=spotfam_reader` müssen manuell in der DB auf `esp32-wroom-32` korrigiert werden (kein Migrations-Skript, da für jetzt nur Dev-Daten betroffen).
+**Status:** Accepted (autonom, Sprint 08).
+
+---
+
 ### D-035 | 2026-06-05 | Sprint 07: Formate erweitern + gef. legale Quelltypen (legal-only)
 
 **Kontext:** Nur mp3/wav exponiert; yt-dlp kann opus/flac/m4a/aac und viele legale Quellen.

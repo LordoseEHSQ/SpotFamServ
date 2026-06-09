@@ -32,6 +32,21 @@ class ReaderDevice
     #[ORM\Column(name: 'default_device_name', length: 255, nullable: true)]
     private ?string $defaultDeviceName = null;
 
+    #[ORM\Column(name: 'last_seen_at', type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $lastSeenAt = null;
+
+    #[ORM\Column(name: 'firmware_version', length: 20, nullable: true)]
+    private ?string $firmwareVersion = null;
+
+    #[ORM\Column(name: 'board', length: 64, nullable: true)]
+    private ?string $board = null;
+
+    #[ORM\Column(name: 'fw_channel', length: 32, nullable: true)]
+    private ?string $fwChannel = null;
+
+    #[ORM\Column(name: 'last_ip', length: 45, nullable: true)]
+    private ?string $lastIp = null;
+
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
@@ -80,20 +95,12 @@ class ReaderDevice
         return $this->apiKeyHash !== null;
     }
 
-    /**
-     * Sets (or rotates) the reader's dedicated API key by storing only its hash.
-     * The plain key is never persisted; the caller hands it to the operator once.
-     */
     public function setApiKey(string $plainKey): void
     {
         $this->apiKeyHash = password_hash($plainKey, PASSWORD_DEFAULT);
         $this->updatedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
     }
 
-    /**
-     * Removes the reader's dedicated key so authentication falls back to the
-     * global READER_API_KEY again (used to revoke a compromised key).
-     */
     public function clearApiKey(): void
     {
         $this->apiKeyHash = null;
@@ -110,15 +117,62 @@ class ReaderDevice
         return $this->defaultDeviceName;
     }
 
-    /**
-     * Sets the reader's default playback device (room box). Stores the human-readable
-     * name alongside the (ephemeral) Spotify device id so it can be displayed and
-     * re-resolved by name if Spotify hands out a new id for the same device (D-015).
-     */
     public function setDefaultDevice(?string $deviceId, ?string $deviceName): void
     {
         $this->defaultSpotifyDeviceId = ($deviceId === null || $deviceId === '') ? null : $deviceId;
         $this->defaultDeviceName = ($deviceName === null || $deviceName === '') ? null : $deviceName;
         $this->updatedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+    }
+
+    public function getLastSeenAt(): ?\DateTimeImmutable
+    {
+        return $this->lastSeenAt;
+    }
+
+    public function getFirmwareVersion(): ?string
+    {
+        return $this->firmwareVersion;
+    }
+
+    public function getBoard(): ?string
+    {
+        return $this->board;
+    }
+
+    public function getFwChannel(): ?string
+    {
+        return $this->fwChannel;
+    }
+
+    public function getLastIp(): ?string
+    {
+        return $this->lastIp;
+    }
+
+    /**
+     * Records reader activity: updates last_seen_at and optionally persists firmware metadata.
+     * Null values leave existing data untouched.
+     */
+    public function touchSeen(
+        ?string $ip = null,
+        ?string $firmwareVersion = null,
+        ?string $board = null,
+        ?string $fwChannel = null,
+    ): void {
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $this->lastSeenAt = $now;
+        $this->updatedAt = $now;
+        if ($ip !== null && $ip !== '') {
+            $this->lastIp = $ip;
+        }
+        if ($firmwareVersion !== null && $firmwareVersion !== '') {
+            $this->firmwareVersion = $firmwareVersion;
+        }
+        if ($board !== null && $board !== '') {
+            $this->board = $board;
+        }
+        if ($fwChannel !== null && $fwChannel !== '') {
+            $this->fwChannel = $fwChannel;
+        }
     }
 }

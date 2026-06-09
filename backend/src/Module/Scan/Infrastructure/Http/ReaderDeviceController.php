@@ -6,9 +6,11 @@ namespace App\Module\Scan\Infrastructure\Http;
 
 use App\Module\Scan\Application\GenerateReaderApiKey;
 use App\Module\Scan\Application\ListReaderDevices;
+use App\Module\Scan\Application\ListScanEvents;
 use App\Module\Scan\Application\RevokeReaderApiKey;
 use App\Module\Scan\Application\SetReaderDefaultDevice;
 use App\Module\Scan\Domain\ReaderDevice;
+use App\Module\Scan\Domain\ScanEvent;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,6 +29,7 @@ final class ReaderDeviceController
         private readonly SetReaderDefaultDevice $setDefaultDevice,
         private readonly GenerateReaderApiKey $generateApiKey,
         private readonly RevokeReaderApiKey $revokeApiKey,
+        private readonly ListScanEvents $listScanEvents,
     ) {
     }
 
@@ -34,9 +37,33 @@ final class ReaderDeviceController
     public function list(): JsonResponse
     {
         $readers = ($this->listReaders)();
-        return new JsonResponse([
-            'items' => array_map([$this, 'readerToArray'], $readers),
-        ]);
+        $items = array_map(function (ReaderDevice $r): array {
+            $readerArray = $this->readerToArray($r);
+            // Attach the latest scan event for inline diagnostics in the admin UI.
+            $readerArray['last_scan'] = null;
+            if ($r->getId() !== null) {
+                $events = ($this->listScanEvents)(1, 0, null, $r->getId());
+                if ($events !== []) {
+                    $e = $events[0];
+                    $details = $e->getDetails();
+                    $readerId = isset($details['reader_id']) ? (string) $details['reader_id'] : null;
+                    $message = null;
+                    if (isset($details['error'])) {
+                        $msg = (string) $details['error'];
+                        $message = strlen($msg) > 200 ? substr($msg, 0, 200) . '…' : $msg;
+                    }
+                    $readerArray['last_scan'] = [
+                        'card_uid_raw' => $e->getCardUidRaw(),
+                        'outcome' => $e->getOutcome(),
+                        'reader_id' => $readerId,
+                        'message' => $message,
+                        'created_at' => $e->getCreatedAt()->format(\DateTimeInterface::ATOM),
+                    ];
+                }
+            }
+            return $readerArray;
+        }, $readers);
+        return new JsonResponse(['items' => $items]);
     }
 
     #[Route(path: '/{readerId}/default-device', name: 'set_default_device', methods: ['PUT'], requirements: ['readerId' => '[^/]+'])]
@@ -90,7 +117,11 @@ final class ReaderDeviceController
      *     name: string|null,
      *     has_api_key: bool,
      *     default_spotify_device_id: string|null,
-     *     default_device_name: string|null
+     *     default_device_name: string|null,
+     *     last_seen_at: string|null,
+     *     firmware_version: string|null,
+     *     board: string|null,
+     *     fw_channel: string|null
      * }
      */
     private function readerToArray(ReaderDevice $r): array
@@ -102,6 +133,10 @@ final class ReaderDeviceController
             'has_api_key' => $r->hasApiKey(),
             'default_spotify_device_id' => $r->getDefaultSpotifyDeviceId(),
             'default_device_name' => $r->getDefaultDeviceName(),
+            'last_seen_at' => $r->getLastSeenAt()?->format(\DateTimeInterface::ATOM),
+            'firmware_version' => $r->getFirmwareVersion(),
+            'board' => $r->getBoard(),
+            'fw_channel' => $r->getFwChannel(),
         ];
     }
 }

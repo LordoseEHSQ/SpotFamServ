@@ -1,5 +1,13 @@
 import { api } from '../client';
 
+export interface ReaderLastScan {
+  card_uid_raw: string;
+  outcome: string;
+  reader_id: string | null;
+  message: string | null;
+  created_at: string;
+}
+
 export interface ReaderDto {
   id: string | null;
   reader_id: string;
@@ -7,6 +15,11 @@ export interface ReaderDto {
   has_api_key: boolean;
   default_spotify_device_id: string | null;
   default_device_name: string | null;
+  last_seen_at: string | null;
+  firmware_version: string | null;
+  board: string | null;
+  fw_channel: string | null;
+  last_scan: ReaderLastScan | null;
 }
 
 export interface ReaderListResponse {

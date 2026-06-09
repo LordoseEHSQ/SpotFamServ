@@ -61,6 +61,7 @@ final readonly class RedeemReaderClaim
             $plainKey = bin2hex(random_bytes(self::KEY_BYTES));
             $reader = new ReaderDevice($readerId, $claim->getReaderName());
             $reader->setApiKey($plainKey);
+            $reader->touchSeen(null, $firmwareVersion, $board, $claim->getFirmwareChannel());
             $this->readers->save($reader);
 
             $claim->markUsed($readerId);

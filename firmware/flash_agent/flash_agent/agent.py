@@ -57,12 +57,12 @@ def _reader_config_to_nvs_entries(cfg: ReaderConfig) -> dict[str, str]:
     """
     entries: dict[str, str] = {
         "wifi_ssid": cfg.wifi_ssid or "",
-        "wifi_pass": cfg.wifi_password or "",
+        "wifi_password": cfg.wifi_password or "",
         "backend_url": cfg.backend_base_url or "",
-        "ota_channel": cfg.ota_channel or "stable",
+        "fw_channel": cfg.ota_channel or "stable",
     }
     if cfg.reader_api_key:
-        entries["reader_key"] = cfg.reader_api_key
+        entries["reader_api_key"] = cfg.reader_api_key
     return entries
 
 

@@ -61,7 +61,7 @@ final class DoctrineScanEventRepository implements ScanEventRepositoryInterface
     }
 
     /** @return list<ScanEvent> */
-    public function findRecent(int $limit = 50, int $offset = 0, ?string $profileId = null): array
+    public function findRecent(int $limit = 50, int $offset = 0, ?string $profileId = null, ?string $readerDeviceId = null): array
     {
         $qb = $this->em->createQueryBuilder()
             ->select('e')
@@ -71,6 +71,9 @@ final class DoctrineScanEventRepository implements ScanEventRepositoryInterface
             ->setFirstResult($offset);
         if ($profileId !== null) {
             $qb->andWhere('e.familyProfileId = :profileId')->setParameter('profileId', $profileId);
+        }
+        if ($readerDeviceId !== null) {
+            $qb->andWhere('e.readerDeviceId = :readerDeviceId')->setParameter('readerDeviceId', $readerDeviceId);
         }
         return $qb->getQuery()->getResult();
     }
