@@ -97,6 +97,15 @@ D-029 = **eine** typisierte `SystemConfiguration`-Entity; D-030 Maschinen-Keys *
 - [ ] D: Reader-Firmware NVS-first → WLAN-Join + self-claim (Empfehlung: zurückstellen bis PN532)
 - [ ] E: realer RFID-E2E (HW-0/D-022-blockiert)
 
+## Sprint 09 (DONE – v0.9.0) – Audio-UX Härtung + Reader-Lifecycle
+Plan: `tasks/plan-sprint-09-audio-reader.md` · PR #83 (squash-merged).
+- [x] #78 Audio-UX: Warteschlange always-visible, Toasts (sonner), Retry, Fehler-UX
+- [x] #79 DismissAudioJob + DELETE /jobs/{id} 200/204
+- [x] #80 Deploy-Härtung: vendor-Volume (L-034-Fix), APP_ENV, www.conf (pm.max_children=10), pi-deploy.sh
+- [x] #81 Reader API-Key-Rotation UI + Warndialog
+- [x] #82 DeleteReader: DELETE /readers/{readerId} + UUID-Cleanup
+- [ ] **User-Gate Pi:** `docker-compose down -v && docker-compose up --build -d` (vendor-Volume neu initialisieren)
+
 ## Sprint 08 (DONE – v0.8.0) – PN532 Reader-Firmware, OTA & Reader Admin UI
 Plan: `tasks/plan-pn532-reader-firmware-ota.md` · Doku: `docs/sprints/sprint-08.md`.
 Branch: `feat/pn532-reader-ota`. Chat: b59e8f36-18d3-45b6-822a-c2fba5cc5143.
