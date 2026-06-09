@@ -126,14 +126,8 @@ paths:
           schema:
             type: string
       responses:
-        '200':
-          description: 'Job canceled (was pending). Returns the updated job.'
-        '204':
-          description: 'Job dismissed (was failed or canceled). No content.'
-        '404':
-          description: 'Job not found.'
-        '409':
-          description: 'Job is running or done and cannot be canceled/dismissed.'
+        default:
+          description: ''
   /api/v1/audio-extractor/files:
     get:
       operationId: get_api_audio_extractor_files_list
@@ -658,10 +652,8 @@ paths:
             type: string
             pattern: '[^/]+'
       responses:
-        '204':
-          description: 'Reader deleted successfully.'
-        '404':
-          description: 'Reader not found.'
+        default:
+          description: ''
   /api/v1/readers/firmware/manifest:
     get:
       operationId: get_api_reader_firmware_manifest
@@ -686,16 +678,16 @@ paths:
           required: true
           schema:
             type: string
-            pattern: '^\d+\.\d+\.\d+$'
+            pattern: ^\d+\.\d+\.\d+$
       responses:
         '200':
-          description: Firmware update available.
+          description: 'Firmware update available.'
         '204':
-          description: No update available.
+          description: 'No update available.'
         '400':
-          description: Invalid request.
+          description: 'Invalid request.'
         '422':
-          description: Unsupported board or channel.
+          description: 'Unsupported board or channel.'
   '/api/v1/readers/firmware/{board}/{channel}/{version}.bin':
     get:
       operationId: get_api_reader_firmware_download
@@ -718,12 +710,13 @@ paths:
           required: true
           schema:
             type: string
-            pattern: '^\d+\.\d+\.\d+$'
       responses:
         '200':
-          description: Firmware binary.
+          description: 'Firmware binary.'
+        '400':
+          description: 'Invalid request.'
         '404':
-          description: Firmware artifact not found.
+          description: 'Firmware not found.'
   /api/v1/readers/scan:
     post:
       operationId: post_api_scan_scan

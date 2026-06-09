@@ -8,6 +8,7 @@ use App\Module\Provisioning\Application\Port\FlashArtifactRepositoryInterface;
 use App\Module\Provisioning\Domain\FlashArtifact;
 use App\Module\Scan\Application\Port\ReaderDeviceRepositoryInterface;
 use App\Module\System\Application\Port\SystemConfigurationProviderInterface;
+use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -27,6 +28,19 @@ final class ReaderFirmwareController
     ) {
     }
 
+    #[OA\Get(
+        parameters: [
+            new OA\Parameter(name: 'board', in: 'query', required: true, schema: new OA\Schema(type: 'string', example: 'esp32-wroom-32')),
+            new OA\Parameter(name: 'channel', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: 'stable')),
+            new OA\Parameter(name: 'current_version', in: 'query', required: true, schema: new OA\Schema(type: 'string', pattern: '^\d+\.\d+\.\d+$')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Firmware update available.'),
+            new OA\Response(response: 204, description: 'No update available.'),
+            new OA\Response(response: 400, description: 'Invalid request.'),
+            new OA\Response(response: 422, description: 'Unsupported board or channel.'),
+        ],
+    )]
     #[Route(path: '/manifest', name: 'manifest', methods: ['GET'])]
     public function manifest(Request $request): Response
     {
@@ -88,6 +102,13 @@ final class ReaderFirmwareController
         ]);
     }
 
+    #[OA\Get(
+        responses: [
+            new OA\Response(response: 200, description: 'Firmware binary.'),
+            new OA\Response(response: 400, description: 'Invalid request.'),
+            new OA\Response(response: 404, description: 'Firmware not found.'),
+        ],
+    )]
     #[Route(path: '/{board}/{channel}/{version}.bin', name: 'download', methods: ['GET'])]
     public function download(string $board, string $channel, string $version): Response
     {
