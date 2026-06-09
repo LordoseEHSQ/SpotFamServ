@@ -16,6 +16,9 @@ interface FlashArtifactRepositoryInterface
     public function findByBoardChannelVersion(string $board, string $channel, string $version): ?FlashArtifact;
 
     /** @return list<FlashArtifact> */
+    public function findByBoardChannel(string $board, string $channel): array;
+
+    /** @return list<FlashArtifact> */
     public function findAll(): array;
 
     public function save(FlashArtifact $artifact): void;

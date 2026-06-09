@@ -643,9 +643,65 @@ paths:
   /api/v1/readers/firmware/manifest:
     get:
       operationId: get_api_reader_firmware_manifest
+      parameters:
+        -
+          name: board
+          in: query
+          required: true
+          schema:
+            type: string
+            example: esp32-wroom-32
+        -
+          name: channel
+          in: query
+          required: false
+          schema:
+            type: string
+            example: stable
+        -
+          name: current_version
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^\d+\.\d+\.\d+$'
       responses:
-        default:
-          description: ''
+        '200':
+          description: Firmware update available.
+        '204':
+          description: No update available.
+        '400':
+          description: Invalid request.
+        '422':
+          description: Unsupported board or channel.
+  '/api/v1/readers/firmware/{board}/{channel}/{version}.bin':
+    get:
+      operationId: get_api_reader_firmware_download
+      parameters:
+        -
+          name: board
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: channel
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: version
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^\d+\.\d+\.\d+$'
+      responses:
+        '200':
+          description: Firmware binary.
+        '404':
+          description: Firmware artifact not found.
   /api/v1/readers/scan:
     post:
       operationId: post_api_scan_scan

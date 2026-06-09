@@ -1,12 +1,12 @@
 # ESP32-Reader-Provisioning
 
-Stand: 2026-06-03 · Plan: `tasks/plan-esp-consumer-provisioning-ota.md` · Decision: D-018
+Stand: 2026-06-08 · Plan: `tasks/plan-pn532-reader-firmware-ota.md` · Decision: D-018
 
 ## Zielbild
 
 ESP32-Reader (Board `esp32-wroom-32`, Ziel-RFID: PN532/HW-147) werden nach einem initialen USB-Flash ohne PC betrieben: Captive Portal für WLAN/Backend/Claim, Backend liefert `reader_id` und per-Reader-API-Key, danach normale Reader-APIs (`/api/v1/readers/scan|next|previous`). Spotify-Tokens und Backend-Admin-Credentials liegen **nicht** auf dem ESP.
 
-Software-Stand in diesem Branch: Backend-Claim-API, OTA-Manifest-Minimalvertrag (aktuell ohne veröffentlichtes Artefakt → `204`), Frontend „Reader hinzufügen“. Firmware-Captive-Portal, NVS-Schreiblogik und HW-0 sind **noch nicht** Sprint-Done (siehe Grenzen).
+Software-Stand in diesem Branch: PN532-Reader-Firmware fuer ESP32-WROOM-32, Captive-Portal-MVP, NVS-Konfiguration, Claim-Aktivierung, Backend-Scan und OTA-Client sind implementiert. Flash-Station und Backend-Manifest nutzen registrierte Firmware-Artefakte. Sprint-Done bleibt hardware-blockiert, bis UID-Gleichheit, echter Scan, Flash/OTA und Recovery am realen ESP nachgewiesen sind.
 
 ## Claim-Flow (Betrieb)
 
@@ -43,7 +43,8 @@ Basis: `/api/v1`. JSON. Fehlerbody: `{ "error": "<code>", "message": "..." }`.
 | `POST` | `/readers/claims` | Frontend (Admin-Session, sobald Auth aktiv) | Claim erzeugen |
 | `GET` | `/readers/claims/{claimCode}` | Frontend | Status `pending` \| `claimed` \| `expired` |
 | `POST` | `/readers/claims/{claimCode}/activate` | ESP (ohne vorherigen Key) | Claim einlösen, Reader + API-Key anlegen |
-| `GET` | `/readers/firmware/manifest` | ESP | OTA-Check (aktueller Minimalvertrag ohne Artefakt) |
+| `GET` | `/readers/firmware/manifest` | ESP | OTA-Check gegen registrierte Firmware-Artefakte |
+| `GET` | `/readers/firmware/{board}/{channel}/{version}.bin` | ESP | Firmware-Binary herunterladen |
 | `POST` | `/readers/{readerId}/api-key` | Admin | Key rotieren (Plain-Key einmalig) |
 | `DELETE` | `/readers/{readerId}/api-key` | Admin | Key widerrufen → Fallback globaler `READER_API_KEY` |
 
@@ -122,12 +123,13 @@ Namespace `spotfam` (Preferences/NVS):
 | `reader_id` | nach Claim |
 | `reader_api_key` | Plain-Key nach Claim |
 | `fw_channel` | z. B. `stable` |
-| `board` | `esp32-wroom-32` |
-| `provisioned_at` | optional, ISO-Zeit |
+| `claim_code` | nur bis erfolgreicher Activate-Call |
 
 **Nicht in NVS:** Spotify Access/Refresh Token, Spotify Client Secret, Admin-Credentials, Plain-Claim-Code nach erfolgreicher Aktivierung.
 
-**Reset (Zielverhalten, Firmware):** kurz = Status/Retry; lang = Setup/AP erneut, alter Key bis neuer Claim; sehr lang / Factory = Namespace löschen, Backend-Key widerrufen.
+**Compatibility:** Die Firmware liest fuer alte Flash-Agent-Artefakte zusaetzlich `wifi_pass`, `reader_key` und `ota_channel`, schreibt aber kanonisch `wifi_password`, `reader_api_key` und `fw_channel`.
+
+**Reset:** Runtime-Reset ueber Button ist noch nicht freigegeben, weil die realen Button-/GPIOs am AZ-Delivery-Board bestaetigt werden muessen. Factory Reset erfolgt bis dahin per Reflash/NVS-Loeschen.
 
 `secrets.h` bleibt nur Dev-/Factory-Fallback, kein Produktpfad.
 
@@ -142,7 +144,7 @@ MVP-Minimum (Frontend kopiert als JSON):
 }
 ```
 
-Portal erfasst zusätzlich WLAN-SSID und -Passwort. AP nur unprovisioniert oder nach Reset (`SpotFam-Reader-<short-id>`). Kein Logging von WLAN-Passwort oder API-Key; Captive Portal ist kein Hochsicherheitskanal — Risiko über kurze TTL, Einmal-Claim und per-Reader-Key begrenzt.
+Portal erfasst zusätzlich WLAN-SSID und -Passwort. AP nur wenn die Firmware keine lauffähige Runtime-Konfiguration findet (`SpotFam-Reader-<short-id>`). Kein Logging von WLAN-Passwort oder API-Key; Captive Portal ist kein Hochsicherheitskanal — Risiko über kurze TTL, Einmal-Claim und per-Reader-Key begrenzt.
 
 ## OTA-Manifest (Minimalvertrag)
 
@@ -150,7 +152,7 @@ Portal erfasst zusätzlich WLAN-SSID und -Passwort. AP nur unprovisioniert oder 
 
 - Pflicht-Query: `board`, `current_version` (SemVer `^\d+\.\d+\.\d+$`); `channel` default `stable`.
 - Unterstützt: `board=esp32-wroom-32`, `channel=stable`.
-- **`204 No Content`:** kein Update (aktueller Software-Schnitt: kein publiziertes `.bin`).
+- **`204 No Content`:** kein neueres registriertes Artefakt.
 - **`200`** wenn Artefakt existiert:
 
 ```json
@@ -161,6 +163,7 @@ Portal erfasst zusätzlich WLAN-SSID und -Passwort. AP nur unprovisioniert oder 
   "min_version": "1.0.0",
   "download_url": "/api/v1/readers/firmware/esp32-wroom-32/stable/1.0.1.bin",
   "sha256": "<hex>",
+  "size_bytes": 1147892,
   "signature": null,
   "released_at": "2026-06-03T12:00:00+00:00"
 }
@@ -178,7 +181,7 @@ Fehler: `invalid_request` (400), `unsupported_board` (422).
 - **Physischer Zugriff:** NVS-Key extrahierbar → per-Reader-Key, Revoke, begrenzte Reader-Rechte.
 - **Activate:** Rate-Limit pro Claim (5 Fehlversuche); `device_nonce` + Zufall für `reader_id`-Kollisionen.
 - **Scan/Next/Previous:** Weiterhin `X-API-Key` oder `Authorization: Bearer` (per-Reader oder globaler Fallback aus `.env`).
-- **Firmware-Manifest:** Aktueller Minimalvertrag liefert nur Validierung/`204`; vor Auslieferung echter Artefakte muss Auth/Herkunftsschutz erneut bewertet werden.
+- **Firmware-Manifest:** Liefert nur registrierte lokale Artefakte. SHA-256 ist Pflicht; `signature: null` bleibt ein bewusstes LAN-MVP-Risiko und ist keine Herkunftssicherung.
 
 ## Hardware-Gate HW-0
 
@@ -196,17 +199,17 @@ Ohne HW-0: Software-Merge und CI ≠ produktionsreifer ESP-Reader.
 
 | Bereich | Stand |
 |---------|--------|
-| Backend Claim + Manifest-Stub | Implementiert, getestet |
+| Backend Claim + Manifest/Download | Implementiert, getestet |
 | Frontend Reader hinzufügen | Implementiert |
-| CI Firmware-Compile (Baseline) | Grün — MFRC522-Sketch via `arduino-cli` (`esp32:esp32@3.3.8`); kein PN532/Portal/NVS/OTA |
-| ESP Firmware (Portal, NVS, PN532, OTA-Client) | Ausstehend |
-| OTA-Binärartefakt | Keins → Manifest `204` |
-| HW-0 | Offen (blockiert Sprint-Done) |
+| CI Firmware-Compile | PN532-Reader-Firmware via `arduino-cli` (`esp32:esp32@3.3.8`, Partition `no_fs`) |
+| ESP Firmware (Portal, NVS, PN532, OTA-Client) | Implementiert; Hardware-E2E offen |
+| OTA-Binärartefakt | Kann per Flash-Station registriert werden; reales Testartefakt noch zu verifizieren |
+| HW-0 | Teilweise: PN532-Erkennung beobachtet; UID-Gleichheit/Scan/OTA offen |
 | Signiertes OTA | Entscheidung offen (`signature: null` im Vertrag) |
 
-**Merge ≠ Sprint-Done:** Grüne CI und gemergter PR schließen den Software-Schnitt, nicht den Sprint — HW-0 und E2E am echten ESP fehlen.
+**Merge ≠ Sprint-Done:** Grüne CI und gemergter PR schließen den Software-Schnitt, nicht den Sprint — UID-Gleichheit, realer Backend-Scan, Power-Cycle und OTA am echten ESP fehlen.
 
-**Verifikation Firmware-Build:** CI-Job `Firmware Compile (ESP32)` kompiliert den bestehenden MFRC522-Sketch reproduzierbar (`secrets.h.example` → `secrets.h`). Das ist eine Build-Baseline, nicht die Ziel-Firmware: ESP-Webinterface, PN532/HW-147, NVS-Provisioning, Captive Portal und OTA-Client sind nicht umgesetzt.
+**Verifikation Firmware-Build:** CI-Job `Firmware Compile (ESP32)` kompiliert die PN532-Zielfirmware reproduzierbar (`secrets.h.example` → `secrets.h`, FQBN `esp32:esp32:esp32:PartitionScheme=no_fs`). Die Firmware passt in beide OTA-App-Slots der 4-MB-Partition.
 
 ## Verweise
 

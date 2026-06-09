@@ -45,10 +45,10 @@ def _reader_cfg() -> ReaderConfig:
 def test_entries_mapping_includes_reader_key() -> None:
     entries = _reader_config_to_nvs_entries(_reader_cfg())
     assert entries["wifi_ssid"] == "Heimnetz"
-    assert entries["wifi_pass"] == "s3cr3t"
+    assert entries["wifi_password"] == "s3cr3t"
     assert entries["backend_url"] == "http://192.168.1.91:8080"
-    assert entries["ota_channel"] == "stable"
-    assert entries["reader_key"] == "reader-key-123"
+    assert entries["fw_channel"] == "stable"
+    assert entries["reader_api_key"] == "reader-key-123"
     for key in entries:
         assert len(key.encode()) <= 15
 
@@ -57,7 +57,7 @@ def test_entries_mapping_omits_missing_reader_key() -> None:
     cfg = _reader_cfg()
     cfg.reader_api_key = None
     entries = _reader_config_to_nvs_entries(cfg)
-    assert "reader_key" not in entries
+    assert "reader_api_key" not in entries
 
 
 def test_inject_round_trip_success(monkeypatch: pytest.MonkeyPatch) -> None:

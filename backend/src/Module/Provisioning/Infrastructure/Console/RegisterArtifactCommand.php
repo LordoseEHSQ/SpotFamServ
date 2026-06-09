@@ -18,7 +18,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  *
  * Verwendung (manuell oder durch CI):
  *   php bin/console app:provisioning:register-artifact \
- *     --board=esp32-wroom-32 --channel=stable --version=1.2.3 \
+ *     --board=esp32-wroom-32 --channel=stable --firmware-version=1.2.3 \
  *     --file=spotfam_reader_1.2.3.bin --expected-chip=ESP32-D0WD-V3
  *
  * Die Datei muss unter FIRMWARE_DIR liegen (Default: {project_dir}/var/firmware).
@@ -45,7 +45,7 @@ final class RegisterArtifactCommand extends Command
         $this
             ->addOption('board', null, InputOption::VALUE_REQUIRED, 'Board-Bezeichner (z.B. esp32-wroom-32)')
             ->addOption('channel', null, InputOption::VALUE_REQUIRED, 'Release-Kanal (z.B. stable, beta)')
-            ->addOption('version', null, InputOption::VALUE_REQUIRED, 'Versionsnummer (z.B. 1.2.3)')
+            ->addOption('firmware-version', null, InputOption::VALUE_REQUIRED, 'Firmware-Versionsnummer (z.B. 1.2.3)')
             ->addOption('file', null, InputOption::VALUE_REQUIRED, 'Dateiname relativ zu FIRMWARE_DIR (kein Pfad, nur Dateiname)')
             ->addOption('expected-chip', null, InputOption::VALUE_REQUIRED, 'Erwarteter Chip-Bezeichner (z.B. ESP32-D0WD-V3)');
     }
@@ -56,12 +56,12 @@ final class RegisterArtifactCommand extends Command
 
         $board        = trim((string) $input->getOption('board'));
         $channel      = trim((string) $input->getOption('channel'));
-        $version      = trim((string) $input->getOption('version'));
+        $version      = trim((string) $input->getOption('firmware-version'));
         $filename     = trim((string) $input->getOption('file'));
         $expectedChip = trim((string) $input->getOption('expected-chip'));
 
         if ($board === '' || $channel === '' || $version === '' || $filename === '' || $expectedChip === '') {
-            $io->error('Alle Optionen --board, --channel, --version, --file und --expected-chip sind Pflicht.');
+            $io->error('Alle Optionen --board, --channel, --firmware-version, --file und --expected-chip sind Pflicht.');
             return Command::FAILURE;
         }
 

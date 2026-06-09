@@ -28,10 +28,10 @@ NS = "spotfam"
 SIZE = 0x5000  # 20 KiB = 5 Pages (Standard ESP32-Arduino nvs-Partition)
 ENTRIES = {
     "wifi_ssid": "MeinHeimnetz",
-    "wifi_pass": "sup3r-s3cr3t!",
+    "wifi_password": "sup3r-s3cr3t!",
     "backend_url": "http://192.168.1.91:8080",
-    "ota_channel": "stable",
-    "reader_key": "abcdef0123456789",
+    "fw_channel": "stable",
+    "reader_api_key": "abcdef0123456789",
 }
 
 

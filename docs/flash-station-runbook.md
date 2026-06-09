@@ -1,6 +1,6 @@
 # Flash-Station (Reader-Station) – Runbook
 
-Stand: 2026-06-04 · Plan: `tasks/plan-pi-flash-provisioning-station.md` · Decisions: D-021–D-025
+Stand: 2026-06-08 · Plan: `tasks/plan-pn532-reader-firmware-ota.md` · Decisions: D-021–D-025
 
 ## Überblick
 
@@ -89,13 +89,37 @@ cd backend
 php bin/console app:provisioning:register-artifact \
   --board=esp32-wroom-32 \
   --channel=stable \
-  --version=1.0.0 \
+  --firmware-version=1.0.0 \
   --file=<dateiname-in-FIRMWARE_DIR> \
   --expected-chip=ESP32-D0WD-V3
 ```
 
 Der Command berechnet **sha256** und **Größe** und legt einen `FlashArtifact`-Datensatz an.
 Ohne Registrierung ist kein Flash-Job möglich (kein freier Upload — **D-025**).
+
+### PN532-Reader-Firmware bauen
+
+Die Ziel-Firmware fuer ESP32-WROOM-32 + PN532/HW-147 wird mit OTA-faehiger
+4-MB-Partition gebaut:
+
+```bash
+cd firmware/spotfam_reader
+cp secrets.h.example secrets.h # nur fuer lokalen Dev-/CI-Fallback, echte Werte nie committen
+arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=no_fs --export-binaries .
+```
+
+Das Artefakt danach in `FIRMWARE_DIR` kopieren und registrieren:
+
+```bash
+php backend/bin/console app:provisioning:register-artifact \
+  --board=esp32-wroom-32 \
+  --channel=stable \
+  --firmware-version=0.8.0 \
+  --file=<exportiertes-bin> \
+  --expected-chip=ESP32-D0WD-V3
+```
+
+`PartitionScheme=no_fs` ist Pflicht fuer OTA: zwei App-Slots, kein SPIFFS.
 
 ## Ablauf Flashen
 
@@ -145,13 +169,15 @@ der Agent findet die Datei nicht.
 
 ## Bekannte Grenzen
 
-- **HW-0 (PN532 löten + UID lesen)** wurde bewusst übersprungen (**D-022**). Der funktionale
-  RFID-Pfad (Karte → UID → Scan/Play) ist **nicht verifiziert**; bewiesen sind nur **Flash-Pfad**
-  und **Chip-Detection**.
+- **HW-0 (PN532 UID + Backend-Scan)** ist noch nicht vollstaendig gruen. Am 2026-06-08 wurde
+  PN532-Erkennung am ESP beobachtet (`PN532 gefunden`), aber UID-Gleichheit Pi↔ESP, echter
+  Backend-Scan, Power-Cycle und OTA-Test bleiben Pflicht-Evidence.
 - **Live-Status = Polling** (~2–5 s), kein WebSocket/SSE (**D-023**).
 - **Artefakt-Upload** jetzt über authentifizierte Web-UI/API (**D-027**); Console-Command
   `app:provisioning:register-artifact` bleibt als Alternative.
 - **Chip-Whitelist** startet mit `ESP32-D0WD*`; andere Chips werden abgelehnt, bis erweitert.
+- **OTA-Herkunft:** Manifest/Binary nutzen SHA-256 gegen Korruption. `signature: null` ist ein
+  lokales LAN-MVP-Risiko, keine Herkunftssicherung fuer Consumer-Release.
 
 > **Verifiziert (2026-06-05):** Erster echter End-to-End-Flash (Upload → Job → esptool-`write_flash`)
 > gegen ESP32-D0WD-V3 erfolgreich (`success`, progress 100). Der **RFID-Funktionspfad** (PN532,
