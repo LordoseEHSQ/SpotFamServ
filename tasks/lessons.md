@@ -493,3 +493,23 @@ Volume neu initialisieren). `pi-deploy.sh`-Step 9 (`composer install`) entfernt.
 **Regel:** Vor jedem Hardware-Test explizit benennen, welches Firmware-Artefakt auf dem ESP läuft und welche Capability es hat: Probe, Dev-Reader oder produktiver Provisioning/OTA-Reader. "ESP geflasht" ist kein Nachweis für "Reader kann Backend-Scans senden".
 **Vorkommen:** 1
 **Status:** Aktiv
+
+---
+
+### L-036 | 2026-06-09 | docker-compose.override.yml maskiert Image-Updates
+
+**Fehlermuster:** Frontend zeigte nach Image-Update weiterhin v0.5.8. Alle CI-Builds, docker pull, docker rmi + re-pull halfen nicht. Ursache: Pi hatte ein lokales `docker-compose.override.yml` das `/home/lars/spotfam-frontend-dist` als Volume über `/usr/share/nginx/html` legte – stale lokale Dateien überschrieben immer das Image.
+**Root Cause:** Altes Entwicklungsartefakt aus einer Phase, in der die SPA noch lokal gebaut und per Volume deployed wurde. Override-Datei war nie entfernt worden als der Workflow auf Image-basiertes Deployment umgestellt wurde.
+**Regel:** Nach jedem Deployment-Strategiewechsel (Volume → Image) `docker-compose.override.yml` auf dem Zielsystem explizit entfernen oder dokumentieren. `docker inspect <container> | grep Mounts` als erstes Debug-Schritt bei "falscher Version im Browser".
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
+### L-037 | 2026-06-09 | GHA Docker-Cache invalidiert APP_VERSION nicht zuverlässig
+
+**Fehlermuster:** Web-Image wurde mit `APP_VERSION=v0.10.x` gebaut, aber das Bundle enthielt weiterhin `0.5.8` (package.json-Fallback). `no-cache: false` + GHA Remote-Cache lieferte den alten Layer zurück, obwohl `ENV APP_VERSION` sich geändert hatte.
+**Root Cause:** BuildKit mit GHA-Cache (`type=gha`) kann ARG/ENV-Änderungen als Cache-Key bei Remote-Caches unter Umständen nicht korrekt auswerten, wenn keine Filesystem-Änderung im Layer entsteht (`> /dev/null` wirkt nicht). Außerdem teilte sich PR-Build und Tag-Release-Build denselben Cache-Scope.
+**Regel:** (1) Für jeden Release-Build `no-cache: true` setzen; (2) echte Datei statt `/dev/null` schreiben um Layer-Hash zu ändern; (3) Cache-Scopes nach Event-Typ trennen (PR vs. Tag). Immer `docker exec <nginx> grep -o "0\.[0-9]*\.[0-9]*" assets/*.js` zur Verifikation verwenden, nicht nur den Container-Image-Namen.
+**Vorkommen:** 1
+**Status:** Aktiv
