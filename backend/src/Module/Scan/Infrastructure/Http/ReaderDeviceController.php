@@ -13,6 +13,8 @@ use App\Module\Scan\Application\SetReaderDefaultDevice;
 use App\Module\Scan\Domain\ReaderDevice;
 use App\Module\Scan\Domain\ScanEvent;
 use App\Shared\Application\Exception\NotFoundException;
+use OpenApi\Attributes as OA;
+use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -33,9 +35,13 @@ final class ReaderDeviceController
         private readonly RevokeReaderApiKey $revokeApiKey,
         private readonly ListScanEvents $listScanEvents,
         private readonly DeleteReader $deleteReader,
+        private readonly ClockInterface $clock,
     ) {
     }
 
+    #[OA\Response(response: 200, description: 'Reader-Liste', content: new OA\JsonContent(
+        type: 'array', items: new OA\Items(ref: '#/components/schemas/ReaderDto')
+    ))]
     #[Route(name: 'list', methods: ['GET'])]
     public function list(): JsonResponse
     {
@@ -133,6 +139,8 @@ final class ReaderDeviceController
      *     default_spotify_device_id: string|null,
      *     default_device_name: string|null,
      *     last_seen_at: string|null,
+     *     last_ip: string|null,
+     *     minutes_since_seen: int|null,
      *     firmware_version: string|null,
      *     board: string|null,
      *     fw_channel: string|null
@@ -148,6 +156,8 @@ final class ReaderDeviceController
             'default_spotify_device_id' => $r->getDefaultSpotifyDeviceId(),
             'default_device_name' => $r->getDefaultDeviceName(),
             'last_seen_at' => $r->getLastSeenAt()?->format(\DateTimeInterface::ATOM),
+            'last_ip' => $r->getLastIp(),
+            'minutes_since_seen' => $r->minutesSinceLastSeen($this->clock),
             'firmware_version' => $r->getFirmwareVersion(),
             'board' => $r->getBoard(),
             'fw_channel' => $r->getFwChannel(),

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Radio, RefreshCw, Speaker, MapPin, Unlink, Plus, Copy, KeyRound,
-  Wifi, WifiOff, Cpu, ChevronDown, ChevronUp, CheckCircle2, Loader2,
-  AlertCircle, ArrowRight, Zap, Info, Trash2,
+  Cpu, ChevronDown, ChevronUp, CheckCircle2, Loader2,
+  AlertCircle, ArrowRight, Zap, Info, Trash2, Usb,
 } from 'lucide-react';
 import {
   useReaders,
@@ -38,6 +39,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { cn, formatDateRelative } from '@/lib/utils';
+import { readerStatusBadge } from '@/lib/readerStatus';
 
 // ─── Outcome-Labels und -Hilfen ──────────────────────────────────────────────
 
@@ -56,15 +58,6 @@ const OUTCOME_LABELS: Record<string, { label: string; hint?: string; variant: 's
 
 function outcomeInfo(outcome: string) {
   return OUTCOME_LABELS[outcome] ?? { label: outcome, variant: 'muted' as const };
-}
-
-// ─── Hilfsfunktionen ─────────────────────────────────────────────────────────
-
-function lastSeenLabel(lastSeenAt: string | null): { text: string; online: boolean } {
-  if (!lastSeenAt) return { text: 'Nie gesehen', online: false };
-  const mins = Math.floor((Date.now() - new Date(lastSeenAt).getTime()) / 60000);
-  const online = mins <= 10;
-  return { text: formatDateRelative(lastSeenAt), online };
 }
 
 // ─── Box-Zuweisungs-Dialog ───────────────────────────────────────────────────
@@ -414,8 +407,9 @@ function ReaderRow({
   onRotateKey: (r: ReaderDto) => void;
   onDelete: (r: ReaderDto) => void;
 }) {
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
-  const { text: seenText, online } = lastSeenLabel(reader.last_seen_at);
+  const statusBadge = readerStatusBadge(reader.has_api_key, reader.minutes_since_seen);
   const lastScan = reader.last_scan;
   const outcome = lastScan ? outcomeInfo(lastScan.outcome) : null;
 
@@ -427,9 +421,6 @@ function ReaderRow({
       >
         <TableCell>
           <div className="flex items-center gap-2">
-            {online
-              ? <Wifi className="h-4 w-4 text-success shrink-0" />
-              : <WifiOff className="h-4 w-4 text-muted-foreground shrink-0" />}
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-mono text-sm">{reader.reader_id}</span>
@@ -444,11 +435,11 @@ function ReaderRow({
 
         <TableCell>
           <div className="text-xs space-y-0.5">
-            <div className={cn('font-medium', online ? 'text-success' : 'text-muted-foreground')}>
-              {seenText}
-            </div>
+            <Badge variant={statusBadge.variant} className="text-[10px] px-1.5">
+              {statusBadge.text}
+            </Badge>
             {reader.firmware_version && (
-              <div className="flex items-center gap-1 text-muted-foreground">
+              <div className="flex items-center gap-1 text-muted-foreground mt-0.5">
                 <Cpu className="h-3 w-3" />
                 <span>{reader.firmware_version}</span>
                 {reader.fw_channel && <span>· {reader.fw_channel}</span>}
@@ -522,7 +513,16 @@ function ReaderRow({
                   <div><span className="text-muted-foreground">Board:</span> {reader.board ?? '—'}</div>
                   <div><span className="text-muted-foreground">Kanal:</span> {reader.fw_channel ?? '—'}</div>
                   <div><span className="text-muted-foreground">Zuletzt gesehen:</span> {formatDateRelative(reader.last_seen_at)}</div>
+                  {reader.last_ip !== null && (
+                    <div><span className="text-muted-foreground">Letzte IP:</span> <span className="font-mono">{reader.last_ip}</span></div>
+                  )}
                 </div>
+                <button
+                  className="mt-2 text-xs text-primary hover:underline flex items-center gap-1"
+                  onClick={(e) => { e.stopPropagation(); navigate('/provisioning'); }}
+                >
+                  Firmware flashen <ArrowRight className="h-3 w-3" />
+                </button>
               </div>
 
               {/* Letzter Scan + Hinweis */}
@@ -559,6 +559,7 @@ function ReaderRow({
 
 export function ReadersPage() {
   const { data, isLoading, error, refetch, isFetching } = useReaders();
+  const { data: devicesData } = useDetectedDevices();
   const clearBox = useClearReaderBox();
   const rotateApiKey = useRotateReaderApiKey();
   const deleteReader = useDeleteReader();
@@ -567,11 +568,28 @@ export function ReadersPage() {
   const [rotatingReader, setRotatingReader] = useState<ReaderDto | null>(null);
   const [rotatedKey, setRotatedKey] = useState<RotateApiKeyResponse | null>(null);
   const [deletingReader, setDeletingReader] = useState<ReaderDto | null>(null);
+  const navigate = useNavigate();
 
   const readers = data?.items ?? [];
+  const noUsbDevices = devicesData !== undefined && devicesData.items.length === 0;
 
   return (
     <div className="flex flex-col h-full">
+      {noUsbDevices && (
+        <div className="flex items-center gap-2 px-6 py-2.5 bg-amber-50 dark:bg-amber-950/20 border-b border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300 shrink-0">
+          <Usb className="h-4 w-4 shrink-0" />
+          <span>
+            Kein USB-Gerät erkannt – ESP per USB am Pi anschließen, dann{' '}
+            <button
+              className="underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-200"
+              onClick={() => navigate('/provisioning')}
+            >
+              Firmware-Station öffnen
+            </button>
+            .
+          </span>
+        </div>
+      )}
       <div className="flex items-center justify-between border-b px-6 py-4 shrink-0">
         <div>
           <h1 className="text-lg font-semibold tracking-tight">RFID-Leser</h1>

@@ -16,6 +16,8 @@ export interface ReaderDto {
   default_spotify_device_id: string | null;
   default_device_name: string | null;
   last_seen_at: string | null;
+  last_ip: string | null;
+  minutes_since_seen: number | null;
   firmware_version: string | null;
   board: string | null;
   fw_channel: string | null;
