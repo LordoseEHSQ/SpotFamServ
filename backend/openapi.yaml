@@ -582,8 +582,14 @@ paths:
     get:
       operationId: get_api_readers_list
       responses:
-        default:
-          description: ''
+        '200':
+          description: Reader-Liste
+          content:
+            application/json:
+              schema:
+                properties:
+                  items: { type: array, items: { properties: { id: { type: string, nullable: true }, reader_id: { type: string }, name: { type: string, nullable: true }, has_api_key: { type: boolean }, default_spotify_device_id: { type: string, nullable: true }, default_device_name: { type: string, nullable: true }, last_seen_at: { type: string, format: date-time, nullable: true }, last_ip: { type: string, nullable: true }, minutes_since_seen: { type: integer, nullable: true }, firmware_version: { type: string, nullable: true }, board: { type: string, nullable: true }, fw_channel: { type: string, nullable: true } }, type: object } }
+                type: object
   '/api/v1/readers/{readerId}/default-device':
     put:
       operationId: put_api_readers_set_default_device

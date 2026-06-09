@@ -144,8 +144,10 @@ class ProvisioningAgentControllerTest extends TestCase
         $provider->method('getBackendBaseUrl')->willReturn('http://192.168.1.91:8080');
         $provider->method('getOtaChannel')->willReturn('stable');
 
-        $controller = $this->makeController('', $provider, 'reader-key-123');
-        $response   = $controller->readerConfig(Request::create('/api/v1/provisioning/reader-config', 'GET'));
+        $controller = $this->makeController('flash-agent-key', $provider, 'reader-key-123');
+        $request    = Request::create('/api/v1/provisioning/reader-config', 'GET');
+        $request->headers->set('X-API-Key', 'flash-agent-key');
+        $response   = $controller->readerConfig($request);
 
         $this->assertSame(200, $response->getStatusCode());
         $data = json_decode((string) $response->getContent(), true);
@@ -165,8 +167,10 @@ class ProvisioningAgentControllerTest extends TestCase
         $provider->method('getBackendBaseUrl')->willReturn('http://192.168.1.91:8080');
         $provider->method('getOtaChannel')->willReturn('stable');
 
-        $controller = $this->makeController('', $provider, '');
-        $response   = $controller->readerConfig(Request::create('/api/v1/provisioning/reader-config', 'GET'));
+        $controller = $this->makeController('flash-agent-key', $provider, '');
+        $request    = Request::create('/api/v1/provisioning/reader-config', 'GET');
+        $request->headers->set('X-API-Key', 'flash-agent-key');
+        $response   = $controller->readerConfig($request);
 
         $data = json_decode((string) $response->getContent(), true);
         $this->assertFalse($data['complete']);
@@ -183,5 +187,15 @@ class ProvisioningAgentControllerTest extends TestCase
         $response = $controller->readerConfig($request);
 
         $this->assertSame(401, $response->getStatusCode());
+    }
+
+    public function test_reader_config_returns_503_when_flash_agent_key_missing(): void
+    {
+        $controller = $this->makeController('');
+        $response   = $controller->readerConfig(Request::create('/api/v1/provisioning/reader-config', 'GET'));
+
+        $this->assertSame(503, $response->getStatusCode());
+        $data = json_decode((string) $response->getContent(), true);
+        $this->assertStringContainsString('FLASH_AGENT_API_KEY', $data['error']);
     }
 }

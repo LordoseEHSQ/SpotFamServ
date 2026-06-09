@@ -40,7 +40,26 @@ final class ReaderDeviceController
     }
 
     #[OA\Response(response: 200, description: 'Reader-Liste', content: new OA\JsonContent(
-        type: 'array', items: new OA\Items(ref: '#/components/schemas/ReaderDto')
+        properties: [
+            new OA\Property(property: 'items', type: 'array', items: new OA\Items(
+                properties: [
+                    new OA\Property(property: 'id', type: 'string', nullable: true),
+                    new OA\Property(property: 'reader_id', type: 'string'),
+                    new OA\Property(property: 'name', type: 'string', nullable: true),
+                    new OA\Property(property: 'has_api_key', type: 'boolean'),
+                    new OA\Property(property: 'default_spotify_device_id', type: 'string', nullable: true),
+                    new OA\Property(property: 'default_device_name', type: 'string', nullable: true),
+                    new OA\Property(property: 'last_seen_at', type: 'string', format: 'date-time', nullable: true),
+                    new OA\Property(property: 'last_ip', type: 'string', nullable: true),
+                    new OA\Property(property: 'minutes_since_seen', type: 'integer', nullable: true),
+                    new OA\Property(property: 'firmware_version', type: 'string', nullable: true),
+                    new OA\Property(property: 'board', type: 'string', nullable: true),
+                    new OA\Property(property: 'fw_channel', type: 'string', nullable: true),
+                ],
+                type: 'object'
+            )),
+        ],
+        type: 'object'
     ))]
     #[Route(name: 'list', methods: ['GET'])]
     public function list(): JsonResponse
