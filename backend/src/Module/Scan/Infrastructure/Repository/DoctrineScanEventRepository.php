@@ -77,4 +77,11 @@ final class DoctrineScanEventRepository implements ScanEventRepositoryInterface
         }
         return $qb->getQuery()->getResult();
     }
+
+    public function deleteByReaderDeviceId(string $readerDeviceId): void
+    {
+        $this->em->createQuery(
+            'DELETE FROM ' . ScanEvent::class . ' e WHERE e.readerDeviceId = :id'
+        )->execute(['id' => $readerDeviceId]);
+    }
 }

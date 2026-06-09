@@ -51,6 +51,8 @@ RUN composer dump-autoload --optimize
 # R7 (D-021): Wrapper-Entrypoint chownt /data/audio fuer www-data bei JEDEM Start (self-healing,
 # wirkt im selben Deploy). Ersetzt den schwachen pi-deploy.sh-chmod (Block 5b entfernt). Wrappt
 # den offiziellen docker-php-entrypoint; CMD bleibt php-fpm.
+COPY docker/www.conf /usr/local/etc/php-fpm.d/www.conf
+
 COPY docker-entrypoint.sh /usr/local/bin/spotfam-entrypoint.sh
 RUN chmod +x /usr/local/bin/spotfam-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/spotfam-entrypoint.sh"]

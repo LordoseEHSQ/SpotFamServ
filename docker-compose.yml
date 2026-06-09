@@ -10,11 +10,15 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./backend:/var/www/html
+      # L-034-Fix: anonymes Volume verhindert, dass der Bind-Mount das Image-vendor überlagert.
+      # Vendor kommt immer aus dem Image-Layer; Compose-Volumes mit spezifischerem Pfad haben Vorrang.
+      # Bei composer.lock-Änderungen: `docker-compose down -v && docker-compose up --build -d`.
+      - /var/www/html/vendor
       # Extrahierte Audiodateien im Benutzerbereich (per Dateisystem erreichbar, z.B. CD-Brennen).
       - ${AUDIO_STORAGE_HOST_DIR:-./data/audio}:/data/audio
     environment:
       - DATABASE_URL=postgresql://spotfam:spotfam@db:5432/spotfam
-      - APP_ENV=dev
+      - APP_ENV=${APP_ENV:-prod}
       - APP_SECRET=${APP_SECRET:-change-me-in-env}
       # SPOTIFY_CLIENT_ID/SECRET kommen aus backend/.env.local (git-ignoriert), nicht aus der Container-Env.
       - SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI:-http://127.0.0.1:8080/api/v1/spotify/callback}
@@ -41,10 +45,12 @@ services:
     command: ["php", "bin/console", "messenger:consume", "async", "--time-limit=3600", "--memory-limit=128M", "--limit=50", "-v"]
     volumes:
       - ./backend:/var/www/html
+      # L-034-Fix: anonymes Volume verhindert Bind-Mount-Overlay auf vendor (siehe app-Service).
+      - /var/www/html/vendor
       - ${AUDIO_STORAGE_HOST_DIR:-./data/audio}:/data/audio
     environment:
       - DATABASE_URL=postgresql://spotfam:spotfam@db:5432/spotfam
-      - APP_ENV=${APP_ENV:-dev}
+      - APP_ENV=${APP_ENV:-prod}
       - APP_SECRET=${APP_SECRET:-change-me-in-env}
       - AUDIO_EXTRACTOR_STORAGE_DIR=/data/audio
     depends_on:

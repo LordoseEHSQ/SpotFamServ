@@ -161,6 +161,29 @@ Reihenfolge ist zwingend: **#8 → #9 → #10** (ohne Token kein Discovery/Playb
    Wenn beides leer: Outcome `no_device`, keine Wiedergabe, Hinweis im UI.
    → **Das Connect-Gerät muss beim Setzen online sein** (Spotify-Discovery-Zeitpunkt).
 
+## User-Gate Sprint 09
+
+**Manueller Eingriff nach Merge von Sprint 09 erforderlich.**
+
+Sprint 09 behebt L-034 (Worker-Crash-Loop durch vendor-Overlay): Das `vendor`-Verzeichnis
+wird jetzt über ein anonymes Docker-Volume geschützt, das Vorrang vor dem Bind-Mount hat.
+Vendor kommt immer aus dem Image-Layer, nicht vom Host.
+
+Der Auto-Deploy via `systemd`-Timer reicht für dieses Update **nicht** aus, da neue
+anonyme Volumes nur bei `down -v` neu aus dem Image initialisiert werden.
+
+Nach dem Merge auf `main` und dem ersten Tag-Deploy **einmalig auf dem Pi** ausführen:
+
+```bash
+docker-compose down -v        # entfernt alte Volumes inkl. alten vendor-Stand
+docker-compose up --build -d  # baut neues Image + initialisiert vendor-Volume frisch
+```
+
+**Hinweis:** `down -v` löscht nur die anonymen Volumes (vendor), **nicht** `spotfam_db_data`
+(named Volume – Daten bleiben erhalten).
+
+Danach läuft der Auto-Deploy-Mechanismus wieder normal.
+
 ## Offene Härtung / Risiken
 
 - **Auto-Start fehlt:** `restart: unless-stopped` je Service ergänzen (L-007).

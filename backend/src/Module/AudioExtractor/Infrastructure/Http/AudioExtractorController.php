@@ -6,6 +6,7 @@ namespace App\Module\AudioExtractor\Infrastructure\Http;
 
 use App\Module\AudioExtractor\Application\CancelAudioJob;
 use App\Module\AudioExtractor\Application\CreateAudioJob;
+use App\Module\AudioExtractor\Application\DismissAudioJob;
 use App\Module\AudioExtractor\Application\ExtractAudio;
 use App\Module\AudioExtractor\Application\Port\AudioJobRepositoryInterface;
 use App\Module\AudioExtractor\Application\Port\AudioStorageInterface;
@@ -13,6 +14,7 @@ use App\Module\AudioExtractor\Application\Port\MediaEngineInterface;
 use App\Module\AudioExtractor\Application\UpdateEngine;
 use App\Module\AudioExtractor\Domain\AudioFormat;
 use App\Module\AudioExtractor\Domain\AudioJob;
+use App\Module\AudioExtractor\Domain\ExtractorBusyException;
 use App\Module\AudioExtractor\Domain\StoredAudioFile;
 use App\Shared\Application\Exception\NotFoundException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -42,6 +44,7 @@ final class AudioExtractorController
     public function __construct(
         private readonly CreateAudioJob $createAudioJob,
         private readonly CancelAudioJob $cancelAudioJob,
+        private readonly DismissAudioJob $dismissAudioJob,
         private readonly AudioJobRepositoryInterface $jobs,
         private readonly AudioStorageInterface $storage,
         private readonly MediaEngineInterface $engine,
@@ -109,7 +112,23 @@ final class AudioExtractorController
     #[Route(path: '/jobs/{id}', name: 'jobs_cancel', methods: ['DELETE'])]
     public function cancelJob(string $id): JsonResponse
     {
-        return new JsonResponse($this->jobToArray(($this->cancelAudioJob)($id)));
+        try {
+            $job = $this->jobs->findById($id);
+            if ($job === null) {
+                return new JsonResponse(['error' => 'Job not found.'], Response::HTTP_NOT_FOUND);
+            }
+
+            if (in_array($job->getStatus(), [AudioJob::STATUS_FAILED, AudioJob::STATUS_CANCELED], true)) {
+                ($this->dismissAudioJob)($id);
+                return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+            }
+
+            return new JsonResponse($this->jobToArray(($this->cancelAudioJob)($id)));
+        } catch (NotFoundException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
+        } catch (ExtractorBusyException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_CONFLICT);
+        }
     }
 
     #[Route(path: '/files', name: 'files_list', methods: ['GET'])]

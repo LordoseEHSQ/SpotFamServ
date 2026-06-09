@@ -31,4 +31,10 @@ final class DoctrineReaderDeviceRepository implements ReaderDeviceRepositoryInte
         $this->em->persist($device);
         $this->em->flush();
     }
+
+    public function delete(ReaderDevice $device): void
+    {
+        $this->em->remove($device);
+        $this->em->flush();
+    }
 }

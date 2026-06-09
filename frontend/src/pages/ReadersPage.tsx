@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Radio, RefreshCw, Speaker, MapPin, Unlink, Plus, Copy, KeyRound,
   Wifi, WifiOff, Cpu, ChevronDown, ChevronUp, CheckCircle2, Loader2,
-  AlertCircle, ArrowRight, Zap, Info,
+  AlertCircle, ArrowRight, Zap, Info, Trash2,
 } from 'lucide-react';
 import {
   useReaders,
@@ -10,6 +10,8 @@ import {
   useClearReaderBox,
   useCreateReaderClaim,
   useReaderClaimStatus,
+  useRotateReaderApiKey,
+  useDeleteReader,
 } from '@/hooks/useReaders';
 import {
   useDetectedDevices,
@@ -18,7 +20,7 @@ import {
   useFlashJob,
 } from '@/hooks/useProvisioning';
 import { useDevices } from '@/hooks/useDevices';
-import type { ReaderClaimResponse, ReaderDto } from '@/api/endpoints/readers';
+import type { ReaderClaimResponse, ReaderDto, RotateApiKeyResponse } from '@/api/endpoints/readers';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,6 +29,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -399,10 +405,14 @@ function ReaderRow({
   reader,
   onAssign,
   onClear,
+  onRotateKey,
+  onDelete,
 }: {
   reader: ReaderDto;
   onAssign: (r: ReaderDto) => void;
   onClear: (readerId: string) => void;
+  onRotateKey: (r: ReaderDto) => void;
+  onDelete: (r: ReaderDto) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const { text: seenText, online } = lastSeenLabel(reader.last_seen_at);
@@ -479,6 +489,18 @@ function ReaderRow({
                 <Unlink className="h-3.5 w-3.5" />
               </Button>
             )}
+            <Button variant="ghost" size="sm" className="h-7 px-1.5 text-xs" title="API-Key rotieren" onClick={(e) => { e.stopPropagation(); onRotateKey(reader); }}>
+              <KeyRound className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-muted-foreground hover:text-destructive"
+              title="Reader löschen"
+              onClick={(e) => { e.stopPropagation(); onDelete(reader); }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
             <Button variant="ghost" size="sm" className="h-7 px-1" onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}>
               {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </Button>
@@ -538,8 +560,13 @@ function ReaderRow({
 export function ReadersPage() {
   const { data, isLoading, error, refetch, isFetching } = useReaders();
   const clearBox = useClearReaderBox();
+  const rotateApiKey = useRotateReaderApiKey();
+  const deleteReader = useDeleteReader();
   const [assignTarget, setAssignTarget] = useState<ReaderDto | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [rotatingReader, setRotatingReader] = useState<ReaderDto | null>(null);
+  const [rotatedKey, setRotatedKey] = useState<RotateApiKeyResponse | null>(null);
+  const [deletingReader, setDeletingReader] = useState<ReaderDto | null>(null);
 
   const readers = data?.items ?? [];
 
@@ -599,6 +626,8 @@ export function ReadersPage() {
                   reader={reader}
                   onAssign={setAssignTarget}
                   onClear={(id) => clearBox.mutate(id)}
+                  onRotateKey={setRotatingReader}
+                  onDelete={setDeletingReader}
                 />
               ))}
             </TableBody>
@@ -612,6 +641,99 @@ export function ReadersPage() {
         onClose={() => setAddDialogOpen(false)}
         onClaimed={() => void refetch()}
       />
+
+      {/* API-Key-Rotation: Bestätigungsdialog */}
+      <AlertDialog open={rotatingReader !== null && rotatedKey === null} onOpenChange={(v) => { if (!v) setRotatingReader(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>API-Key rotieren?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Durch die Rotation wird der bestehende API-Key des Readers{' '}
+              <strong>sofort ungültig</strong>. Der Reader{' '}
+              <span className="font-mono">{rotatingReader?.reader_id}</span> kann keine Karten
+              mehr scannen, bis er mit dem neuen Key neu geflasht wird.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setRotatingReader(null)}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!rotatingReader) return;
+                rotateApiKey.mutate(rotatingReader.reader_id, {
+                  onSuccess: (res) => {
+                    setRotatedKey(res);
+                  },
+                });
+              }}
+              disabled={rotateApiKey.isPending}
+            >
+              {rotateApiKey.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Rotiere…</> : 'Key rotieren'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+          {rotateApiKey.isError && (
+            <p className="px-6 pb-4 text-sm text-destructive">{(rotateApiKey.error as Error).message}</p>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reader löschen: Bestätigungsdialog */}
+      <AlertDialog open={deletingReader !== null} onOpenChange={(v) => !v && setDeletingReader(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reader löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Reader <span className="font-mono font-medium">{deletingReader?.reader_id}</span> wird
+              dauerhaft gelöscht, inklusive aller Scan-Ereignisse und Claims. Diese Aktion kann nicht
+              rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteReader.isPending}
+              onClick={() => {
+                if (deletingReader) {
+                  deleteReader.mutate(deletingReader.reader_id, {
+                    onSuccess: () => setDeletingReader(null),
+                  });
+                }
+              }}
+            >
+              {deleteReader.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Löschen…</> : 'Löschen'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* API-Key-Rotation: Neuen Key anzeigen */}
+      <Dialog open={rotatedKey !== null} onOpenChange={(v) => { if (!v) { setRotatedKey(null); setRotatingReader(null); rotateApiKey.reset(); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Neuer API-Key</DialogTitle>
+            <DialogDescription>
+              Kopiere den Key jetzt – er wird nur einmal angezeigt. Flashe den Reader{' '}
+              <span className="font-mono">{rotatedKey?.reader_id}</span> anschließend mit diesem Key.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <pre className="rounded-md border bg-muted/30 p-3 text-xs font-mono break-all whitespace-pre-wrap select-all">
+              {rotatedKey?.api_key}
+            </pre>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => { if (rotatedKey) void navigator.clipboard.writeText(rotatedKey.api_key); }}
+            >
+              <Copy className="h-3.5 w-3.5" /> Key kopieren
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => { setRotatedKey(null); setRotatingReader(null); rotateApiKey.reset(); }}>Schließen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

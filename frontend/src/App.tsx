@@ -1,4 +1,5 @@
 import { BrowserRouter } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { AppRoutes } from './routes';
 import { Layout } from './components/layout/Layout';
 import { AuthProvider } from './hooks/useAuth';
@@ -11,6 +12,7 @@ export default function App() {
           <AppRoutes />
         </Layout>
       </AuthProvider>
+      <Toaster richColors position="top-right" />
     </BrowserRouter>
   );
 }

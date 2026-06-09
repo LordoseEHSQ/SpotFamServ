@@ -182,6 +182,11 @@ final class InMemoryReaderClaimRepository implements ReaderClaimRepositoryInterf
     {
         $this->all[$claim->getClaimCodeHash()] = $claim;
     }
+
+    public function deleteByReaderId(string $readerId): void
+    {
+        $this->all = array_filter($this->all, static fn (ReaderClaim $c) => $c->getReaderId() !== $readerId);
+    }
 }
 
 final class InMemoryReaderDeviceRepository implements ReaderDeviceRepositoryInterface
@@ -202,6 +207,11 @@ final class InMemoryReaderDeviceRepository implements ReaderDeviceRepositoryInte
     public function save(ReaderDevice $device): void
     {
         $this->all[$device->getReaderId()] = $device;
+    }
+
+    public function delete(ReaderDevice $device): void
+    {
+        unset($this->all[$device->getReaderId()]);
     }
 }
 

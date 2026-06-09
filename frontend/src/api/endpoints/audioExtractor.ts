@@ -61,6 +61,8 @@ export const audioExtractorApi = {
   jobs: () => api.get<AudioJobListResponse>('/audio-extractor/jobs'),
   cancelJob: (id: string) =>
     api.delete<AudioJobDto>(`/audio-extractor/jobs/${encodeURIComponent(id)}`),
+  dismissJob: (id: string) =>
+    api.delete<void>(`/audio-extractor/jobs/${encodeURIComponent(id)}`),
   remove: (name: string) =>
     api.delete(`/audio-extractor/files/${encodeURIComponent(name)}`),
   update: () => api.post<{ engine_version: string }>('/audio-extractor/update', {}),

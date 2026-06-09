@@ -45,4 +45,10 @@ final class DoctrineAudioJobRepository implements AudioJobRepositoryInterface
         $this->em->persist($job);
         $this->em->flush();
     }
+
+    public function delete(AudioJob $job): void
+    {
+        $this->em->remove($job);
+        $this->em->flush();
+    }
 }

@@ -18,4 +18,6 @@ interface AudioJobRepositoryInterface
     public function recent(int $limit = 50): array;
 
     public function save(AudioJob $job): void;
+
+    public function delete(AudioJob $job): void;
 }

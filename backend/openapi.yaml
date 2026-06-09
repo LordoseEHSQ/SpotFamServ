@@ -126,8 +126,14 @@ paths:
           schema:
             type: string
       responses:
-        default:
-          description: ''
+        '200':
+          description: 'Job canceled (was pending). Returns the updated job.'
+        '204':
+          description: 'Job dismissed (was failed or canceled). No content.'
+        '404':
+          description: 'Job not found.'
+        '409':
+          description: 'Job is running or done and cannot be canceled/dismissed.'
   /api/v1/audio-extractor/files:
     get:
       operationId: get_api_audio_extractor_files_list
@@ -640,6 +646,22 @@ paths:
       responses:
         default:
           description: ''
+  '/api/v1/readers/{readerId}':
+    delete:
+      operationId: delete_api_readers_delete
+      parameters:
+        -
+          name: readerId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[^/]+'
+      responses:
+        '204':
+          description: 'Reader deleted successfully.'
+        '404':
+          description: 'Reader not found.'
   /api/v1/readers/firmware/manifest:
     get:
       operationId: get_api_reader_firmware_manifest
