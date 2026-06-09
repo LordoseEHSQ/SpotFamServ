@@ -15,9 +15,9 @@ COPY frontend/ ./
 # Release-Version in den Build geben (CI: --build-arg APP_VERSION=<git-tag>).
 # Vite bevorzugt APP_VERSION vor package.json -> Footer zeigt den echten Tag (L-016).
 ARG APP_VERSION=""
-# Eigene RUN-Zeile damit BuildKit-Remote-Cache bei APP_VERSION-Wechsel
-# zuverlässig invalidiert wird (GHA-Cache ignoriert sonst den ARG-Wert).
-RUN echo "APP_VERSION=${APP_VERSION}" > /dev/null
+# Schreibe Datei (nicht /dev/null) damit BuildKit-Layer-Hash sich bei APP_VERSION-Wechsel
+# tatsächlich ändert und alle nachfolgenden Layer (pnpm build) cache-invalidiert werden.
+RUN echo "$APP_VERSION" > .app_version_stamp
 ENV APP_VERSION=$APP_VERSION
 RUN pnpm build
 
