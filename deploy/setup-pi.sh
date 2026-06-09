@@ -64,7 +64,48 @@ echo ""
 echo "Führe Smoke-Test aus (flash_agent detect)…"
 .venv/bin/python -m flash_agent detect && echo "Flash-Agent OK"
 
-# ─── 8. Abschluss ────────────────────────────────────────────────────────────
+# ─── 8. Firmware-Artefakt aus letztem GitHub-Release (optional) ────────────
+cd "$REPO_DIR"
+FW_FILENAME="spotfam_reader.ino.merged.bin"
+FW_DEST="$FIRMWARE_DIR/$FW_FILENAME"
+
+if command -v curl >/dev/null && command -v jq >/dev/null; then
+    REPO_SLUG="LordoseEHSQ/SpotFamServ"
+    RELEASE_JSON="$(curl -fsSL "https://api.github.com/repos/${REPO_SLUG}/releases/latest" 2>/dev/null || true)"
+    if [ -n "$RELEASE_JSON" ]; then
+        ASSET_URL="$(echo "$RELEASE_JSON" | jq -r '.assets[] | select(.name == "'"$FW_FILENAME"'") | .browser_download_url' | head -1)"
+        TAG_NAME="$(echo "$RELEASE_JSON" | jq -r '.tag_name')"
+        if [ -n "$ASSET_URL" ] && [ "$ASSET_URL" != "null" ]; then
+            echo ""
+            echo "Lade Firmware-Artefakt aus Release ${TAG_NAME}…"
+            curl -fsSL -o "$FW_DEST" "$ASSET_URL"
+            FW_VERSION="${TAG_NAME#v}"
+            if docker compose ps --status running app 2>/dev/null | grep -q app; then
+                docker compose exec -T app php bin/console app:provisioning:register-artifact \
+                    --board=esp32-wroom-32 \
+                    --channel=stable \
+                    --firmware-version="$FW_VERSION" \
+                    --file="$FW_FILENAME" \
+                    --expected-chip=ESP32-D0WD-V3 \
+                    && echo "Firmware-Artefakt registriert (${FW_VERSION})."
+            else
+                echo "HINWEIS: Docker-Stack läuft nicht – Artefakt liegt in $FW_DEST."
+                echo "  Nach 'docker compose up -d' registrieren:"
+                echo "  docker compose exec -T app php bin/console app:provisioning:register-artifact \\"
+                echo "    --board=esp32-wroom-32 --channel=stable --firmware-version=${FW_VERSION} \\"
+                echo "    --file=${FW_FILENAME} --expected-chip=ESP32-D0WD-V3"
+            fi
+        else
+            echo "HINWEIS: Kein Release-Asset ${FW_FILENAME} gefunden – manueller Upload in Firmware-Station."
+        fi
+    else
+        echo "HINWEIS: GitHub-Release-API nicht erreichbar – Firmware manuell hochladen."
+    fi
+else
+    echo "HINWEIS: curl/jq fehlen – Firmware-Artefakt nicht automatisch geladen."
+fi
+
+# ─── 9. Abschluss ────────────────────────────────────────────────────────────
 echo ""
 echo "=== Setup abgeschlossen ==="
 echo "Nächste Schritte:"
