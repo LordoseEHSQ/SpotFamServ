@@ -69,5 +69,5 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             APP_VERSION=${{ github.event_name == 'push' && github.ref_name || '' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=web-${{ github.event_name == 'push' && github.ref_name || github.sha }}
+          cache-to: type=gha,mode=max,scope=web-${{ github.event_name == 'push' && github.ref_name || github.sha }}
