@@ -87,7 +87,11 @@ if command -v curl >/dev/null && command -v jq >/dev/null; then
         if [ -n "$ASSET_URL" ] && [ "$ASSET_URL" != "null" ]; then
             echo ""
             echo "Lade Firmware-Artefakt aus Release ${TAG_NAME}…"
-            curl -fsSL -o "$FW_DEST" "$ASSET_URL"
+            TMP_FW="$(mktemp /tmp/fw_XXXXX.bin)"
+            curl -fsSL -o "$TMP_FW" "$ASSET_URL"
+            # FIRMWARE_DIR gehört dem Docker-Container (uid 82); sudo install schreibt als root
+            sudo install -m 664 "$TMP_FW" "$FW_DEST"
+            rm -f "$TMP_FW"
             FW_VERSION="${TAG_NAME#v}"
             if docker compose ps --status running app 2>/dev/null | grep -q app; then
                 docker compose exec -T app php bin/console app:provisioning:register-artifact \
