@@ -17,6 +17,12 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 command -v docker >/dev/null || { echo "FEHLER: Docker nicht installiert."; exit 1; }
 command -v python3 >/dev/null || { echo "FEHLER: Python3 fehlt."; exit 1; }
 
+# jq wird für den automatischen Firmware-Download benötigt; idempotent installieren
+if ! command -v jq >/dev/null 2>&1; then
+    echo "Installiere jq (wird für GitHub-Release-Download benötigt)…"
+    sudo apt-get install -y --no-install-recommends jq
+fi
+
 # ─── 2. Flash-Agent: venv + Abhängigkeiten ───────────────────────────────────
 AGENT_DIR="$REPO_DIR/firmware/flash_agent"
 cd "$AGENT_DIR"
@@ -62,6 +68,9 @@ sudo systemctl enable --now spotfam-flash-agent.service
 # ─── 7. Smoke-Test ───────────────────────────────────────────────────────────
 echo ""
 echo "Führe Smoke-Test aus (flash_agent detect)…"
+# ESPTOOL_BIN aus secrets.env ist bereits exportiert (Schritt 3).
+# Zusätzlich venv/bin in PATH setzen, damit das CLI-Entrypoint 'esptool' direkt auffindbar ist.
+export PATH="$AGENT_DIR/.venv/bin:$PATH"
 .venv/bin/python -m flash_agent detect && echo "Flash-Agent OK"
 
 # ─── 8. Firmware-Artefakt aus letztem GitHub-Release (optional) ────────────
