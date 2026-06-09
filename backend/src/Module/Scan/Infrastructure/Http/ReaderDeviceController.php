@@ -13,6 +13,8 @@ use App\Module\Scan\Application\SetReaderDefaultDevice;
 use App\Module\Scan\Domain\ReaderDevice;
 use App\Module\Scan\Domain\ScanEvent;
 use App\Shared\Application\Exception\NotFoundException;
+use OpenApi\Attributes as OA;
+use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -33,9 +35,32 @@ final class ReaderDeviceController
         private readonly RevokeReaderApiKey $revokeApiKey,
         private readonly ListScanEvents $listScanEvents,
         private readonly DeleteReader $deleteReader,
+        private readonly ClockInterface $clock,
     ) {
     }
 
+    #[OA\Response(response: 200, description: 'Reader-Liste', content: new OA\JsonContent(
+        properties: [
+            new OA\Property(property: 'items', type: 'array', items: new OA\Items(
+                properties: [
+                    new OA\Property(property: 'id', type: 'string', nullable: true),
+                    new OA\Property(property: 'reader_id', type: 'string'),
+                    new OA\Property(property: 'name', type: 'string', nullable: true),
+                    new OA\Property(property: 'has_api_key', type: 'boolean'),
+                    new OA\Property(property: 'default_spotify_device_id', type: 'string', nullable: true),
+                    new OA\Property(property: 'default_device_name', type: 'string', nullable: true),
+                    new OA\Property(property: 'last_seen_at', type: 'string', format: 'date-time', nullable: true),
+                    new OA\Property(property: 'last_ip', type: 'string', nullable: true),
+                    new OA\Property(property: 'minutes_since_seen', type: 'integer', nullable: true),
+                    new OA\Property(property: 'firmware_version', type: 'string', nullable: true),
+                    new OA\Property(property: 'board', type: 'string', nullable: true),
+                    new OA\Property(property: 'fw_channel', type: 'string', nullable: true),
+                ],
+                type: 'object'
+            )),
+        ],
+        type: 'object'
+    ))]
     #[Route(name: 'list', methods: ['GET'])]
     public function list(): JsonResponse
     {
@@ -133,6 +158,8 @@ final class ReaderDeviceController
      *     default_spotify_device_id: string|null,
      *     default_device_name: string|null,
      *     last_seen_at: string|null,
+     *     last_ip: string|null,
+     *     minutes_since_seen: int|null,
      *     firmware_version: string|null,
      *     board: string|null,
      *     fw_channel: string|null
@@ -148,6 +175,8 @@ final class ReaderDeviceController
             'default_spotify_device_id' => $r->getDefaultSpotifyDeviceId(),
             'default_device_name' => $r->getDefaultDeviceName(),
             'last_seen_at' => $r->getLastSeenAt()?->format(\DateTimeInterface::ATOM),
+            'last_ip' => $r->getLastIp(),
+            'minutes_since_seen' => $r->minutesSinceLastSeen($this->clock),
             'firmware_version' => $r->getFirmwareVersion(),
             'board' => $r->getBoard(),
             'fw_channel' => $r->getFwChannel(),

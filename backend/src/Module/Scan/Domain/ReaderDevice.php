@@ -149,6 +149,15 @@ class ReaderDevice
         return $this->lastIp;
     }
 
+    public function minutesSinceLastSeen(\Symfony\Component\Clock\ClockInterface $clock): ?int
+    {
+        if ($this->lastSeenAt === null) {
+            return null;
+        }
+        $diff = $clock->now()->getTimestamp() - $this->lastSeenAt->getTimestamp();
+        return (int) floor($diff / 60);
+    }
+
     /**
      * Records reader activity: updates last_seen_at and optionally persists firmware metadata.
      * Null values leave existing data untouched.

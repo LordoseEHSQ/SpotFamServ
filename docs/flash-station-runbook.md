@@ -78,7 +78,27 @@ journalctl -u spotfam-flash-agent -f
 .venv/bin/python -m flash_agent flash --dry-run --port /dev/ttyUSB0 --artifact <datei.bin>
 ```
 
-## Artefakt registrieren
+## Firmware bereitstellen
+
+### Variante A – CI-Release (empfohlen ab v0.10.0)
+
+Bei jedem Tag `v*` baut `.github/workflows/release-firmware.yml` die Reader-Firmware und
+veröffentlicht `spotfam_reader.ino.merged.bin` als GitHub-Release-Asset.
+
+`deploy/setup-pi.sh` lädt das neueste Asset automatisch nach `FIRMWARE_DIR` und registriert
+es per `app:provisioning:register-artifact`, sofern der Docker-Stack läuft.
+
+### Variante B – Admin-Upload in der Firmware-Station (ohne Kommandozeile)
+
+1. Im Browser `http://<pi>:8080/provisioning` öffnen (als Admin eingeloggt).
+2. Bereich **Firmware-Artefakte** → Datei wählen (`.bin` aus lokalem Build oder CI-Release).
+3. Board `esp32-wroom-32`, Kanal `stable`, Version und erwarteter Chip `ESP32-D0WD-V3` eintragen.
+4. **Hochladen** – das Backend speichert die Datei in `FIRMWARE_DIR` und registriert den Datensatz.
+
+> Ohne registriertes Artefakt ist kein Flash-Job möglich. Die UI-Liste bleibt leer, bis mindestens
+> ein Upload oder ein `register-artifact`-Lauf erfolgt ist.
+
+## Artefakt registrieren (Console)
 
 Firmware-Datei **vorher** nach `FIRMWARE_DIR` kopieren (nur Dateiname, kein Unterpfad mit `/`).
 
