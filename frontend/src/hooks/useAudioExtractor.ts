@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { audioExtractorApi, type ExtractRequest } from '@/api/endpoints/audioExtractor';
 
 export const audioExtractorKeys = {
@@ -58,6 +59,19 @@ export function useCancelAudioJob() {
     mutationFn: (id: string) => audioExtractorApi.cancelJob(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: audioExtractorKeys.jobs() });
+    },
+  });
+}
+
+export function useDismissAudioJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => audioExtractorApi.dismissJob(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: audioExtractorKeys.jobs() });
+    },
+    onError: () => {
+      toast.error('Job konnte nicht entfernt werden.');
     },
   });
 }

@@ -37,9 +37,8 @@ log "Deploy: $CURRENT_TAG ($CURRENT_REF) -> $LATEST_TAG ($TARGET_REF)"
 
 # 3) Was aendert sich? (fuer conditional build/composer)
 CHANGED="$(git diff --name-only "$CURRENT_REF" "$TARGET_REF" 2>/dev/null || echo '')"
-need_build=false; need_composer=false
-echo "$CHANGED" | grep -qE '^(backend/Dockerfile|docker-compose\.yml|backend/composer\.(json|lock))' && need_build=true
-echo "$CHANGED" | grep -qE '^backend/composer\.lock' && need_composer=true
+need_build=false
+echo "$CHANGED" | grep -qE '^(backend/Dockerfile|docker-compose\.yml|backend/composer\.(json|lock)|backend/docker/)' && need_build=true
 
 # 4) Ziel-Tag auschecken (untracked Secrets/.env.local/dist/vendor bleiben erhalten)
 git checkout -f "$LATEST_TAG"
@@ -48,7 +47,10 @@ git checkout -f "$LATEST_TAG"
 #    kommt aus GHCR. WEB_IMAGE_TAG bindet das Image an den deployten v*-Tag.
 export WEB_IMAGE_TAG="$LATEST_TAG"
 
-# 5b) Audio-Extractor (R7/D-021): Die Schreibrechte auf das Persistenz-Verzeichnis stellt jetzt
+# 5b) Bind-Mount ./backend:/var/www/html ist seit Sprint 09 entfernt (L-034-Fix): Code liegt im
+#     Image (docker compose build). composer install laeuft im Dockerfile, nicht mehr hier.
+#
+# Audio-Extractor (R7/D-021): Die Schreibrechte auf das Persistenz-Verzeichnis stellt jetzt
 #     der App-Image-Entrypoint (`backend/docker-entrypoint.sh`, chown www-data bei jedem Start)
 #     sicher – idempotent, self-healing, im selben Deploy wirksam. Der frueher hier stehende
 #     `chmod 0777`-Block ist entfernt (scheiterte am root-eigenen Dir + Ein-Deploy-Versatz, L-023).
@@ -84,11 +86,7 @@ for i in $(seq 1 30); do
   sleep 2
 done
 
-# 9) Composer nur bei lock-Aenderung (Dev-Bind-Mount, vgl. lessons L-006)
-if [ "$need_composer" = true ]; then
-  log "composer.lock geaendert – composer install"
-  docker compose exec -T app composer install --no-interaction --prefer-dist
-fi
+# 9) composer install entfaellt (seit Sprint 09): laeuft im Dockerfile (kein Bind-Mount mehr).
 
 # 10) Migrationen (idempotent: nur ausstehende)
 log "Migrationen"

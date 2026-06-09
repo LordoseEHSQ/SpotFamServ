@@ -45,6 +45,11 @@ export interface ReaderClaimStatusResponse {
   fw_channel: string;
 }
 
+export interface RotateApiKeyResponse {
+  reader_id: string;
+  api_key: string;
+}
+
 export const readersApi = {
   list: () => api.get<ReaderListResponse>('/readers'),
   createClaim: (body: CreateReaderClaimRequest) =>
@@ -58,4 +63,10 @@ export const readersApi = {
     }),
   clearDefaultDevice: (readerId: string) =>
     api.delete<ReaderDto>(`/readers/${encodeURIComponent(readerId)}/default-device`),
+  rotateApiKey: (readerId: string) =>
+    api.post<RotateApiKeyResponse>(`/readers/${encodeURIComponent(readerId)}/api-key`, {}),
+  revokeApiKey: (readerId: string) =>
+    api.delete<ReaderDto>(`/readers/${encodeURIComponent(readerId)}/api-key`),
+  deleteReader: (readerId: string) =>
+    api.delete<void>(`/readers/${encodeURIComponent(readerId)}`),
 };

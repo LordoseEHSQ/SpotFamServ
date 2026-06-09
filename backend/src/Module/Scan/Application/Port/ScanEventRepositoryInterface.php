@@ -23,4 +23,6 @@ interface ScanEventRepositoryInterface
 
     /** @return list<ScanEvent> */
     public function findRecent(int $limit = 50, int $offset = 0, ?string $profileId = null, ?string $readerDeviceId = null): array;
+
+    public function deleteByReaderDeviceId(string $readerDeviceId): void;
 }

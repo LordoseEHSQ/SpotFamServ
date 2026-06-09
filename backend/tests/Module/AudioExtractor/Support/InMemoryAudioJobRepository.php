@@ -33,4 +33,9 @@ final class InMemoryAudioJobRepository implements AudioJobRepositoryInterface
     {
         $this->jobs[$job->getId()] = $job;
     }
+
+    public function delete(AudioJob $job): void
+    {
+        unset($this->jobs[$job->getId()]);
+    }
 }

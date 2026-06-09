@@ -6,6 +6,7 @@ namespace App\Tests\Module\AudioExtractor\Infrastructure\Http;
 
 use App\Module\AudioExtractor\Application\CancelAudioJob;
 use App\Module\AudioExtractor\Application\CreateAudioJob;
+use App\Module\AudioExtractor\Application\DismissAudioJob;
 use App\Module\AudioExtractor\Application\MediaRequestValidator;
 use App\Module\AudioExtractor\Application\Port\AudioStorageInterface;
 use App\Module\AudioExtractor\Application\Port\MediaEngineInterface;
@@ -60,6 +61,7 @@ class AudioExtractorControllerTest extends TestCase
         return new AudioExtractorController(
             new CreateAudioJob($validator, $this->jobs, $bus),
             new CancelAudioJob($this->jobs),
+            new DismissAudioJob($this->jobs),
             $this->jobs,
             $storage,
             $engine,

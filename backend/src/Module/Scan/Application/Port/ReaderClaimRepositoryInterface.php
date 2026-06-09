@@ -11,4 +11,6 @@ interface ReaderClaimRepositoryInterface
     public function findByCodeHash(string $claimCodeHash): ?ReaderClaim;
 
     public function save(ReaderClaim $claim): void;
+
+    public function deleteByReaderId(string $readerId): void;
 }

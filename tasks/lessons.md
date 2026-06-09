@@ -477,12 +477,12 @@ fing und `async` konsumierte. php-fpm hatte im selben Fenster potenziell 500er.
 damit das im Image frisch gebaute `vendor/` mit dem Host-`vendor/`**. `pi-deploy.sh` macht `up -d`
 **vor** `composer install` (Schritt 9). Beim ersten Worker-Boot fehlte `symfony/messenger` im
 Host-`vendor`. `restart: unless-stopped` + nachgelagertes `composer install` heilten es self-healing.
-**Regel:** Reproduzierbar bei **jedem** Deploy mit `composer.lock`-Änderung. Härtung: entweder
-`composer install` **vor** `docker compose up -d` ziehen (Deploy-Reihenfolge), oder den
-Worker/`vendor` **nicht** bind-mounten (Image-`vendor` nutzen). Bis dahin: nach Deploy Worker-Status
-prüfen (`docker inspect … RestartCount`, `logs messenger-worker`), nicht nur den HTTP-Health.
+**Regel:** Fix in Sprint 09 (v0.9.0): Anonymes Volume für `/var/www/html/vendor` in `docker-compose.yml`
+verhindert, dass der Bind-Mount das Image-Vendor überlagert. Vendor kommt immer aus dem Image-Layer.
+Bei `composer.lock`-Änderungen: `docker-compose down -v && docker-compose up --build -d` (anonymes
+Volume neu initialisieren). `pi-deploy.sh`-Step 9 (`composer install`) entfernt.
 **Vorkommen:** 1
-**Status:** Aktiv (Fix offen → v0.7.1)
+**Status:** Behoben (v0.9.0)
 
 ---
 

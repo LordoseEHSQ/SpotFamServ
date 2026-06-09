@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { readersApi } from '@/api/endpoints/readers';
 
 export const readerKeys = {
@@ -45,5 +46,35 @@ export function useClearReaderBox() {
   return useMutation({
     mutationFn: (readerId: string) => readersApi.clearDefaultDevice(readerId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: readerKeys.list() }),
+  });
+}
+
+export function useRotateReaderApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (readerId: string) => readersApi.rotateApiKey(readerId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: readerKeys.all }),
+  });
+}
+
+export function useRevokeReaderApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (readerId: string) => readersApi.revokeApiKey(readerId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: readerKeys.all }),
+  });
+}
+
+export function useDeleteReader() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (readerId: string) => readersApi.deleteReader(readerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: readerKeys.all });
+      toast.success('Reader gelöscht.');
+    },
+    onError: () => {
+      toast.error('Reader konnte nicht gelöscht werden.');
+    },
   });
 }

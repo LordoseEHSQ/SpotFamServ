@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Module\Scan\Infrastructure\Http;
 
+use App\Module\Scan\Application\DeleteReader;
 use App\Module\Scan\Application\GenerateReaderApiKey;
 use App\Module\Scan\Application\ListReaderDevices;
 use App\Module\Scan\Application\ListScanEvents;
@@ -11,6 +12,7 @@ use App\Module\Scan\Application\RevokeReaderApiKey;
 use App\Module\Scan\Application\SetReaderDefaultDevice;
 use App\Module\Scan\Domain\ReaderDevice;
 use App\Module\Scan\Domain\ScanEvent;
+use App\Shared\Application\Exception\NotFoundException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -30,6 +32,7 @@ final class ReaderDeviceController
         private readonly GenerateReaderApiKey $generateApiKey,
         private readonly RevokeReaderApiKey $revokeApiKey,
         private readonly ListScanEvents $listScanEvents,
+        private readonly DeleteReader $deleteReader,
     ) {
     }
 
@@ -108,6 +111,17 @@ final class ReaderDeviceController
     {
         $reader = ($this->revokeApiKey)($readerId);
         return new JsonResponse($this->readerToArray($reader));
+    }
+
+    #[Route(path: '/{readerId}', name: 'delete', methods: ['DELETE'], requirements: ['readerId' => '[^/]+'])]
+    public function delete(string $readerId): JsonResponse
+    {
+        try {
+            ($this->deleteReader)($readerId);
+            return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+        } catch (NotFoundException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
+        }
     }
 
     /**

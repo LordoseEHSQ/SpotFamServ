@@ -640,6 +640,20 @@ paths:
       responses:
         default:
           description: ''
+  '/api/v1/readers/{readerId}':
+    delete:
+      operationId: delete_api_readers_delete
+      parameters:
+        -
+          name: readerId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '[^/]+'
+      responses:
+        default:
+          description: ''
   /api/v1/readers/firmware/manifest:
     get:
       operationId: get_api_reader_firmware_manifest
@@ -664,16 +678,16 @@ paths:
           required: true
           schema:
             type: string
-            pattern: '^\d+\.\d+\.\d+$'
+            pattern: ^\d+\.\d+\.\d+$
       responses:
         '200':
-          description: Firmware update available.
+          description: 'Firmware update available.'
         '204':
-          description: No update available.
+          description: 'No update available.'
         '400':
-          description: Invalid request.
+          description: 'Invalid request.'
         '422':
-          description: Unsupported board or channel.
+          description: 'Unsupported board or channel.'
   '/api/v1/readers/firmware/{board}/{channel}/{version}.bin':
     get:
       operationId: get_api_reader_firmware_download
@@ -696,12 +710,13 @@ paths:
           required: true
           schema:
             type: string
-            pattern: '^\d+\.\d+\.\d+$'
       responses:
         '200':
-          description: Firmware binary.
+          description: 'Firmware binary.'
+        '400':
+          description: 'Invalid request.'
         '404':
-          description: Firmware artifact not found.
+          description: 'Firmware not found.'
   /api/v1/readers/scan:
     post:
       operationId: post_api_scan_scan

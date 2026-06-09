@@ -25,4 +25,11 @@ final class DoctrineReaderClaimRepository implements ReaderClaimRepositoryInterf
         $this->em->persist($claim);
         $this->em->flush();
     }
+
+    public function deleteByReaderId(string $readerId): void
+    {
+        $this->em->createQuery(
+            'DELETE FROM ' . ReaderClaim::class . ' c WHERE c.readerId = :readerId'
+        )->execute(['readerId' => $readerId]);
+    }
 }

@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Download, AudioLines, AlertTriangle, Loader2, Trash2, RefreshCw, FileAudio, X, CheckCircle2, Clock,
+  ServerCrash, InboxIcon,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useAudioExtractorConfig, useAudioFiles, useExtractAudio,
-  useDeleteAudioFile, useUpdateEngine, useAudioJobs, useCancelAudioJob,
+  useDeleteAudioFile, useUpdateEngine, useAudioJobs, useCancelAudioJob, useDismissAudioJob,
   audioExtractorKeys,
 } from '@/hooks/useAudioExtractor';
 import type { StoredAudioFileDto, AudioJobDto, AudioJobStatus } from '@/api/endpoints/audioExtractor';
@@ -55,11 +57,12 @@ const JOB_STATUS: Record<AudioJobStatus, { label: string; variant: 'muted' | 'in
 export function AudioExtractorPage() {
   const { data: config } = useAudioExtractorConfig();
   const { data: filesData, isLoading: filesLoading } = useAudioFiles();
-  const { data: jobsData } = useAudioJobs();
+  const { data: jobsData, isLoading: jobsLoading, isError: jobsError } = useAudioJobs();
   const extract = useExtractAudio();
   const deleteFile = useDeleteAudioFile();
   const updateEngine = useUpdateEngine();
   const cancelJob = useCancelAudioJob();
+  const dismissJob = useDismissAudioJob();
   const queryClient = useQueryClient();
 
   const [url, setUrl] = useState('');
@@ -78,9 +81,21 @@ export function AudioExtractorPage() {
       if (j.status === 'done') seenDone.current.add(j.id);
     });
     if (freshlyDone) {
+      toast.success('Extraktion abgeschlossen');
       queryClient.invalidateQueries({ queryKey: audioExtractorKeys.files() });
     }
   }, [jobs, queryClient]);
+
+  const seenFailed = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const freshlyFailed = jobs.some((j) => j.status === 'failed' && !seenFailed.current.has(j.id));
+    jobs.forEach((j) => {
+      if (j.status === 'failed') seenFailed.current.add(j.id);
+    });
+    if (freshlyFailed) {
+      toast.error('Extraktion fehlgeschlagen');
+    }
+  }, [jobs]);
 
   const selectedFormat = config?.formats.find((f) => f.value === format);
   const showBitrate = selectedFormat?.supports_bitrate ?? false;
@@ -93,12 +108,16 @@ export function AudioExtractorPage() {
     e.preventDefault();
     if (!url.trim()) return;
     extract.mutate(
+      { url: url.trim(), format, bitrate_kbps: showBitrate ? effectiveBitrate : undefined },
       {
-        url: url.trim(),
-        format,
-        bitrate_kbps: showBitrate ? effectiveBitrate : undefined,
+        onSuccess: () => {
+          setUrl('');
+          toast.success('Extraktion gestartet');
+        },
+        onError: (err) => {
+          toast.error(`Fehler: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`);
+        },
       },
-      { onSuccess: () => setUrl('') },
     );
   };
 
@@ -248,26 +267,53 @@ export function AudioExtractorPage() {
             </CardContent>
           </Card>
 
-          {jobs.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Warteschlange</CardTitle>
-                <CardDescription>
-                  Extraktionen laufen im Hintergrund. Der Status aktualisiert sich automatisch.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {jobs.map((job) => (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Warteschlange</CardTitle>
+              <CardDescription>
+                Extraktionen laufen im Hintergrund. Der Status aktualisiert sich automatisch.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {jobsError ? (
+                <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
+                  <ServerCrash className="h-7 w-7 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Warteschlange konnte nicht geladen werden.</p>
+                </div>
+              ) : jobsLoading ? (
+                <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
+                  <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
+                </div>
+              ) : jobs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
+                  <InboxIcon className="h-7 w-7 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Keine aktiven Extraktionen.</p>
+                </div>
+              ) : (
+                jobs.map((job) => (
                   <JobRow
                     key={job.id}
                     job={job}
                     onCancel={() => cancelJob.mutate(job.id)}
                     cancelDisabled={cancelJob.isPending}
+                    onRetry={() => {
+                      extract.mutate({ url: job.url, format: job.format, bitrate_kbps: undefined });
+                    }}
+                    onDismiss={
+                      job.status === 'failed' || job.status === 'canceled'
+                        ? () => dismissJob.mutate(job.id)
+                        : undefined
+                    }
+                    dismissDisabled={
+                      job.status === 'failed' || job.status === 'canceled'
+                        ? dismissJob.isPending
+                        : undefined
+                    }
                   />
-                ))}
-              </CardContent>
-            </Card>
-          )}
+                ))
+              )}
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader className="pb-3">
@@ -370,10 +416,16 @@ function JobRow({
   job,
   onCancel,
   cancelDisabled,
+  onRetry,
+  onDismiss,
+  dismissDisabled,
 }: {
   job: AudioJobDto;
   onCancel: () => void;
   cancelDisabled: boolean;
+  onRetry: () => void;
+  onDismiss?: () => void;
+  dismissDisabled?: boolean;
 }) {
   const status = JOB_STATUS[job.status];
   const isActive = job.status === 'pending' || job.status === 'running';
@@ -384,9 +436,8 @@ function JobRow({
         {job.status === 'running' && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
         {job.status === 'pending' && <Clock className="h-4 w-4 text-muted-foreground shrink-0" />}
         {job.status === 'done' && <CheckCircle2 className="h-4 w-4 text-success shrink-0" />}
-        {(job.status === 'failed' || job.status === 'canceled') && (
-          <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
-        )}
+        {job.status === 'failed' && <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />}
+        {job.status === 'canceled' && <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />}
         <span className="font-mono text-xs uppercase text-muted-foreground shrink-0">{job.format}</span>
         <span className="truncate flex-1 text-muted-foreground" title={job.url}>{job.url}</span>
         <Badge variant={status.variant} className="shrink-0">{status.label}</Badge>
@@ -402,12 +453,29 @@ function JobRow({
             <X className="h-3.5 w-3.5" />
           </Button>
         )}
+        {job.status === 'failed' && (
+          <Button variant="ghost" size="sm" className="h-7 shrink-0" title="Erneut versuchen" onClick={onRetry}>
+            <RefreshCw className="h-3.5 w-3.5" />
+          </Button>
+        )}
         {job.status === 'done' && job.download_url && (
           <a href={job.download_url} download className="shrink-0">
             <Button variant="ghost" size="sm" className="h-7" title="Herunterladen">
               <Download className="h-3.5 w-3.5" />
             </Button>
           </a>
+        )}
+        {(job.status === 'failed' || job.status === 'canceled') && onDismiss && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 shrink-0 text-muted-foreground hover:text-destructive"
+            title="Entfernen"
+            onClick={onDismiss}
+            disabled={dismissDisabled}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
         )}
       </div>
 
@@ -421,7 +489,10 @@ function JobRow({
       )}
 
       {job.status === 'failed' && job.error && (
-        <p className="mt-1.5 text-xs text-destructive break-words">{job.error}</p>
+        <details className="mt-1.5">
+          <summary className="text-xs text-destructive cursor-pointer select-none">Fehlerdetails anzeigen</summary>
+          <p className="mt-1 text-xs text-muted-foreground break-words font-mono whitespace-pre-wrap">{job.error}</p>
+        </details>
       )}
     </div>
   );

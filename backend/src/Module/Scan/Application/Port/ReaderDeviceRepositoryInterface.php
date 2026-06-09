@@ -14,4 +14,6 @@ interface ReaderDeviceRepositoryInterface
     public function findAll(): array;
 
     public function save(ReaderDevice $device): void;
+
+    public function delete(ReaderDevice $device): void;
 }
