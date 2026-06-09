@@ -2,7 +2,7 @@
   "name": "spotfam-frontend",
   "private": true,
   "type": "module",
-  "version": "0.5.8",
+  "version": "0.10.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
