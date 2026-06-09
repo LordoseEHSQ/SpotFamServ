@@ -4,6 +4,36 @@
 
 _Keine unveröffentlichten Änderungen._
 
+## [0.8.0] – 2026-06-09 — Sprint 08: PN532 Reader-Firmware, OTA & Reader Admin UI
+
+> E2E verifiziert: Karte auf ESP32 → `esp-f61155e31112` → Scan → Spotify-Wiedergabe (Lars, Bruce Springsteen).
+> OTA-Code-Pfad fertig; echtes Update noch unverifiziert (kein Artefakt hochgeladen).
+
+### Added
+- **ESP32 PN532-Firmware v0.8.2** (`firmware/spotfam_reader/`): PN532/I2C via Adafruit-Lib,
+  NVS-Provisioning (SSID, Backend-URL, Claim-Code, Reader-ID, API-Key, FW-Channel),
+  Captive-Portal-AP für Erst-Konfiguration, Claim-Aktivierung gegen Backend,
+  OTA-Pull-Check (60 min, reader_id als Heartbeat-Param).
+- **Reader-Diagnostik-Migration** (`Version20260608180000`): 5 nullable Spalten auf `reader_device`:
+  `last_seen_at`, `firmware_version`, `board`, `fw_channel`, `last_ip`.
+- **`ReaderDevice.touchSeen()`**: atomic update von Heartbeat + Firmware-Metadaten;
+  aufgerufen bei Scan, Manifest-Check und Claim-Aktivierung.
+- **OTA-Manifest-Heartbeat**: `GET /readers/firmware/manifest?reader_id=…` speichert
+  `last_seen_at` + installierte `firmware_version` (`current_version`-Param) pro Reader.
+- **`GET /readers`** um Diagnose-Felder erweitert: `last_seen_at`, `firmware_version`,
+  `board`, `fw_channel` + `last_scan` inline (Outcome, card_uid, message, created_at).
+- **`GET /readers/scan-events`**: neuer Filter `reader_device_id` (indizierte Spalte);
+  exponiert `reader_id` + sanitierten `message`-Ausschnitt aus Details-JSON.
+- **Reader-Zentrale UI** (`ReadersPage`): Status (last_seen_at relativ), Firmware-Badge,
+  Outcome-Badge mit Operator-Hint, Aufklappzeile für vollständige Diagnose.
+- **5-Schritt-Onboarding-Wizard**: Claim → USB-Flash (optional, Skip möglich) →
+  Captive-Portal-Anleitung → Polling bis aktiviert → Done.
+
+### Fixed
+- Board-Default in ProvisioningPage: `spotfam_reader` → `esp32-wroom-32` (OTA-Mismatch).
+- `ScanEvent::getDetails()` Getter ergänzt (fehlte für scan-events-Erweiterung).
+- `ScanEventRepository`: `readerDeviceId`-Spaltenfilter statt langsamen JSON-Scan.
+
 ## [0.7.0] – 2026-06-05 — Sprint 07: Audio-Extraktor: Refactor, Warteschlange, Quellen/Formate
 
 > Live auf dem Pi (tag-getriggerter Deploy, Health 200). Bekannte Folgepunkte: UI-Feedback bei

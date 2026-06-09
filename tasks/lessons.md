@@ -4,6 +4,26 @@ Einträge sind immutabel nach Erstellung. Bei Wiederholung eines Musters: Vorkom
 
 ---
 
+### L-035 | 2026-06-09 | Pi-Deploy / git
+
+**Fehlermuster:** Pi-Volume-Mount (`./backend:/var/www/html`) in Kombination mit `pi-deploy.sh` + tag-basiertem Auto-Deploy setzt HEAD immer wieder auf den letzten Release-Tag zurück (detached HEAD). Feature-Branches überleben einen Pi-Restart / Deploy-Trigger nicht.
+**Root Cause:** Der Deploy-Mechanismus führt `git checkout <tag>` aus, was HEAD löst. Da das Backend als Live-Volume gemountet ist, hat jeder git-Checkout sofortigen Effekt auf den laufenden Container.
+**Regel:** Für Feature-Branch-Deployments auf dem Pi entweder (a) einen Worktree an einem separaten Pfad anlegen + `docker-compose.override.yml` darauf zeigen lassen, oder (b) den PR mergen + Tag setzen, damit der offizielle Deploy-Weg greift. Nie händisch `git checkout <branch>` im Haupt-Checkout des Pi machen, wenn Container aktiv sind.
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
+### L-036 | 2026-06-09 | Docker / Frontend-Deploy
+
+**Fehlermuster:** `docker cp` von Frontend-Dist in nginx-Container ist nicht persistent: beim nächsten `docker compose up` oder Container-Restart wird das Basisimage wiederhergestellt und die kopierten Dateien sind weg.
+**Root Cause:** `docker cp` modifiziert den Writable Layer des Containers, nicht das Image. Bei `Recreate` wird ein neuer Container aus dem Image gebaut.
+**Regel:** Für persistentes Frontend-Deployment immer ein Volume-Mount auf ein Host-Verzeichnis nutzen (`docker-compose.override.yml`: `volumes: - /host/path/dist:/usr/share/nginx/html:ro`) statt `docker cp`. `docker cp` nur für kurzfristige Tests.
+**Vorkommen:** 1
+**Status:** Aktiv
+
+---
+
 ### L-001 | 2026-06-01 | Deploy/rsync
 
 **Fehlermuster:** `rsync` des ganzen Repos auf den Pi hing minutenlang – ein lokaler `pi-image/`-Ordner (2,7 GB OS-Image) wurde mitübertragen.
@@ -463,3 +483,13 @@ Worker/`vendor` **nicht** bind-mounten (Image-`vendor` nutzen). Bis dahin: nach 
 prüfen (`docker inspect … RestartCount`, `logs messenger-worker`), nicht nur den HTTP-Health.
 **Vorkommen:** 1
 **Status:** Aktiv (Fix offen → v0.7.1)
+
+---
+
+### L-035 | 2026-06-08 | ESP/PN532-Firmware-Scope
+
+**Fehlermuster:** Beim realen ESP-Test wurde implizit angenommen, die Flash-/Provisioning-Infrastruktur bedeute bereits eine produktive PN532-Reader-Firmware. Tatsächlich existierte nur die PN532-Probe und die alte `spotfam_reader`-Firmware war weiter MFRC522/SPI.
+**Root Cause:** Der Arbeitsstand wurde nicht hart genug in drei Ebenen getrennt: Flash-Station/Artefakt-Transport, Diagnose-Firmware und produktive Reader-Firmware mit WLAN/API/OTA.
+**Regel:** Vor jedem Hardware-Test explizit benennen, welches Firmware-Artefakt auf dem ESP läuft und welche Capability es hat: Probe, Dev-Reader oder produktiver Provisioning/OTA-Reader. "ESP geflasht" ist kein Nachweis für "Reader kann Backend-Scans senden".
+**Vorkommen:** 1
+**Status:** Aktiv

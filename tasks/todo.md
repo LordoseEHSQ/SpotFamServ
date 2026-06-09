@@ -97,6 +97,17 @@ D-029 = **eine** typisierte `SystemConfiguration`-Entity; D-030 Maschinen-Keys *
 - [ ] D: Reader-Firmware NVS-first → WLAN-Join + self-claim (Empfehlung: zurückstellen bis PN532)
 - [ ] E: realer RFID-E2E (HW-0/D-022-blockiert)
 
+## Sprint 08 (DONE – v0.8.0) – PN532 Reader-Firmware, OTA & Reader Admin UI
+Plan: `tasks/plan-pn532-reader-firmware-ota.md` · Doku: `docs/sprints/sprint-08.md`.
+Branch: `feat/pn532-reader-ota`. Chat: b59e8f36-18d3-45b6-822a-c2fba5cc5143.
+- [x] ESP32 PN532-Firmware v0.8.2 (NVS, Captive Portal, Claim-Aktivierung, OTA-Pull-Check)
+- [x] Backend: Reader-Diagnostik-Migration, touchSeen(), Manifest-Heartbeat, Scan-Events-Filter
+- [x] Frontend: Reader-Zentrale (Status, Firmware, Scan-Hint), 5-Schritt-Onboarding-Wizard
+- [x] E2E verifiziert: Karte → Scan → Spotify-Wiedergabe (Lars, Bruce Springsteen)
+- [x] Dry-Run C-1/C-2/C-3/H-4 eingearbeitet; PHPUnit 33/33, PHPStan L6, TypeScript clean
+- [ ] OTA E2E: Artefakt hochladen + echtes OTA-Update auf ESP verifizieren (folgt Sprint 09)
+- [ ] Zweiter ESP provisioniert via Onboarding-Wizard (Hardware/User-Gate)
+
 ## Sprint 07 (DONE – v0.7.0 LIVE AUF PI) – Audio-Extraktor: Refactor, Warteschlange, Quellen/Formate
 Plan: `tasks/plan-sprint-07-audio-extractor-refactor.md` · Starter: `docs/sprints/sprint-07-starter.md`.
 Branch: `feat/sprint-07-audio-refactor` · Worktree: `../SpotFamServ-sprint-07`. Eigener frischer Chat (GATE).
