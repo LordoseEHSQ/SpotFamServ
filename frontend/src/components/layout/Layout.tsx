@@ -14,6 +14,7 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   badge?: string;
+  title?: string;
 }
 
 interface NavGroup {
@@ -33,7 +34,12 @@ const navigation: NavGroup[] = [
       { label: 'Teilnehmer', href: '/profiles', icon: Users },
       { label: 'Lautsprecher & Geräte', href: '/devices', icon: Speaker },
       { label: 'RFID-Leser', href: '/readers', icon: Radio },
-      { label: 'Reader-Station', href: '/provisioning', icon: Cpu },
+      {
+        label: 'Firmware-Station (USB)',
+        href: '/provisioning',
+        icon: Cpu,
+        title: 'ESP32 per USB am Pi anschließen und Firmware aufspielen',
+      },
     ],
   },
   {
@@ -68,6 +74,7 @@ function SidebarNavItem({ item }: { item: NavItem }) {
   return (
     <NavLink
       to={item.href}
+      title={item.title}
       className={cn(
         'group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
         isActive

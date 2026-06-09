@@ -574,11 +574,12 @@ export function ProvisioningPage() {
       {/* Header */}
       <div className="flex items-center justify-between border-b px-6 py-4 shrink-0">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight">Reader-Station</h1>
+          <h1 className="text-lg font-semibold tracking-tight">Firmware-Station</h1>
           <p className="text-sm text-muted-foreground">
-            {devices.length === 0
-              ? 'Kein Gerät erkannt'
-              : `${devices.length} Gerät${devices.length !== 1 ? 'e' : ''} erkannt`}
+            ESP32 per USB flashen
+            {devices.length > 0 && (
+              <> – {devices.length} Gerät{devices.length !== 1 ? 'e' : ''} erkannt</>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">

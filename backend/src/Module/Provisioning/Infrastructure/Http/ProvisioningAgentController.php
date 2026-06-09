@@ -44,6 +44,13 @@ final class ProvisioningAgentController
     #[Route(path: '/reader-config', name: 'reader_config', methods: ['GET'])]
     public function readerConfig(Request $request): JsonResponse
     {
+        if ($this->flashAgentApiKey === '') {
+            return new JsonResponse(
+                ['error' => 'FLASH_AGENT_API_KEY nicht konfiguriert – Endpunkt gesperrt.'],
+                Response::HTTP_SERVICE_UNAVAILABLE,
+            );
+        }
+
         if (!$this->validateAgentAuth($request)) {
             return $this->unauthorized();
         }
