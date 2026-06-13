@@ -109,7 +109,7 @@ final class ReaderFirmwareController
             new OA\Response(response: 404, description: 'Firmware not found.'),
         ],
     )]
-    #[Route(path: '/{board}/{channel}/{version}.bin', name: 'download', methods: ['GET'])]
+    #[Route(path: '/{board}/{channel}/{version}.bin', name: 'download', methods: ['GET'], requirements: ['version' => '[0-9]+\.[0-9]+\.[0-9]+[\w\-]*'])]
     public function download(string $board, string $channel, string $version): Response
     {
         $board = strtolower(trim($board));

@@ -72,6 +72,9 @@ services:
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       # backend/public bleibt: nginx braucht es fuer $realpath_root im fastcgi-Proxy.
       - ./backend/public:/var/www/html/public:ro
+      # ESP32-OTA: Firmware-Binaries direkt per nginx als statische Dateien servieren (kein PHP-Umweg).
+      # Ablage: backend/var/firmware-serve/{board}/{channel}/{version}.bin
+      - ./backend/var/firmware-serve:/var/firmware-serve:ro
       # frontend/dist ENTFERNT -> kommt aus dem Image.
     depends_on:
       - app
