@@ -46,8 +46,9 @@ security:
         - { path: ^/api/v1/readers/previous$, roles: PUBLIC_ACCESS }
         # ESP-Erstbindung (Claim-Activate durch den ESP selbst)
         - { path: ^/api/v1/readers/claims/[^/]+/activate$, roles: PUBLIC_ACCESS }
-        # ESP-OTA: Firmware-Manifest
+        # ESP-OTA: Firmware-Manifest + Binary-Download
         - { path: ^/api/v1/readers/firmware/manifest$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1/readers/firmware/, roles: PUBLIC_ACCESS }
         # Flash-Agent (D-024, X-API-Key FLASH_AGENT_API_KEY inline im AgentController)
         - { path: ^/api/v1/provisioning/devices/detect$, roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/provisioning/jobs/next$, roles: PUBLIC_ACCESS }
