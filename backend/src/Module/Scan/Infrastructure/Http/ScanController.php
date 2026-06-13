@@ -74,6 +74,24 @@ final class ScanController
         return $this->control($request, ProcessReaderControl::ACTION_PREVIOUS);
     }
 
+    #[Route(path: '/pause', name: 'pause', methods: ['POST'])]
+    public function pause(Request $request): JsonResponse
+    {
+        return $this->control($request, ProcessReaderControl::ACTION_PAUSE);
+    }
+
+    #[Route(path: '/volume-up', name: 'volume_up', methods: ['POST'])]
+    public function volumeUp(Request $request): JsonResponse
+    {
+        return $this->control($request, ProcessReaderControl::ACTION_VOLUME_UP);
+    }
+
+    #[Route(path: '/volume-down', name: 'volume_down', methods: ['POST'])]
+    public function volumeDown(Request $request): JsonResponse
+    {
+        return $this->control($request, ProcessReaderControl::ACTION_VOLUME_DOWN);
+    }
+
     private function control(Request $request, string $action): JsonResponse
     {
         $body = $this->parseBody($request);

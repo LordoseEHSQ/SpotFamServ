@@ -354,6 +354,30 @@ final class SpotifyHttpApiClient implements SpotifyApiClientInterface
         );
     }
 
+    public function setVolume(string $accessToken, int $volumePercent, ?string $deviceId = null): void
+    {
+        $query = ['volume_percent' => (string) $volumePercent];
+        if ($deviceId !== null) {
+            $query['device_id'] = $deviceId;
+        }
+        $response = $this->httpClient->request('PUT', self::API_BASE . '/me/player/volume', [
+            'headers' => ['Authorization' => 'Bearer ' . $accessToken, 'Content-Type' => 'application/json'],
+            'query' => $query,
+            'body' => '',
+        ]);
+        $status = $response->getStatusCode();
+        if ($status === 204 || $status === 200 || $status === 202 || $status === 404) {
+            return;
+        }
+        if ($status >= 400) {
+            $message = $this->extractErrorMessage($response, $status);
+            if ($status === 403 && str_contains(strtolower($message), 'premium')) {
+                throw new SpotifyScopeMissingException('Spotify Premium required for volume control');
+            }
+            throw new SpotifyApiException('Set volume failed: ' . $message, $status);
+        }
+    }
+
     public function addTracksToPlaylist(string $accessToken, string $playlistId, array $uris): void
     {
         $response = $this->httpClient->request('POST', self::API_BASE . '/playlists/' . $playlistId . '/tracks', [

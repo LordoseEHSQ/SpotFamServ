@@ -12,17 +12,18 @@
 #define PIN_PN532_RST   -1   // -1 = Reset nicht verdrahtet
 
 // --- Taster (gegen GND, interner Pull-up; aktiv LOW) -----------------------
-// Buttons bleiben standardmaessig deaktiviert, bis die Pins am AZ-Delivery-
-// Board real bestaetigt sind. GPIO0/BOOT darf hier nie verwendet werden.
-#define SPOTFAM_ENABLE_BUTTONS 0
-#define PIN_BTN_NEXT    25
-#define PIN_BTN_PREV    26
+// GPIO0/BOOT darf hier nie verwendet werden.
+#define SPOTFAM_ENABLE_BUTTONS   1
+#define PIN_BTN_NEXT             25
+#define PIN_BTN_PREV             26
+#define PIN_BTN_VOL_UP           32
+#define PIN_BTN_VOL_DOWN         33
 
 // --- Status-LED (onboard) --------------------------------------------------
 #define PIN_LED         2
 
 // --- Firmware/OTA -----------------------------------------------------------
-#define FIRMWARE_VERSION "0.10.1"
+#define FIRMWARE_VERSION "0.10.2"
 #define FIRMWARE_BOARD   "esp32-wroom-32"
 #define DEFAULT_FW_CHANNEL "stable"
 
@@ -33,6 +34,7 @@
 #define BUTTON_DEBOUNCE_MS      250    // Entprellung Taster
 #define SCAN_COOLDOWN_MS        1500   // lokale Sperre nach Karten-Scan
                                        // (Backend entprellt zusaetzlich 5 s)
+#define CARD_REMOVE_DEBOUNCE_MS 1500   // Karte muss mind. 1,5 s weg sein → Pause
 #define PN532_READ_TIMEOUT_MS   1000
 #define PN532_REINIT_MS          5000
 #define BACKEND_RETRY_MS        5000

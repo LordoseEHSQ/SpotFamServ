@@ -55,6 +55,10 @@ static unsigned long lastBackendAttemptMs = 0;
 static unsigned long lastOtaCheckMs = 0;
 static unsigned long lastBtnNextMs = 0;
 static unsigned long lastBtnPrevMs = 0;
+static unsigned long lastBtnVolUpMs = 0;
+static unsigned long lastBtnVolDownMs = 0;
+static bool cardWasPresent = false;
+static unsigned long cardAbsentSinceMs = 0;
 
 static String nvsString(const char *key, const char *fallback) {
   String value = prefs.getString(key, "");
@@ -527,6 +531,8 @@ void setup() {
 #if SPOTFAM_ENABLE_BUTTONS
   pinMode(PIN_BTN_NEXT, INPUT_PULLUP);
   pinMode(PIN_BTN_PREV, INPUT_PULLUP);
+  pinMode(PIN_BTN_VOL_UP, INPUT_PULLUP);
+  pinMode(PIN_BTN_VOL_DOWN, INPUT_PULLUP);
 #endif
 
   loadConfig();
@@ -566,17 +572,44 @@ void loop() {
     Serial.println("[BTN] PREV");
     sendControl("/api/v1/readers/previous");
   }
+  if (digitalRead(PIN_BTN_VOL_UP) == LOW && millis() - lastBtnVolUpMs > BUTTON_DEBOUNCE_MS) {
+    lastBtnVolUpMs = millis();
+    Serial.println("[BTN] VOL+");
+    sendControl("/api/v1/readers/volume-up");
+  }
+  if (digitalRead(PIN_BTN_VOL_DOWN) == LOW && millis() - lastBtnVolDownMs > BUTTON_DEBOUNCE_MS) {
+    lastBtnVolDownMs = millis();
+    Serial.println("[BTN] VOL-");
+    sendControl("/api/v1/readers/volume-down");
+  }
 #endif
 
   if (initPn532()) {
     uint8_t uid[7] = {0};
     uint8_t uidLen = 0;
-    if (nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLen, PN532_READ_TIMEOUT_MS)) {
-      if (millis() - lastScanMs > SCAN_COOLDOWN_MS) {
-        lastScanMs = millis();
-        String cardUid = uidToHex(uid, uidLen);
-        Serial.printf("[RFID] Karte: %s (len=%u)\n", cardUid.c_str(), uidLen);
-        sendScan(cardUid);
+    bool cardNowPresent = nfc.readPassiveTargetID(
+        PN532_MIFARE_ISO14443A, uid, &uidLen, PN532_READ_TIMEOUT_MS);
+
+    if (cardNowPresent) {
+      cardAbsentSinceMs = 0;
+      if (!cardWasPresent) {
+        cardWasPresent = true;
+        if (millis() - lastScanMs > SCAN_COOLDOWN_MS) {
+          lastScanMs = millis();
+          String cardUid = uidToHex(uid, uidLen);
+          Serial.printf("[RFID] Karte: %s (len=%u)\n", cardUid.c_str(), uidLen);
+          sendScan(cardUid);
+        }
+      }
+    } else {
+      if (cardWasPresent) {
+        if (cardAbsentSinceMs == 0) cardAbsentSinceMs = millis();
+        if (millis() - cardAbsentSinceMs > CARD_REMOVE_DEBOUNCE_MS) {
+          cardWasPresent = false;
+          cardAbsentSinceMs = 0;
+          Serial.println("[RFID] Karte entfernt - Pause");
+          sendControl("/api/v1/readers/pause");
+        }
       }
     }
   }
