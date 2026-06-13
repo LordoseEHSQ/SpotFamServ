@@ -16,6 +16,7 @@
 #include <DNSServer.h>
 #include <WebServer.h>
 #include <Wire.h>
+#include <esp_task_wdt.h>
 #include <Adafruit_PN532.h>
 #include <mbedtls/sha256.h>
 
@@ -314,6 +315,8 @@ static bool initPn532() {
   lastPn532InitMs = millis();
 
   Serial.printf("[RFID] PN532 I2C init SDA=%d SCL=%d\n", PIN_PN532_SDA, PIN_PN532_SCL);
+  Wire.end();
+  delay(10);
   Wire.begin(PIN_PN532_SDA, PIN_PN532_SCL);
   nfc.begin();
   uint32_t version = nfc.getFirmwareVersion();
@@ -459,6 +462,7 @@ static bool performOta(const String &downloadUrl, const String &expectedSha256, 
     return false;
   }
 
+  esp_task_wdt_delete(NULL);
   if (!Update.end(true)) {
     Serial.printf("[OTA] Update.end fehlgeschlagen: %s\n", Update.errorString());
     http.end();

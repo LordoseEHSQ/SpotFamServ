@@ -22,7 +22,7 @@
 #define PIN_LED         2
 
 // --- Firmware/OTA -----------------------------------------------------------
-#define FIRMWARE_VERSION "0.8.2"
+#define FIRMWARE_VERSION "0.10.1"
 #define FIRMWARE_BOARD   "esp32-wroom-32"
 #define DEFAULT_FW_CHANNEL "stable"
 
@@ -34,6 +34,6 @@
 #define SCAN_COOLDOWN_MS        1500   // lokale Sperre nach Karten-Scan
                                        // (Backend entprellt zusaetzlich 5 s)
 #define PN532_READ_TIMEOUT_MS   1000
-#define PN532_REINIT_MS         30000
+#define PN532_REINIT_MS          5000
 #define BACKEND_RETRY_MS        5000
 #define OTA_CHECK_INTERVAL_MS   3600000UL
