@@ -506,6 +506,20 @@ Volume neu initialisieren). `pi-deploy.sh`-Step 9 (`composer install`) entfernt.
 
 ---
 
+### L-038 | 2026-06-13 | ESP32-OTA: Drei unabhängige Bugs blockieren Firmware-Update
+
+**Fehlermuster:** ESP32 in endloser OTA-Reboot-Schleife, RFID-Scan nie erreichbar.
+**Root Cause (3 Bugs):**
+1. **Route-Regex** – `format: 'json'` auf Klassen-Ebene ließ Symfony Punkte aus `{version}` ausschließen (`[^/\.]`). `0.10.0` matchte nie → 404.
+2. **Security-Regel fehlte** – `/api/v1/readers/firmware/` war nicht in `PUBLIC_ACCESS` → ESP32 bekam 401.
+3. **Merged-Binary für OTA** – Alle Firmware-Dateien sind `*-merged.bin` (Bootloader+Partition+App, 4 MB). ESP32-OTA braucht nur das App-Binary (~1.1 MB aus `build/esp32.esp32.esp32/spotfam_reader.ino.bin`). `Update.begin(4194304)` überschritt OTA-Partitionsgröße (1.875 MB) → WDT-Reset auf dem ESP32.
+**Folge-Problem:** OTA von 0.8.2 → 0.10.0 auch mit korrektem App-Binary nicht stabil (WDT-Reset in alter Firmware). 0.10.0 muss einmalig per USB geflasht werden.
+**Regel:** (1) Firmware-Upload-Workflow immer App-Binary (`*.ino.bin`) statt Merged-Binary verwenden. (2) `firmware-serve/{board}/{channel}/{version}.bin`-Verzeichnis beim Upload befüllen. (3) Nginx serviert OTA-Binaries als statische Dateien (kein FastCGI-Umweg). (4) Bei OTA-Problemen: nginx-Log auf Download-Größe prüfen (65 KB = Merged-Binary; 1.1 MB = App-Binary).
+**Vorkommen:** 1
+**Status:** Aktiv (USB-Flash 0.10.0 ausstehend)
+
+---
+
 ### L-037 | 2026-06-09 | GHA Docker-Cache invalidiert APP_VERSION nicht zuverlässig
 
 **Fehlermuster:** Web-Image wurde mit `APP_VERSION=v0.10.x` gebaut, aber das Bundle enthielt weiterhin `0.5.8` (package.json-Fallback). `no-cache: false` + GHA Remote-Cache lieferte den alten Layer zurück, obwohl `ENV APP_VERSION` sich geändert hatte.
