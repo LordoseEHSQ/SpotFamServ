@@ -112,4 +112,9 @@ interface SpotifyApiClientInterface
      * @param list<string> $uris Spotify track URIs
      */
     public function addTracksToPlaylist(string $accessToken, string $playlistId, array $uris): void;
+
+    /**
+     * Set playback volume (0–100). Silently ignored when no active device.
+     */
+    public function setVolume(string $accessToken, int $volumePercent, ?string $deviceId = null): void;
 }

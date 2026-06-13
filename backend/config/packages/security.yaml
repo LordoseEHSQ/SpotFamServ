@@ -44,6 +44,9 @@ security:
         - { path: ^/api/v1/readers/scan$, roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/readers/next$, roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/readers/previous$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1/readers/pause$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1/readers/volume-up$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1/readers/volume-down$, roles: PUBLIC_ACCESS }
         # ESP-Erstbindung (Claim-Activate durch den ESP selbst)
         - { path: ^/api/v1/readers/claims/[^/]+/activate$, roles: PUBLIC_ACCESS }
         # ESP-OTA: Firmware-Manifest + Binary-Download
