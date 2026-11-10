@@ -16,7 +16,7 @@ Gehäusedeckel, vorbereitete Display-Anschlüsse (I2C-OLED **oder** SPI-TFT).
 | `tools/design.py` | **Single Source of Truth**: Bauteile, Pins, Netze, LCSC-Nummern |
 | `tools/generate.py` | Erzeugt alle Dateien unten (`python3 tools/generate.py`) |
 | `spotfam-reader.kicad_sch` | Schaltplan. Netze hängen über Labels an den Pins |
-| `spotfam-reader.kicad_pcb` | Platinenumriss 80 × 55 mm, Antennen-Sperrzone, GND-Flächen, Platzierungshilfen |
+| `spotfam-reader.kicad_pcb` | Platinenumriss 88,9 × 63,5 mm (Sammelkartenformat, quer), Antennen-Sperrzone, GND-Flächen, Platzierungshilfen |
 | `spotfam-reader.kicad_pro` | Projekt mit Netzklassen (Power, USB, Default) und JLCPCB-Regeln |
 | `NETLIST.md` | Lesbare Netzliste zum Gegenlesen |
 | `bom/jlcpcb-bom.csv` | BOM im JLCPCB-Format (nur SMD-Teile) |

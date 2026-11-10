@@ -185,7 +185,7 @@ def gen_schematic():
 # ---------------------------------------------------------------------------
 # Platine (ohne Footprints - die kommen per F8 aus dem Schaltplan)
 # ---------------------------------------------------------------------------
-BOARD_W, BOARD_H = 80.0, 55.0
+BOARD_W, BOARD_H = 88.9, 63.5  # Sammelkartenformat (2,5 x 3,5 Zoll), quer
 OX, OY = 100.0, 80.0  # Ursprung auf dem Blatt
 CORNER_R = 3.0
 ANT_W, ANT_D = 26.0, 8.0  # Antennen-Sperrzone (Modulantenne 18 mm + Rand)
