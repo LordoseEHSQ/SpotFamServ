@@ -2,16 +2,17 @@
 """
 Erzeugt aus design.py:
   ../spotfam-reader.kicad_sch   Schaltplan (Netze ueber Labels an jedem Pin)
-  ../spotfam-reader.kicad_pcb   Platine: Umriss, Bohrungen, Antennen-Sperrzone,
-                                GND-Flaeche, Platzierungshilfen
+  ../spotfam-reader.kicad_pcb   Platine: alle Footprints platziert und mit Netzen,
+                                Umriss, Antennen-Sperrzone, GND-Flaechen,
+                                vorverlegte Versorgungsbahnen (siehe pcb.py)
   ../spotfam-reader.kicad_pro   Projekt mit JLCPCB-tauglichen Designregeln
   ../bom/jlcpcb-bom.csv         BOM im JLCPCB-Format (nur SMT-Teile)
   ../bom/full-bom.csv           Komplette Stueckliste inkl. Handloet-Teile
   ../NETLIST.md                 Lesbare Netzliste zur Kontrolle
 
 Bewusst ohne Abhaengigkeiten (nur Python-Standardbibliothek).
-Die Footprints selbst holt KiCad beim "Update PCB from Schematic" (F8)
-aus den offiziellen Bibliotheken.
+Footprints liegen als Kopie in ../footprints, damit die Generierung ohne
+KiCad-Installation reproduzierbar ist.
 """
 
 import csv
@@ -23,6 +24,7 @@ from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(__file__))
 from design import PARTS  # noqa: E402
+import pcb  # noqa: E402
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
 PROJECT = "spotfam-reader"
@@ -183,111 +185,6 @@ def gen_schematic():
 
 
 # ---------------------------------------------------------------------------
-# Platine (ohne Footprints - die kommen per F8 aus dem Schaltplan)
-# ---------------------------------------------------------------------------
-BOARD_W, BOARD_H = 88.9, 63.5  # Sammelkartenformat (2,5 x 3,5 Zoll), quer
-OX, OY = 100.0, 80.0  # Ursprung auf dem Blatt
-CORNER_R = 3.0
-ANT_W, ANT_D = 26.0, 8.0  # Antennen-Sperrzone (Modulantenne 18 mm + Rand)
-
-
-def gen_pcb():
-    L = [
-        '(kicad_pcb (version 20240108) (generator "pcbnew") (generator_version "8.0")',
-        "(general (thickness 1.6) (legacy_teardrops no))",
-        '(paper "A4")',
-        '(title_block (title "SpotFam Reader") (date "2026-11-10") (rev "A"))',
-        """(layers
-  (0 "F.Cu" signal) (31 "B.Cu" signal)
-  (32 "B.Adhes" user "B.Adhesive") (33 "F.Adhes" user "F.Adhesive")
-  (34 "B.Paste" user) (35 "F.Paste" user)
-  (36 "B.SilkS" user "B.Silkscreen") (37 "F.SilkS" user "F.Silkscreen")
-  (38 "B.Mask" user) (39 "F.Mask" user)
-  (40 "Dwgs.User" user "User.Drawings") (41 "Cmts.User" user "User.Comments")
-  (42 "Eco1.User" user "User.Eco1") (43 "Eco2.User" user "User.Eco2")
-  (44 "Edge.Cuts" user) (45 "Margin" user)
-  (46 "B.CrtYd" user "B.Courtyard") (47 "F.CrtYd" user "F.Courtyard")
-  (48 "B.Fab" user) (49 "F.Fab" user))""",
-        "(setup (pad_to_mask_clearance 0) (allow_soldermask_bridges_in_footprints no))",
-        '(net 0 "")',
-        '(net 1 "GND")',
-    ]
-
-    def line(x1, y1, x2, y2, layer, w=0.05, key=None):
-        return (f"(gr_line (start {f(x1)} {f(y1)}) (end {f(x2)} {f(y2)})"
-                f' (stroke (width {f(w)}) (type default)) (layer {q(layer)}) (uuid {q(uid("ln", key or (x1, y1, x2, y2, layer)))}))')
-
-    def arc(sx, sy, mx, my, ex, ey, key):
-        return (f"(gr_arc (start {f(sx)} {f(sy)}) (mid {f(mx)} {f(my)}) (end {f(ex)} {f(ey)})"
-                f' (stroke (width 0.05) (type default)) (layer "Edge.Cuts") (uuid {q(uid("arc", key))}))')
-
-    def text(t, x, y, layer, size=1.0, key=None):
-        return (f"(gr_text {q(t)} (at {f(x)} {f(y)} 0) (layer {q(layer)}) (uuid {q(uid('txt', key or t))})"
-                f" (effects (font (size {f(size)} {f(size)}) (thickness {f(size * 0.15)})) (justify left)))")
-
-    def rect(x1, y1, x2, y2, layer, key):
-        return (f"(gr_rect (start {f(x1)} {f(y1)}) (end {f(x2)} {f(y2)})"
-                f' (stroke (width 0.1) (type dash)) (fill none) (layer {q(layer)}) (uuid {q(uid("rect", key))}))')
-
-    x0, y0, x1, y1, r = OX, OY, OX + BOARD_W, OY + BOARD_H, CORNER_R
-    k = 0.70710678 * r
-    # Umriss mit abgerundeten Ecken
-    L += [
-        line(x0 + r, y0, x1 - r, y0, "Edge.Cuts"), line(x1, y0 + r, x1, y1 - r, "Edge.Cuts"),
-        line(x1 - r, y1, x0 + r, y1, "Edge.Cuts"), line(x0, y1 - r, x0, y0 + r, "Edge.Cuts"),
-        arc(x1 - r, y0, x1 - r + k, y0 + r - k, x1, y0 + r, "tr"),
-        arc(x1, y1 - r, x1 - r + k, y1 - r + k, x1 - r, y1, "br"),
-        arc(x0 + r, y1, x0 + r - k, y1 - r + k, x0, y1 - r, "bl"),
-        arc(x0, y0 + r, x0 + r - k, y0 + r - k, x0 + r, y0, "tl"),
-    ]
-
-    # Antennen-Sperrzone oben mittig, Modulantenne buendig an die Oberkante legen
-    ax0 = OX + (BOARD_W - ANT_W) / 2
-    ant = [(ax0, y0), (ax0 + ANT_W, y0), (ax0 + ANT_W, y0 + ANT_D), (ax0, y0 + ANT_D)]
-    pts = " ".join(f"(xy {f(a)} {f(b)})" for a, b in ant)
-    L.append(
-        f'(zone (net 0) (net_name "") (layers "F.Cu" "B.Cu") (uuid {q(uid("zone", "antenna"))}) (name "Antenne_Keepout")'
-        " (hatch edge 0.5) (connect_pads (clearance 0)) (min_thickness 0.25) (filled_areas_thickness no)"
-        " (keepout (tracks not_allowed) (vias not_allowed) (pads not_allowed) (copperpour not_allowed) (footprints allowed))"
-        f" (fill (thermal_gap 0.5) (thermal_bridge_width 0.5)) (polygon (pts {pts})))"
-    )
-
-    # GND-Flaeche auf beiden Lagen (wird nach dem Routen mit B gefuellt)
-    m = 0.5
-    gnd = [(x0 + m, y0 + m), (x1 - m, y0 + m), (x1 - m, y1 - m), (x0 + m, y1 - m)]
-    gpts = " ".join(f"(xy {f(a)} {f(b)})" for a, b in gnd)
-    for layer in ("F.Cu", "B.Cu"):
-        L.append(
-            f'(zone (net 1) (net_name "GND") (layer {q(layer)}) (uuid {q(uid("zone", "gnd", layer))}) (name {q("GND_" + layer[0])})'
-            " (hatch edge 0.5) (priority 0) (connect_pads (clearance 0.3)) (min_thickness 0.25) (filled_areas_thickness no)"
-            " (fill (thermal_gap 0.5) (thermal_bridge_width 0.5)) (polygon (pts " + gpts + ")))"
-        )
-
-    # Platzierungshilfen auf User.Drawings
-    areas = [
-        ("U1 ESP32-S3 (Antenne an Oberkante)", ax0 + 4, y0, ax0 + ANT_W - 4, y0 + 26.5, "u1"),
-        ("J1 USB-C (Buchse buendig links)", x0, y0 + 20, x0 + 10, y0 + 32, "j1"),
-        ("U2/U3/C1/C2 Versorgung + ESD", x0 + 11, y0 + 18, x0 + 25, y0 + 34, "pwr"),
-        ("SW1-SW4 Taster", x0 + 8, y1 - 12, x1 - 8, y1 - 2, "sw"),
-        ("J2 PN532 / J3 OLED / J4 TFT", x1 - 22, y0 + 6, x1 - 2, y0 + 40, "conn"),
-        ("SW5 RST / SW6 BOOT / J5 UART", x0 + 2, y0 + 36, x0 + 22, y0 + 42, "dbg"),
-    ]
-    for t, a, b, c, d, key in areas:
-        L.append(rect(a, b, c, d, "Dwgs.User", key))
-        L.append(text(t, a + 0.5, b + 1.2, "Dwgs.User", 0.8, key))
-
-    for i, (hx, hy) in enumerate([(x0 + 4, y0 + 4), (x1 - 4, y0 + 4), (x0 + 4, y1 - 4), (x1 - 4, y1 - 4)], 1):
-        L.append(f"(gr_circle (center {f(hx)} {f(hy)}) (end {f(hx + 1.6)} {f(hy)})"
-                 f' (stroke (width 0.1) (type dash)) (fill none) (layer "Dwgs.User") (uuid {q(uid("hole", i))}))')
-        L.append(text(f"H{i}", hx + 2, hy, "Dwgs.User", 0.8, f"h{i}"))
-
-    L.append(text("SpotFam Reader Rev A", x0 + 30, y1 - 15, "F.SilkS", 1.2, "title"))
-    L.append(text("Footprints: Tools > Update PCB from Schematic (F8)", x0, y1 + 3, "Cmts.User", 1.0, "hint"))
-    L.append(")")
-    return "\n".join(L) + "\n"
-
-
-# ---------------------------------------------------------------------------
 # Projekt / Designregeln (JLCPCB Standard 2-Lagen)
 # ---------------------------------------------------------------------------
 def gen_project():
@@ -375,9 +272,14 @@ def gen_netlist_md():
 
 
 def main():
+    board, pads, boxes = pcb.gen_board()
+    errors = pcb.check_routes(pads)
+    if errors:
+        print("\n".join(errors))
+        sys.exit(1)
     files = {
         f"{PROJECT}.kicad_sch": gen_schematic(),
-        f"{PROJECT}.kicad_pcb": gen_pcb(),
+        f"{PROJECT}.kicad_pcb": board,
         f"{PROJECT}.kicad_pro": gen_project(),
     }
     md, nets = gen_netlist_md()
